@@ -14,9 +14,9 @@ import (
 
 // writeReadme is a Refresh that rewrites a file in the change's folder from the
 // gate it's given.
-func writeReadme(root string, c Change) error {
+func writeReadme(root string, c Change) ([]string, error) {
 	body := c.Name + " " + c.Phase + " " + c.Status + "\n"
-	return os.WriteFile(filepath.Join(root, "specs", c.Name, "README.md"), []byte(body), 0o644)
+	return nil, os.WriteFile(filepath.Join(root, "specs", c.Name, "README.md"), []byte(body), 0o644)
 }
 
 // dirty is `git status --porcelain` without the local active-change pointer,
@@ -82,17 +82,17 @@ func TestRefreshSeesSavedStateBeforeLog(t *testing.T) {
 	root, s := t.TempDir(), store()
 	type seen struct{ given, onDisk, log string }
 	var calls []seen
-	s.Refresh = func(r string, c Change) error {
+	s.Refresh = func(r string, c Change) ([]string, error) {
 		changes, err := s.ReadChanges(r)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		log, err := os.ReadFile(s.LogPath(r))
 		if err != nil {
-			return err
+			return nil, err
 		}
 		calls = append(calls, seen{c.Gates["intake"], changes[c.Name].Gates["intake"], string(log)})
-		return nil
+		return nil, nil
 	}
 	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
@@ -133,7 +133,7 @@ func TestRefreshErrorIsAWarning(t *testing.T) {
 	root, s := t.TempDir(), store()
 	warnings := &bytes.Buffer{}
 	s.Warn = warnings
-	s.Refresh = func(string, Change) error { return errors.New("x.md: bad markers") }
+	s.Refresh = func(string, Change) ([]string, error) { return nil, errors.New("x.md: bad markers") }
 	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +181,7 @@ func TestRefreshUnderVCSNone(t *testing.T) {
 	s.Commit = true
 	s.VCS = "none"
 	calls := 0
-	s.Refresh = func(string, Change) error { calls++; return nil }
+	s.Refresh = func(string, Change) ([]string, error) { calls++; return nil, nil }
 	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
@@ -206,7 +206,7 @@ func TestRefreshUnderVCSNone(t *testing.T) {
 func TestRefreshNotCalledWhenRefused(t *testing.T) {
 	root, s := t.TempDir(), store()
 	calls := 0
-	s.Refresh = func(string, Change) error { calls++; return nil }
+	s.Refresh = func(string, Change) ([]string, error) { calls++; return nil, nil }
 
 	if _, err := s.Advance(root, "intake", Approved, ""); err == nil {
 		t.Fatal("Advance with no active change succeeded")
@@ -229,11 +229,18 @@ func TestRefreshNotCalledWhenRefused(t *testing.T) {
 			t.Fatalf("%s succeeded", r.name)
 		}
 	}
+	if calls != 0 {
+		t.Fatalf("Refresh ran %d times on refused transitions", calls)
+	}
 	if _, err := s.CloseChange(root, "1-x", "done"); err != nil {
 		t.Fatal(err)
 	}
+	calls = 0 // the close itself refreshes
 	if _, err := s.Reopen(root, "intake", "r"); err == nil {
 		t.Fatal("Reopen after close succeeded")
+	}
+	if _, err := s.CloseChange(root, "1-x", "again"); err == nil {
+		t.Fatal("closing a closed change succeeded")
 	}
 	if calls != 0 {
 		t.Fatalf("Refresh ran %d times on refused transitions", calls)
@@ -294,7 +301,7 @@ func TestCraftedActivePointerIsRefused(t *testing.T) {
 	}
 	s := store()
 	calls := 0
-	s.Refresh = func(string, Change) error { calls++; return nil }
+	s.Refresh = func(string, Change) ([]string, error) { calls++; return nil, nil }
 	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
@@ -348,5 +355,52 @@ func TestCraftedActivePointerIsRefused(t *testing.T) {
 	}
 	if calls != 1 {
 		t.Fatalf("Refresh ran %d times after a valid pointer, want 1", calls)
+	}
+}
+
+// A Refresh that writes outside the change's folders gets that file into the
+// transition's commit, for Advance, Reopen and CloseChange alike (S-0042 D4).
+func TestRefreshWrittenPathsAreCommitted(t *testing.T) {
+	root, s := gitRepo(t)
+	calls := 0
+	s.Refresh = func(r string, c Change) ([]string, error) {
+		calls++
+		rel := "overview/" + c.Name + ".md"
+		full := filepath.Join(r, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			return nil, err
+		}
+		body := c.Name + " " + c.Phase + " " + c.Status + "\n"
+		return []string{rel}, os.WriteFile(full, []byte(body), 0o644)
+	}
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	steps := []struct {
+		name string
+		do   func() error
+		want string
+	}{
+		{"advance", func() error { _, err := s.Advance(root, "intake", Approved, ""); return err }, "1-x intake approved\n"},
+		{"reopen", func() error { _, err := s.Reopen(root, "intake", "changed"); return err }, "1-x intake draft\n"},
+		{"close", func() error { _, err := s.CloseChange(root, "1-x", "done"); return err }, "1-x intake closed\n"},
+	}
+	for i, st := range steps {
+		if err := st.do(); err != nil {
+			t.Fatalf("%s: %v", st.name, err)
+		}
+		if calls != i+1 {
+			t.Fatalf("%s: Refresh ran %d times, want %d", st.name, calls, i+1)
+		}
+		files := run(t, root, "show", "--name-only", "--format=", "HEAD")
+		if !strings.Contains(files, "overview/1-x.md") {
+			t.Fatalf("%s commit has:\n%s", st.name, files)
+		}
+		if got := run(t, root, "show", "HEAD:overview/1-x.md"); got != st.want {
+			t.Fatalf("%s: committed overview = %q, want %q", st.name, got, st.want)
+		}
+		if status := dirty(t, root); status != "" {
+			t.Fatalf("%s: tree not clean:\n%s", st.name, status)
+		}
 	}
 }
