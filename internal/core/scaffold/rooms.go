@@ -60,7 +60,7 @@ func (e Engine) EnsureRoom(dir, room string) (RoomReport, error) {
 	}
 	t := tree{fsys: fsys, prefix: room}
 	err = e.walkTree(t, func(rel string, data []byte) error {
-		if err := writeFile(filepath.Join(dir, filepath.FromSlash(rel)), data); err != nil {
+		if err := e.write(dir, rel, data); err != nil {
 			return err
 		}
 		m.Files[rel] = hashBytes(data)
