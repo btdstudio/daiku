@@ -131,7 +131,7 @@ func TestScaffoldGuidanceText(t *testing.T) {
 		{"sync-examples/github.md", "needs no planning repo"},
 		{"03_spec/personas/analyst.md", "on one line"},
 		{"03_spec/templates/functional-spec.md", "all on one line"},
-		{"AGENTS.md", "`daiku tickets new <type> <title> [--parent <id>] [--repo <name>] [--depends <id,id>] [--requirements <id,id>]`"},
+		{"AGENTS.md", "`daiku tickets new <type> <title> [--parent <id>] [--repo <name>] [--depends <id,id>] [--requirements <id,id>] [--inbox]`"},
 	} {
 		data := scaffoldText(t, tc.file)
 		// Whitespace is collapsed, so rewrapping a paragraph can't hide a phrase.
