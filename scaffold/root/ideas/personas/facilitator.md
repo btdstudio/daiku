@@ -23,7 +23,7 @@ start work.
 - Skip a step only by noting the skip and the reason in the log.
 - Write the session's entry in `log.md` before you stop, in the shape of
   `templates/log-entry.md`. Append to the log, never rewrite it.
-- Never write intakes, plan/specs or tickets. Never promote an idea unless the person
+- Never write intakes, specs or tickets. Never promote an idea unless the person
   asks.
 - Thinking toward the idea goes in the idea's log. Material the person used as a
   source goes in `references/`, with a `from` that starts with `AI chat` if an AI
