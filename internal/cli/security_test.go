@@ -284,3 +284,34 @@ func TestSymlinkedPlanOverviewRefusesBuildNew(t *testing.T) {
 		t.Fatal("the refused build new changed something")
 	}
 }
+
+// Code review finding 1: closing a plan folder STATE.json doesn't record, whose
+// README is a symlink, refuses before the close is recorded.
+func TestSymlinkedOverviewRefusesClosingAnUnrecordedPlan(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks")
+	}
+	root := vcsWorkspace(t, `{"vcs": "none"}`)
+	if code := runChange(root, []string{"new", "Auth flow"}); code != 0 {
+		t.Fatal("change new")
+	}
+	ghost := filepath.Join(root, "plan", "specs", "9-ghost")
+	if err := os.MkdirAll(ghost, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(t.TempDir(), "elsewhere.md")
+	if err := os.WriteFile(target, []byte("outside\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, filepath.Join(ghost, "README.md")); err != nil {
+		t.Fatal(err)
+	}
+	stateBefore, logBefore := readFile(t, state.StatePath(root)), readLog(t, root)
+	code, stderr := captureStderr(t, func() int { return runChange(root, []string{"close", "9-ghost", "--reason", "r"}) })
+	if code == 0 || !strings.Contains(stderr, "is a symlink") {
+		t.Fatalf("close = %d: %s", code, stderr)
+	}
+	if readFile(t, state.StatePath(root)) != stateBefore || readLog(t, root) != logBefore || readFile(t, target) != "outside\n" {
+		t.Fatal("the refused close changed something")
+	}
+}
