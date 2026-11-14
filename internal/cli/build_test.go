@@ -434,3 +434,86 @@ func TestBuildNewRefusesASymlinkedLog(t *testing.T) {
 		t.Fatal("LOG.md's target was written")
 	}
 }
+
+// Code review finding 1: reopening a build into implement after it shipped takes
+// its repo again, so the lock applies; --force overrides and logs it.
+func TestReopenAfterShipRunsTheLock(t *testing.T) {
+	root := buildRoot(t)
+	seedBuild(t, root, "S-0036", "api")
+	gateAll(t, root, append(throughTasks, [][]string{
+		{"implement", "in-progress"}, {"implement", "complete"}, {"test", "approved"}, {"review", "approved"},
+		{"security", "skipped", "--reason", "docs only"}, {"ship", "in-progress"}, {"ship", "complete"},
+	}...)...)
+	seedBuild(t, root, "N-0040", "api")
+	gateAll(t, root, append(throughTasks, []string{"implement", "in-progress"})...)
+	if code := runSwitch(root, []string{"S-0036"}); code != 0 {
+		t.Fatal("switch S-0036")
+	}
+	code, stderr := captureStderr(t, func() int { return runReopen(root, []string{"implement", "--reason", "defect"}) })
+	if code != 1 || !strings.Contains(stderr, "api is locked by N-0040 (implement in-progress)") {
+		t.Fatalf("reopen into a held repo = %d: %s", code, stderr)
+	}
+	if g := gates(t, root); g["ship"] != "complete" {
+		t.Fatalf("a refused reopen changed the gates: %v", g)
+	}
+	if code, stderr := captureStderr(t, func() int { return runReopen(root, []string{"implement", "--reason", "defect", "--force"}) }); code != 0 {
+		t.Fatalf("reopen --force = %d: %s", code, stderr)
+	}
+	if log := readLog(t, root); !strings.Contains(log, "S-0036: reopened implement (defect)\n") || !strings.Contains(log, "S-0036: override: daiku: api is locked by N-0040") {
+		t.Fatalf("the override isn't logged with the reopen:\n%s", log)
+	}
+}
+
+// A build that holds its repo reopens within implement through ship freely: it
+// already holds the repo (the usual loop back from review).
+func TestHolderReopensWithoutTheLock(t *testing.T) {
+	root := buildRoot(t)
+	seedBuild(t, root, "S-0036", "api")
+	gateAll(t, root, append(throughTasks, [][]string{{"implement", "in-progress"}, {"implement", "complete"}, {"test", "approved"}}...)...)
+	seedBuild(t, root, "N-0040", "api")
+	if code := runSwitch(root, []string{"S-0036"}); code != 0 {
+		t.Fatal("switch S-0036")
+	}
+	if code, stderr := captureStderr(t, func() int { return runReopen(root, []string{"implement", "--reason", "finding"}) }); code != 0 {
+		t.Fatalf("holder reopen = %d: %s", code, stderr)
+	}
+}
+
+// Code review finding 2: a forced gate that jumps past implement still runs the
+// lock, so the refusal and the log name it.
+func TestForcedJumpPastImplementRunsTheLock(t *testing.T) {
+	root := buildRoot(t)
+	seedBuild(t, root, "S-0036", "api")
+	gateAll(t, root, append(throughTasks, []string{"implement", "in-progress"})...)
+	seedBuild(t, root, "N-0040", "api")
+	gateAll(t, root, throughTasks...)
+	code, stderr := gateStderr(t, root, "test", "approved")
+	if code != 1 || !strings.Contains(stderr, "test requires implement") || !strings.Contains(stderr, "api is locked by S-0036") {
+		t.Fatalf("unforced jump = %d: %s", code, stderr)
+	}
+	gateAll(t, root, []string{"test", "approved", "--force"})
+	if log := readLog(t, root); !strings.Contains(log, "N-0040: override: daiku: api is locked by S-0036") {
+		t.Fatalf("the lock override isn't logged:\n%s", log)
+	}
+}
+
+// Reopening to tasks or earlier doesn't take the repo, so the lock doesn't apply.
+func TestReopenBeforeImplementSkipsTheLock(t *testing.T) {
+	root := buildRoot(t)
+	seedBuild(t, root, "S-0036", "api")
+	gateAll(t, root, append(throughTasks, [][]string{
+		{"implement", "in-progress"}, {"implement", "complete"}, {"test", "approved"}, {"review", "approved"},
+		{"security", "skipped", "--reason", "docs only"}, {"ship", "in-progress"}, {"ship", "complete"},
+	}...)...)
+	seedBuild(t, root, "N-0040", "api")
+	gateAll(t, root, append(throughTasks, []string{"implement", "in-progress"})...)
+	if code := runSwitch(root, []string{"S-0036"}); code != 0 {
+		t.Fatal("switch S-0036")
+	}
+	if code, stderr := captureStderr(t, func() int { return runReopen(root, []string{"tasks", "--reason", "rethink"}) }); code != 0 {
+		t.Fatalf("reopen to tasks = %d: %s", code, stderr)
+	}
+	if log := readLog(t, root); strings.Contains(log, "override") {
+		t.Fatalf("reopen to tasks logged an override:\n%s", log)
+	}
+}

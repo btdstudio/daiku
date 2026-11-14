@@ -654,9 +654,9 @@ func (s Store) Advance(root, phase, status, reason string, notes ...string) (Cha
 	return c, s.Record(root, lines, s.changePaths(root, c, l)...)
 }
 
-// Reopen moves the active change back to a phase, runs Refresh, logs it and
-// commits, including the change's folders, as Advance does.
-func (s Store) Reopen(root, phase, reason string) (Change, error) {
+// Reopen moves the active change back to a phase, runs Refresh, logs it along
+// with any notes and commits, including the change's folders, as Advance does.
+func (s Store) Reopen(root, phase, reason string, notes ...string) (Change, error) {
 	c, l, err := s.active(root)
 	if err != nil {
 		return Change{}, err
@@ -668,7 +668,11 @@ func (s Store) Reopen(root, phase, reason string) (Change, error) {
 		return Change{}, err
 	}
 	s.refresh(root, c)
-	return c, s.Record(root, []string{c.Name + ": reopened " + phase + " (" + reason + ")"}, s.changePaths(root, c, l)...)
+	lines := []string{c.Name + ": reopened " + phase + " (" + reason + ")"}
+	for _, note := range notes {
+		lines = append(lines, c.Name+": "+note)
+	}
+	return c, s.Record(root, lines, s.changePaths(root, c, l)...)
 }
 
 // changePaths lists a change's folders, relative to root: its own folder, and

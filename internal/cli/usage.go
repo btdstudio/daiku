@@ -40,7 +40,7 @@ var commands = []command{
 	{path: []string{"change", "new"}, synopsis: "daiku change new <title> [--repo <name|path>]... [--rev <r>] [--body <b>]", summary: "create a change + intake + switch"},
 	{path: []string{"change", "close"}, synopsis: "daiku change close <change> --reason <r>", summary: "close a change"},
 	{path: []string{"gate"}, synopsis: "daiku gate <phase> <status> [--reason <r>] [--force]", summary: "advance the active change's gate"},
-	{path: []string{"reopen"}, synopsis: "daiku reopen <phase> --reason <r>", summary: "move back to a phase, clearing later approvals"},
+	{path: []string{"reopen"}, synopsis: "daiku reopen <phase> --reason <r> [--force]", summary: "move back to a phase, clearing later approvals"},
 	{path: []string{"tickets", "new"}, synopsis: "daiku tickets new <type> <title> [--parent <id>] [--repo <name>] [--depends <id,id>] [--requirements <id,id>] [--inbox]", summary: "create a ticket in the active plan change, or with --inbox (or no open plan change) an N- task in build/tickets/"},
 	{path: []string{"tickets", "pull"}, synopsis: "daiku tickets pull <file>", summary: "record a ticket fetched from a PM tool as X-<pm-id> in build/tickets/"},
 	{path: []string{"tickets", "check"}, synopsis: "daiku tickets check", summary: "validate every ticket"},

@@ -35,7 +35,7 @@ used yet has no sections here.
 | `daiku switch [--all] [<change>]` | list changes (`--all` includes closed ones), or switch the active change |
 | `daiku change close <change> --reason <r>` | close a change |
 | `daiku gate <phase> <status> [--reason <r>] [--force]` | advance the active change's gate (earlier phases must be approved or skipped); `skipped` needs a reason |
-| `daiku reopen <phase> --reason <r>` | move back to a phase and clear later approvals |
+| `daiku reopen <phase> --reason <r> [--force]` | move back to a phase and clear later approvals; for a build, `--force` overrides the repo lock |
 | `daiku idea new <title>` | create an idea in `ideas/`, from the summary template |
 | `daiku idea list` | list ideas with their status, and the reason for a parked or dropped one |
 | `daiku idea show <id>` | print an idea's summary and status |

@@ -67,7 +67,7 @@ daiku build new N-0001         # creates the build room and a build change
 | `daiku change new <title> [--repo <name\|path>]... [--rev <r>] [--body <b>]` | create a plan change + intake + switch; creates `plan/` the first time |
 | `daiku change close <change> --reason <r>` | close a change |
 | `daiku gate <phase> <status> [--reason <r>] [--force]` | advance the active change's gate (earlier phases must be approved or skipped); `skipped` needs a reason |
-| `daiku reopen <phase> --reason <r>` | move back to a phase and clear later approvals |
+| `daiku reopen <phase> --reason <r> [--force]` | move back to a phase and clear later approvals; for a build, `--force` overrides the repo lock |
 | `daiku tickets new <type> <title> [--parent <id>] [--repo <name>] [--depends <id,id>] [--requirements <id,id>] [--inbox]` | create a ticket in the active change, citing the spec's requirements; with `--inbox`, or no open plan change, an `N-` task in `build/tickets/` |
 | `daiku tickets pull <file>` | record a ticket an agent fetched from a PM tool (through `sync.md`) as `build/tickets/X-<pm-id>.md`; pulling the same item again replaces it |
 | `daiku tickets check` | validate every ticket: schema, parents, cycles, repos, readiness, drift. Errors (`✗`) exit 1; warnings (`!`) don't |
