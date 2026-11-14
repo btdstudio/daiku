@@ -24,11 +24,12 @@ import (
 // copies store at call time, so every transition carries it.
 func init() {
 	store.Refresh = func(root string, c core.Change) ([]string, error) {
-		// Only plan changes have an overview; a build's comes in a later version.
-		if c.Loop != PlanLoop {
+		// A plan refreshes its own overview; a build, its plan's (S-0042 D4).
+		plan := overviewTarget(root, c)
+		if plan == "" {
 			return nil, nil
 		}
-		return RefreshOverview(root, c.Name)
+		return RefreshOverview(root, plan)
 	}
 }
 
@@ -92,10 +93,15 @@ func Overview(root, change string) (merged, existing []byte, rel string, err err
 	if err != nil {
 		return nil, nil, rel, err
 	}
+	builds, err := BuildRows(root, change)
+	if err != nil {
+		return nil, nil, rel, err
+	}
 	region := overview.Render(overview.Input{
 		Model: m, Phases: phases, Gates: gates, Reasons: reasons,
 		Repos: reg.Names(), ADRDir: loaded.Effective.AdrDir,
 		NarrativeEmpty: overview.NarrativeEmpty(narrative),
+		Builds:         builds,
 	})
 	merged, err = overview.Merge(base, region)
 	if err != nil {

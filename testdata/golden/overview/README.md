@@ -92,7 +92,12 @@ flowchart LR
 
 ## Builds
 
-_None yet._
+| Ticket | Repo | Build |
+|---|---|---|
+| [S-0004](tickets/S-0004.md) | `app` | not started |
+| [S-0005](tickets/S-0005.md) | `web` | not started |
+| [S-0006](tickets/S-0006.md) | `app` | not started |
+| [T-0007](tickets/T-0007.md) | `app` | not started |
 
 ## Decisions
 
