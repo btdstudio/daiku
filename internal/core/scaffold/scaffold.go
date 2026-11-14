@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/btdstudio/daiku/internal/core/settings"
@@ -25,8 +26,12 @@ import (
 // Engine scaffolds one tool's workspace.
 type Engine struct {
 	Tool string
-	// FS holds the tree to copy out, rooted at the workspace root.
+	// FS holds the root tree to copy out, rooted at the workspace root.
 	FS fs.FS
+	// Rooms are optional sub-trees by name. A room's files live under <room>/ in
+	// the workspace and share the root's manifest. Init writes only the root;
+	// EnsureRoom adds a room, and a room exists once its folder does. Optional.
+	Rooms map[string]fs.FS
 	// Marker is a folder that identifies an existing workspace, so `update` can
 	// rebuild a lost manifest without writing into an unrelated directory.
 	Marker string
@@ -102,8 +107,64 @@ type UpdateReport struct {
 	Unchanged []string
 }
 
-func (e Engine) walk(fn func(rel string, data []byte) error) error {
-	return fs.WalkDir(e.FS, ".", func(p string, d fs.DirEntry, err error) error {
+// tree is one embedded tree and the folder its files go under in a workspace
+// ("" for the root).
+type tree struct {
+	fsys   fs.FS
+	prefix string
+}
+
+func (e Engine) root() tree { return tree{fsys: e.FS} }
+
+// roomNames lists the rooms in name order, so walks are deterministic.
+func (e Engine) roomNames() []string {
+	names := make([]string, 0, len(e.Rooms))
+	for name := range e.Rooms {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// roomExists reports whether a room's folder is in the workspace.
+func roomExists(dir, room string) bool {
+	info, err := os.Stat(filepath.Join(dir, filepath.FromSlash(room)))
+	return err == nil && info.IsDir()
+}
+
+// trees are the root and every room whose folder exists in dir.
+func (e Engine) trees(dir string) []tree {
+	out := []tree{e.root()}
+	for _, room := range e.roomNames() {
+		if roomExists(dir, room) {
+			out = append(out, tree{fsys: e.Rooms[room], prefix: room})
+		}
+	}
+	return out
+}
+
+// allTrees are the root and every room, whether or not it's in a workspace.
+func (e Engine) allTrees() []tree {
+	out := []tree{e.root()}
+	for _, room := range e.roomNames() {
+		out = append(out, tree{fsys: e.Rooms[room], prefix: room})
+	}
+	return out
+}
+
+// walk calls fn for every file of the given trees, with rel the file's
+// slash-separated path in the workspace.
+func (e Engine) walk(trees []tree, fn func(rel string, data []byte) error) error {
+	for _, t := range trees {
+		if err := e.walkTree(t, fn); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (e Engine) walkTree(t tree, fn func(rel string, data []byte) error) error {
+	return fs.WalkDir(t.fsys, ".", func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -119,29 +180,35 @@ func (e Engine) walk(fn func(rel string, data []byte) error) error {
 		if e.local() && omitWhenLocal(p) {
 			return nil
 		}
-		data, err := fs.ReadFile(e.FS, p)
+		data, err := fs.ReadFile(t.fsys, p)
 		if err != nil {
 			return err
 		}
-		return fn(p, data)
+		return fn(path.Join(t.prefix, p), data)
 	})
 }
 
 // keptDirs creates, under a local workspace, the folders that the tree's
 // .gitkeep files exist to keep, since walk leaves those files out.
-func (e Engine) keptDirs(dir string) error {
+func (e Engine) keptDirs(dir string, trees []tree) error {
 	if !e.local() {
 		return nil
 	}
-	return fs.WalkDir(e.FS, ".", func(p string, d fs.DirEntry, err error) error {
+	for _, t := range trees {
+		err := fs.WalkDir(t.fsys, ".", func(p string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if d.IsDir() || path.Base(p) != ".gitkeep" {
+				return nil
+			}
+			return os.MkdirAll(filepath.Join(dir, filepath.FromSlash(path.Join(t.prefix, path.Dir(p)))), 0o755)
+		})
 		if err != nil {
 			return err
 		}
-		if d.IsDir() || path.Base(p) != ".gitkeep" {
-			return nil
-		}
-		return os.MkdirAll(filepath.Join(dir, filepath.FromSlash(path.Dir(p))), 0o755)
-	})
+	}
+	return nil
 }
 
 func hashBytes(data []byte) string {
@@ -149,10 +216,11 @@ func hashBytes(data []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// BuildManifest walks the tree and hashes every file.
-func (e Engine) BuildManifest() (Manifest, error) {
+// BuildManifest hashes every file of the root tree and of each room whose
+// folder exists in dir.
+func (e Engine) BuildManifest(dir string) (Manifest, error) {
 	m := Manifest{Version: version.String(), Files: map[string]string{}}
-	err := e.walk(func(rel string, data []byte) error {
+	err := e.walk(e.trees(dir), func(rel string, data []byte) error {
 		m.Files[rel] = hashBytes(data)
 		return nil
 	})
@@ -215,7 +283,7 @@ func (e Engine) Scaffold(dir string, opts Options) (Report, error) {
 			rep.GitInit = true
 		}
 	}
-	err := e.walk(func(rel string, data []byte) error {
+	err := e.walk([]tree{e.root()}, func(rel string, data []byte) error {
 		dest := filepath.Join(dir, filepath.FromSlash(rel))
 		if _, err := os.Stat(dest); err == nil && !opts.Force {
 			return nil // skip existing user-owned file
@@ -229,7 +297,7 @@ func (e Engine) Scaffold(dir string, opts Options) (Report, error) {
 	if err != nil {
 		return rep, err
 	}
-	if err := e.keptDirs(dir); err != nil {
+	if err := e.keptDirs(dir, []tree{e.root()}); err != nil {
 		return rep, err
 	}
 	seeded, err := e.writeSeeds(dir)
@@ -246,7 +314,7 @@ func (e Engine) Scaffold(dir string, opts Options) (Report, error) {
 			rep.Written = append(rep.Written, created)
 		}
 	}
-	m, err := e.BuildManifest()
+	m, err := e.BuildManifest(dir)
 	if err != nil {
 		return rep, err
 	}
@@ -350,11 +418,11 @@ func (e Engine) Update(dir string) (UpdateReport, error) {
 	if err != nil {
 		return rep, fmt.Errorf("%s update: %v", e.Tool, err)
 	}
-	next, err := e.BuildManifest()
+	next, err := e.BuildManifest(dir)
 	if err != nil {
 		return rep, err
 	}
-	if err := e.keptDirs(dir); err != nil {
+	if err := e.keptDirs(dir, e.trees(dir)); err != nil {
 		return rep, err
 	}
 	for rel, nextHash := range next.Files {
@@ -387,19 +455,29 @@ func (e Engine) Update(dir string) (UpdateReport, error) {
 	return rep, nil
 }
 
+// writeManaged writes rel from the tree it belongs to: the room it's under, if
+// any, else the root.
 func (e Engine) writeManaged(dest, rel string) error {
-	data, err := fs.ReadFile(e.FS, rel)
+	fsys, p := e.FS, rel
+	for room, rfs := range e.Rooms {
+		if strings.HasPrefix(rel, room+"/") {
+			fsys, p = rfs, strings.TrimPrefix(rel, room+"/")
+			break
+		}
+	}
+	data, err := fs.ReadFile(fsys, p)
 	if err != nil {
 		return err
 	}
 	return writeFile(dest, data)
 }
 
-// Check validates the tree and returns a list of problems (empty when clean). It
-// guards against template syntax leaking into the literal output.
+// Check validates the root tree and every room's, and returns a list of problems
+// (empty when clean). It guards against template syntax leaking into the literal
+// output.
 func (e Engine) Check() []string {
 	var problems []string
-	if err := e.walk(func(rel string, data []byte) error {
+	if err := e.walk(e.allTrees(), func(rel string, data []byte) error {
 		if strings.Contains(string(data), "{{") {
 			problems = append(problems, rel+": contains template syntax")
 		}
