@@ -17,6 +17,8 @@ func TestPulledID(t *testing.T) {
 		"a--b":       "X-a-b",
 		"-a-":        "X-a",
 		"../x":       "X-x",
+		"x-12":       "X-12",
+		"x-PROJ-1":   "X-PROJ-1",
 	}
 	for in, want := range cases {
 		got, err := PulledID(in)

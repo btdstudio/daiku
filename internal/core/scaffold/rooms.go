@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/btdstudio/daiku/internal/core/version"
 )
@@ -33,11 +32,14 @@ func (e Engine) EnsureRoom(dir, room string) (RoomReport, error) {
 	if !ok {
 		return rep, fmt.Errorf("%s: unknown room %q", e.Tool, room)
 	}
-	if room == "" || strings.ContainsAny(room, `/\`) || !filepath.IsLocal(room) {
+	if !validRoom(room) {
 		return rep, fmt.Errorf("%s: invalid room name %q", e.Tool, room)
 	}
 	if err := e.checkVCS(); err != nil {
 		return rep, err
+	}
+	if roomIsSymlink(dir, room) {
+		return rep, fmt.Errorf("%s: %s/ is a symlink, which could lead outside the workspace — replace it with a folder", e.Tool, room)
 	}
 	if roomExists(dir, room) {
 		return rep, nil
