@@ -18,6 +18,7 @@ func writeRecords(t *testing.T, s Store, root string, names ...string) {
 	changes := map[string]*Change{}
 	for _, name := range names {
 		c := NewChange(name)
+		c.Loop = planLoop
 		c.Phase, c.Status = "ship", Closed
 		changes[name] = &c
 	}
@@ -33,7 +34,7 @@ func writeRecords(t *testing.T, s Store, root string, names ...string) {
 func makeFolders(t *testing.T, s Store, root string, names ...string) {
 	t.Helper()
 	for _, name := range names {
-		if err := os.MkdirAll(s.ChangeDir(root, name), 0o755); err != nil {
+		if err := os.MkdirAll(changeDir(root, name), 0o755); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -61,7 +62,7 @@ func TestNextIDCountsFoldersAndRecords(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			root, s := t.TempDir(), store()
 			if !tc.noSpecs {
-				if err := os.MkdirAll(s.SpecsPath(root), 0o755); err != nil {
+				if err := os.MkdirAll(specsPath(root), 0o755); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -69,7 +70,7 @@ func TestNextIDCountsFoldersAndRecords(t *testing.T) {
 				writeRecords(t, s, root, tc.records...)
 			}
 			makeFolders(t, s, root, tc.folders...)
-			got, err := s.NextID(root)
+			got, err := s.NextID(root, planLoop)
 			if err != nil || got != tc.want {
 				t.Fatalf("NextID = %d, %v; want %d", got, err, tc.want)
 			}
@@ -100,7 +101,7 @@ func TestNextIDRefusesBadState(t *testing.T) {
 			root, s := t.TempDir(), store()
 			makeFolders(t, s, root, "1-a")
 			setup(t, s, root)
-			if id, err := s.NextID(root); err == nil || id != 0 {
+			if id, err := s.NextID(root, planLoop); err == nil || id != 0 {
 				t.Fatalf("NextID = %d, %v; want an error", id, err)
 			}
 		})
@@ -108,7 +109,7 @@ func TestNextIDRefusesBadState(t *testing.T) {
 	t.Run("preflight", func(t *testing.T) {
 		root, s := t.TempDir(), store()
 		s.Preflight = func(string) error { return os.ErrPermission }
-		if id, err := s.NextID(root); !errors.Is(err, os.ErrPermission) || id != 0 {
+		if id, err := s.NextID(root, planLoop); !errors.Is(err, os.ErrPermission) || id != 0 {
 			t.Fatalf("NextID = %d, %v; want the preflight error", id, err)
 		}
 	})
@@ -116,17 +117,17 @@ func TestNextIDRefusesBadState(t *testing.T) {
 
 func TestNextIDRefusesUnreadableSpecs(t *testing.T) {
 	root, s := t.TempDir(), store()
-	if err := os.WriteFile(s.SpecsPath(root), nil, 0o644); err != nil {
+	if err := os.WriteFile(specsPath(root), nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if id, err := s.NextID(root); err == nil || !strings.Contains(err.Error(), "cannot read") || id != 0 {
+	if id, err := s.NextID(root, planLoop); err == nil || !strings.Contains(err.Error(), "cannot read") || id != 0 {
 		t.Fatalf("NextID = %d, %v; want a cannot read error", id, err)
 	}
 }
 
 func TestSeedRefusesRecordedName(t *testing.T) {
 	root, s := t.TempDir(), store()
-	if _, err := s.Seed(root, "2-beta", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "2-beta", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.Advance(root, "intake", Approved, ""); err != nil {
@@ -135,13 +136,13 @@ func TestSeedRefusesRecordedName(t *testing.T) {
 	if _, err := s.CloseChange(root, "2-beta", "test"); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.RemoveAll(s.ChangeDir(root, "2-beta")); err != nil {
+	if err := os.RemoveAll(changeDir(root, "2-beta")); err != nil {
 		t.Fatal(err)
 	}
 	state, _ := os.ReadFile(s.StatePath(root))
 	log, _ := os.ReadFile(s.LogPath(root))
 
-	_, err := s.Seed(root, "2-beta", SeedOptions{})
+	_, err := s.Seed(root, "2-beta", planLoop, SeedOptions{})
 	if err == nil || !strings.Contains(err.Error(), "already exists") {
 		t.Fatalf("err = %v", err)
 	}
@@ -151,7 +152,7 @@ func TestSeedRefusesRecordedName(t *testing.T) {
 	if got, _ := os.ReadFile(s.LogPath(root)); !bytes.Equal(got, log) {
 		t.Errorf("LOG.md changed:\n%s", got)
 	}
-	if _, err := os.Stat(s.ChangeDir(root, "2-beta")); !os.IsNotExist(err) {
+	if _, err := os.Stat(changeDir(root, "2-beta")); !os.IsNotExist(err) {
 		t.Errorf("refused seed created the folder: %v", err)
 	}
 	changes, err := s.ReadChanges(root)
@@ -168,10 +169,10 @@ func TestSeedWritesNothingOnBadState(t *testing.T) {
 	if err := os.WriteFile(s.StatePath(root), []byte(`{"changes":{`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err == nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err == nil {
 		t.Fatal("seed must fail on corrupt state")
 	}
-	if _, err := os.Stat(s.SpecsPath(root)); !os.IsNotExist(err) {
+	if _, err := os.Stat(specsPath(root)); !os.IsNotExist(err) {
 		t.Errorf("refused seed created the specs folder: %v", err)
 	}
 	if _, err := os.Stat(s.LogPath(root)); !os.IsNotExist(err) {
@@ -182,12 +183,12 @@ func TestSeedWritesNothingOnBadState(t *testing.T) {
 // seedNext seeds a change the way the tools do: NextID, then Seed.
 func seedNext(t *testing.T, s Store, root, title string) string {
 	t.Helper()
-	id, err := s.NextID(root)
+	id, err := s.NextID(root, planLoop)
 	if err != nil {
 		t.Fatal(err)
 	}
 	name := strconv.Itoa(id) + "-" + Slugify(title)
-	if _, err := s.Seed(root, name, SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, name, planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	return name
@@ -203,7 +204,7 @@ func TestIssueReproNoReuse(t *testing.T) {
 	if _, err := s.CloseChange(root, "2-beta", "test"); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.RemoveAll(s.ChangeDir(root, "2-beta")); err != nil {
+	if err := os.RemoveAll(changeDir(root, "2-beta")); err != nil {
 		t.Fatal(err)
 	}
 	if got := seedNext(t, s, root, "gamma"); got != "3-gamma" {
@@ -217,7 +218,7 @@ func TestIssueReproNoReuse(t *testing.T) {
 		if got := seedNext(t, s, root, title); got != want {
 			t.Fatalf("change %d = %q, want %q", i+1, got, want)
 		}
-		if _, err := os.Stat(filepath.Join(s.ChangeDir(root, want), ".gitkeep")); err != nil {
+		if _, err := os.Stat(filepath.Join(changeDir(root, want), ".gitkeep")); err != nil {
 			t.Fatal(err)
 		}
 	}

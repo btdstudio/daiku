@@ -221,7 +221,7 @@ func rawChange(t *testing.T, s Store, root, name string) map[string]any {
 
 func TestReasonsInStateJSON(t *testing.T) {
 	root, s := t.TempDir(), store()
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if _, ok := rawChange(t, s, root, "1-x")["reasons"]; ok {
@@ -254,12 +254,13 @@ func TestReasonsInStateJSON(t *testing.T) {
 		t.Fatal("reasons key kept after the skip was undone")
 	}
 
-	// A file from v0.9.0, with a skip but no reasons key, loads with no reasons
-	// and gains no key on the next save.
+	// A file from kiso v0.9.0, with a skip but no reasons key, loads with no
+	// reasons and gains no key on the next save. (daiku requires the loop.)
 	old := `{
   "schema": 1,
   "changes": {
     "1-x": {
+      "loop": "plan",
       "phase": "explore",
       "status": "skipped",
       "gates": {

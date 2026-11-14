@@ -34,9 +34,9 @@ func dirty(t *testing.T, root string) string {
 
 func TestRefreshCommitsWithTheTransition(t *testing.T) {
 	root, s := gitRepo(t)
-	s.ChangeDirs = []string{"research"}
+	s = withLoop(t, s, func(l *Loop) { l.ChangeDirs = []string{"research"} })
 	s.Refresh = writeReadme
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.MkdirAll(filepath.Join(root, "research", "1-x"), 0o755); err != nil {
@@ -94,7 +94,7 @@ func TestRefreshSeesSavedStateBeforeLog(t *testing.T) {
 		calls = append(calls, seen{c.Gates["intake"], changes[c.Name].Gates["intake"], string(log)})
 		return nil
 	}
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.Advance(root, "intake", Approved, ""); err != nil {
@@ -134,7 +134,7 @@ func TestRefreshErrorIsAWarning(t *testing.T) {
 	warnings := &bytes.Buffer{}
 	s.Warn = warnings
 	s.Refresh = func(string, Change) error { return errors.New("x.md: bad markers") }
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -182,7 +182,7 @@ func TestRefreshUnderVCSNone(t *testing.T) {
 	s.VCS = "none"
 	calls := 0
 	s.Refresh = func(string, Change) error { calls++; return nil }
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if calls != 0 {
@@ -211,7 +211,7 @@ func TestRefreshNotCalledWhenRefused(t *testing.T) {
 	if _, err := s.Advance(root, "intake", Approved, ""); err == nil {
 		t.Fatal("Advance with no active change succeeded")
 	}
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	refused := []struct {
@@ -242,8 +242,8 @@ func TestRefreshNotCalledWhenRefused(t *testing.T) {
 
 func TestReopenCommitsTheChangesFolders(t *testing.T) {
 	root, s := gitRepo(t)
-	s.ChangeDirs = []string{"research", "missing"}
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	s = withLoop(t, s, func(l *Loop) { l.ChangeDirs = []string{"research", "missing"} })
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.Advance(root, "intake", Approved, ""); err != nil {
@@ -295,7 +295,7 @@ func TestCraftedActivePointerIsRefused(t *testing.T) {
 	s := store()
 	calls := 0
 	s.Refresh = func(string, Change) error { calls++; return nil }
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	before, err := os.ReadFile(s.StatePath(root))
@@ -315,7 +315,7 @@ func TestCraftedActivePointerIsRefused(t *testing.T) {
 			t.Fatal(err)
 		}
 		// The folder exists, so only the name and symlink checks can refuse it.
-		if _, err := os.Stat(s.ChangeDir(root, name)); err != nil {
+		if _, err := os.Stat(changeDir(root, name)); err != nil {
 			t.Fatalf("%s: test setup: %v", name, err)
 		}
 		if _, err := s.Advance(root, "intake", Approved, ""); err == nil || !strings.Contains(err.Error(), "isn't a valid change folder") {
