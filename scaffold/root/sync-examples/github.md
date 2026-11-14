@@ -1,6 +1,6 @@
 # Sync instructions: GitHub Issues
 
-A starter for `plan/06_publish/sync.md`. Copy it there, then fill in the settings.
+A starter for the workspace's `sync.md`. Copy it there, then fill in the settings.
 
 ## Settings
 

@@ -129,10 +129,7 @@ func TestScaffoldSeedsStateAtRootAndIgnoresOnlyActive(t *testing.T) {
 
 func TestSyncFileEditsSurviveUpdate(t *testing.T) {
 	dir := scaffoldWorkspace(t)
-	if _, err := EnsurePlan(dir); err != nil {
-		t.Fatal(err)
-	}
-	sync := filepath.Join(dir, "plan", "06_publish", "sync.md")
+	sync := filepath.Join(dir, "sync.md")
 	if err := os.WriteFile(sync, []byte("my instructions"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +139,7 @@ func TestSyncFileEditsSurviveUpdate(t *testing.T) {
 	if got, _ := os.ReadFile(sync); string(got) != "my instructions" {
 		t.Fatalf("sync.md clobbered: %q", got)
 	}
-	if _, err := os.Stat(filepath.Join(dir, "plan", "06_publish", "sync-examples", "github.md")); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, "sync-examples", "github.md")); err != nil {
 		t.Fatal(err)
 	}
 }

@@ -14,8 +14,9 @@ const (
 	IntakeDir = "plan/00_intake"
 	// ADRDir is the default ADR folder (settings adrDir).
 	ADRDir = "plan/04_architecture/adr"
-	// SyncFile is the default sync instructions (settings syncFile).
-	SyncFile = "plan/06_publish/sync.md"
+	// SyncFile is the default sync instructions (settings syncFile), at the root so
+	// the build room's fetch and the plan room's publish share one file.
+	SyncFile = "sync.md"
 	// ResearchDir and ExploreDir hold a per-change folder each, committed with
 	// the change's gates.
 	ResearchDir = "plan/01_research"

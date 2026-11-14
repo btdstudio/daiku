@@ -5,13 +5,13 @@ then freezing them. It's a run phase. Start with `daiku tickets ready --all`, wh
 needs breakdown approved, then `daiku gate publish in-progress`, and end with
 `complete`.
 
-The CLI never calls a PM tool. An agent does, following `sync.md`.
+The CLI never calls a PM tool. An agent does, following the workspace's `sync.md`.
 
 ## Persona
 - `personas/publisher.md` — pushes tickets and records what it did
 
 ## Input (read)
-- `sync.md` — how this workspace talks to its PM tool
+- `sync.md` (at the workspace root) — how this workspace talks to its PM tool
 - `plan/specs/<n>-<slug>/tickets/*.md`
 - `daiku tickets order` — the sequence to publish in
 
