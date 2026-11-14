@@ -2,6 +2,7 @@
 
 This file applies to agents working on the daiku repo itself. daiku replaces
 zumen (planning), tomo (building) and their shared core, kiso, with one tool.
+The plan loop is zumen `a3f8867`; the build loop is tomo `af54ad2`.
 
 ## Non-negotiable rules
 
@@ -23,18 +24,24 @@ zumen (planning), tomo (building) and their shared core, kiso, with one tool.
 ```
 embed.go              package daiku: embeds scaffold/ (RootFS, PlanFS, AgentsFS)
 scaffold/
-  root/               what `daiku init` writes: CLAUDE.md, README.md, ideas/, references/
+  root/               what `daiku init` writes: CLAUDE.md, README.md, sync.md, sync-examples/, ideas/, references/
   plan/               the plan room, written under plan/ on first `change new`
+  build/              the build room, written under build/ on first `build new`
   agents/             AGENTS.md fragments: root.md plus one per room
 cmd/daiku/            the daiku binary: version, init, update, check, then internal/cli
 internal/
   cli/          every command; verbs act on the active change's loop
   state/        the store: plan and build loops, zumen's wrappers
   settings/     daiku's settings (defaults under plan/)
-  icm/          scaffold engine config, seeds, AGENTS.md writing, EnsurePlan
+  icm/          scaffold engine config, seeds, AGENTS.md writing, EnsurePlan, EnsureBuild
   agents/       AGENTS.md assembly from fragments, and the section merge
   plan/         the plan loop's artifact checks
     layout/ adr/ source/ overview/ idea/ reference/
+  build/        the build loop, ported from tomo
+    layout/     the build room's paths
+    inbox/      build/tickets/: native N- tickets and pulled X- ones
+    lock/       the repo lock, worked out from STATE.json
+    ship/       branch name, PR body, running git and gh in the build's repo
   core/
     state/        phase machines, one STATE.json store with a loop per change
     ticket/       ticket schema v1, planned/native/pulled (X-) ids
@@ -49,8 +56,12 @@ internal/
 testdata/             overview fixture and golden files
 ```
 
-Plan-only paths come from `internal/plan/layout`; no package hard-codes
-`plan/specs` or a room folder. Every workspace write goes through
+Plan-only paths come from `internal/plan/layout` and build-only ones from
+`internal/build/layout`; no package hard-codes `plan/specs`, `build/tickets` or a
+room folder. A room is there once its folder is, except the build room, which
+needs its `01_design/` (the inbox can exist first): see `scaffold.Engine.RoomMarkers`.
+`commit` and `pr` run git and gh only through `ship.Runner` and `ship.Output`, with
+no shell; tests swap them to record calls. Every workspace write goes through
 `workspace.WriteFile`, `OpenFile` or `MkdirAll` (or, for scaffold files,
 `workspace.ThroughSymlink`), so a committed symlink can't send a file outside the
 workspace. Path settings must be local (`filepath.IsLocal`).
