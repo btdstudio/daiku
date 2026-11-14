@@ -333,26 +333,6 @@ func (s Store) resolve(root, name string, changes map[string]*Change) Change {
 	return c
 }
 
-// throughSymlink returns the first existing path component of rel, under root,
-// that is a symlink, or "" if there's none. Components that don't exist yet are
-// fine: MkdirAll will create them as real folders. Checking every component, not
-// only the last, keeps a committed symlink such as build/<repo> or plan/specs
-// from sending a change's folder outside the workspace.
-func throughSymlink(root, rel string) string {
-	cur := root
-	for _, part := range strings.Split(path.Clean(rel), "/") {
-		cur = filepath.Join(cur, part)
-		info, err := os.Lstat(cur)
-		if err != nil {
-			return ""
-		}
-		if info.Mode()&os.ModeSymlink != 0 {
-			return cur
-		}
-	}
-	return ""
-}
-
 // realDir reports whether p is a directory and not a symlink.
 func realDir(p string) bool {
 	info, err := os.Lstat(p)
@@ -468,7 +448,7 @@ func (s Store) checkFolder(root string, c Change) error {
 	if err != nil {
 		return unknown
 	}
-	if throughSymlink(root, rel) != "" || !realDir(filepath.Join(root, filepath.FromSlash(rel))) {
+	if workspace.ThroughSymlink(root, rel) != "" || !realDir(filepath.Join(root, filepath.FromSlash(rel))) {
 		return unknown
 	}
 	return nil
@@ -556,7 +536,7 @@ func (s Store) Seed(root, name, loop string, opts SeedOptions) (Change, error) {
 	if err := m.SetGate(&c, first, Draft, ""); err != nil {
 		return Change{}, err
 	}
-	if link := throughSymlink(root, rel); link != "" {
+	if link := workspace.ThroughSymlink(root, rel); link != "" {
 		return Change{}, fmt.Errorf("%s: won't create %s: %s is a symlink, which could lead outside the workspace", s.tool(), rel, link)
 	}
 	dir := filepath.Join(root, filepath.FromSlash(rel))

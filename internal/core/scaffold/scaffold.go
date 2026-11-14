@@ -317,7 +317,7 @@ func (e Engine) Scaffold(dir string, opts Options) (Report, error) {
 		if _, err := os.Stat(dest); err == nil && !opts.Force {
 			return nil // skip existing user-owned file
 		}
-		if err := writeFile(dest, data); err != nil {
+		if err := e.write(dir, rel, data); err != nil {
 			return err
 		}
 		rep.Written = append(rep.Written, rel)
@@ -395,7 +395,7 @@ func (e Engine) recordLocal(dir string) (string, error) {
 	if err := enc.Encode(m); err != nil {
 		return "", err
 	}
-	if err := writeFile(file, []byte(out.String())); err != nil {
+	if err := e.write(dir, rel, []byte(out.String())); err != nil {
 		return "", err
 	}
 	if created {
@@ -418,7 +418,7 @@ func (e Engine) writeSeeds(dir string) ([]string, error) {
 		if _, err := os.Stat(dest); err == nil {
 			continue
 		}
-		if err := writeFile(dest, s.Data); err != nil {
+		if err := e.write(dir, s.Rel, s.Data); err != nil {
 			return nil, err
 		}
 		written = append(written, s.Rel)
@@ -461,7 +461,7 @@ func (e Engine) Update(dir string) (UpdateReport, error) {
 		dest := filepath.Join(dir, filepath.FromSlash(rel))
 		curData, err := os.ReadFile(dest)
 		if err != nil {
-			if err := e.writeManaged(dest, rel); err != nil {
+			if err := e.writeManaged(dir, rel); err != nil {
 				return rep, err
 			}
 			rep.Updated = append(rep.Updated, rel)
@@ -472,7 +472,7 @@ func (e Engine) Update(dir string) (UpdateReport, error) {
 			continue
 		}
 		if prevHash, recorded := cur.Files[rel]; recorded && hashBytes(curData) == prevHash {
-			if err := e.writeManaged(dest, rel); err != nil {
+			if err := e.writeManaged(dir, rel); err != nil {
 				return rep, err
 			}
 			rep.Updated = append(rep.Updated, rel)
@@ -489,7 +489,7 @@ func (e Engine) Update(dir string) (UpdateReport, error) {
 
 // writeManaged writes rel from the tree it belongs to: the room it's under, if
 // any, else the root.
-func (e Engine) writeManaged(dest, rel string) error {
+func (e Engine) writeManaged(dir, rel string) error {
 	fsys, p := e.FS, rel
 	// Room names have no separators, so at most one is a prefix of rel.
 	for _, room := range e.roomNames() {
@@ -502,7 +502,7 @@ func (e Engine) writeManaged(dest, rel string) error {
 	if err != nil {
 		return err
 	}
-	return writeFile(dest, data)
+	return e.write(dir, rel, data)
 }
 
 // Check validates the root tree and every room's, and returns a list of problems
@@ -522,6 +522,16 @@ func (e Engine) Check() []string {
 		problems = append(problems, err.Error())
 	}
 	return problems
+}
+
+// write writes data to rel, a slash-separated path under dir, creating folders
+// as needed. It refuses when any part of rel is a symlink, so a committed
+// symlink can't send a managed file outside the workspace.
+func (e Engine) write(dir, rel string, data []byte) error {
+	if link := workspace.ThroughSymlink(dir, rel); link != "" {
+		return fmt.Errorf("%s: won't write %s: %s is a symlink, which could lead outside the workspace", e.Tool, rel, link)
+	}
+	return writeFile(filepath.Join(dir, filepath.FromSlash(rel)), data)
 }
 
 func writeFile(dest string, data []byte) error {

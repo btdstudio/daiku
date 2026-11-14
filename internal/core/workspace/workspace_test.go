@@ -3,6 +3,7 @@ package workspace
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -69,4 +70,29 @@ func TestCheckLegacy(t *testing.T) {
 			t.Fatalf("CheckLegacy = %v, want nil", err)
 		}
 	})
+}
+
+func TestThroughSymlink(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks need privileges on Windows")
+	}
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "a", "b"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(root, "a"), filepath.Join(root, "l")); err != nil {
+		t.Fatal(err)
+	}
+	cases := map[string]string{
+		"a/b":       "",
+		"a/b/c/d":   "", // missing components are fine
+		"missing/x": "",
+		"l/b":       filepath.Join(root, "l"),
+		"l":         filepath.Join(root, "l"),
+	}
+	for rel, want := range cases {
+		if got := ThroughSymlink(root, rel); got != want {
+			t.Errorf("ThroughSymlink(%q) = %q, want %q", rel, got, want)
+		}
+	}
 }
