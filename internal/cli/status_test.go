@@ -178,3 +178,101 @@ func TestStatusInitiativeAndCode(t *testing.T) {
 		}
 	}
 }
+
+// The initiative view (S-0042 R5, R6, D7).
+
+// initiativeRoot is plan 7-gateway with tickets S-0036 and S-0037 on api, and
+// build S-0036 at implement.
+func initiativeRoot(t *testing.T) string {
+	t.Helper()
+	root := buildRoot(t)
+	if _, err := state.SeedChange(root, "7-gateway", false, nil); err != nil {
+		t.Fatal(err)
+	}
+	setPhase(t, root, "7-gateway", "breakdown", "approved")
+	for _, id := range []string{"S-0036", "S-0037"} {
+		tk, err := ticket.New(ticket.Ticket{ID: id, Type: ticket.Story, Title: "Gateway " + id, Repo: "api", Change: "7-gateway", Body: "\n"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		p := filepath.Join(root, "plan", "specs", "7-gateway", "tickets", id+".md")
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, tk.Bytes(), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := state.SeedBuild(root, "S-0036", "api", "plan/specs/7-gateway/tickets/S-0036.md"); err != nil {
+		t.Fatal(err)
+	}
+	setPhase(t, root, "S-0036", "implement", "in-progress")
+	return root
+}
+
+// AC2: each ticket with its repo and build, or not started.
+func TestStatusOfAPlan(t *testing.T) {
+	root := initiativeRoot(t)
+	code, out := captureStdout(t, func() int { return runStatus(root, []string{"7-gateway"}) })
+	want := "7-gateway  breakdown approved\n" +
+		"  S-0036  api  implement in-progress\n" +
+		"  S-0037  api  not started\n"
+	if code != 0 || out != want {
+		t.Fatalf("status 7-gateway = %d:\n%s\nwant:\n%s", code, out, want)
+	}
+}
+
+// AC6: a plan that isn't here, a build, and an unknown name are refused.
+func TestStatusOfANonPlanIsRefused(t *testing.T) {
+	root := buildRoot(t)
+	boardBuild(t, root, "S-0036", "api", "7-gateway")
+	for name, want := range map[string]string{
+		"7-gateway": "daiku: 7-gateway isn't a plan change in this workspace\n",
+		"S-0036":    "daiku: S-0036 isn't a plan change in this workspace (it's a build — bare daiku status lists it)\n",
+		"../etc":    "daiku: ../etc isn't a plan change in this workspace\n",
+	} {
+		code, stderr := captureStderr(t, func() int { return runStatus(root, []string{name}) })
+		if code != 1 || stderr != want {
+			t.Errorf("status %s = %d: %q", name, code, stderr)
+		}
+	}
+	if code, stderr := captureStderr(t, func() int { return runStatus(root, []string{"a", "b"}) }); code != 1 || !strings.Contains(stderr, "daiku status [<plan-change>]") {
+		t.Errorf("two args = %d: %q", code, stderr)
+	}
+}
+
+// treeDigest is every path and its contents under root.
+func treeDigest(t *testing.T, root string) string {
+	t.Helper()
+	var b strings.Builder
+	err := filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		b.WriteString(p + "\n")
+		if d.Type().IsRegular() {
+			data, err := os.ReadFile(p)
+			if err != nil {
+				return err
+			}
+			b.Write(data)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b.String()
+}
+
+// AC10 / N2: neither view changes a file.
+func TestStatusViewsWriteNothing(t *testing.T) {
+	root := initiativeRoot(t)
+	before := treeDigest(t, root)
+	for _, args := range [][]string{nil, {"7-gateway"}, {"S-0036"}} {
+		captureStdout(t, func() int { return runStatus(root, args) })
+		if after := treeDigest(t, root); after != before {
+			t.Fatalf("status %v changed the workspace", args)
+		}
+	}
+}

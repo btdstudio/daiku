@@ -30,7 +30,7 @@ used yet has no sections here.
 |---|---|
 | `daiku init [dir] [--no-git] [--force]` | scaffold a daiku workspace, root only (`--no-git`: a local workspace, vcs: none; `--force`: overwrite existing files) |
 | `daiku update` | refresh managed files to the installed version |
-| `daiku status` | show the active change's phase/status |
+| `daiku status [<plan-change>]` | show the active change and every open change by room and repo, or a plan's tickets and their builds |
 | `daiku settings` | show/merge settings |
 | `daiku switch [--all] [<change>]` | list changes (`--all` includes closed ones), or switch the active change |
 | `daiku change close <change> --reason <r>` | close a change |
