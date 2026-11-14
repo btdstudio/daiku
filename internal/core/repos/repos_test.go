@@ -358,3 +358,16 @@ func TestListAndUsage(t *testing.T) {
 		t.Fatalf("code = %d, err = %q", code, errOut)
 	}
 }
+
+func TestNameReIsFolderSafe(t *testing.T) {
+	for _, name := range []string{"api", "web-2", "my.repo", "a_b"} {
+		if !NameRe.MatchString(name) {
+			t.Errorf("NameRe rejects %q", name)
+		}
+	}
+	for _, name := range []string{"", ".", "..", "../x", "a/b", `a\b`, ".hidden", "-x", "API"} {
+		if NameRe.MatchString(name) {
+			t.Errorf("NameRe accepts %q", name)
+		}
+	}
+}
