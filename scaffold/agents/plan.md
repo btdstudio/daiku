@@ -73,7 +73,7 @@ Prefer `daiku <command>` over hand-editing `plan/00_intake/`.
 | Write the spec | `plan/03_spec/` | analyst | `plan/03_spec/context.md`, `plan/00_intake/*`, `plan/01_research/<n>-<slug>/*`, `plan/02_explore/<n>-<slug>/*`, `references/index.md` | the repos |
 | Design the architecture | `plan/04_architecture/` | architect | `plan/04_architecture/context.md`, `plan/specs/<n>-<slug>/functional-spec.md`, `plan/02_explore/<n>-<slug>/*`, `references/index.md` | the repos |
 | Break down into tickets | `plan/05_breakdown/` | architect | `plan/05_breakdown/context.md`, `plan/specs/<n>-<slug>/functional-spec.md`, `plan/specs/<n>-<slug>/architecture.md`, `references/index.md` | the repos |
-| Publish tickets | `plan/06_publish/` | publisher | `plan/06_publish/context.md`, `plan/06_publish/sync.md`, `plan/specs/<n>-<slug>/tickets/*`, `references/index.md` | the repos, `plan/01_research/*`, `plan/02_explore/*` |
+| Publish tickets | `plan/06_publish/` | publisher | `plan/06_publish/context.md`, `sync.md`, `plan/specs/<n>-<slug>/tickets/*`, `references/index.md` | the repos, `plan/01_research/*`, `plan/02_explore/*` |
 
 ## Plan naming
 
@@ -85,7 +85,7 @@ Prefer `daiku <command>` over hand-editing `plan/00_intake/`.
 - Research: `plan/01_research/<n>-<slug>/<topic>.md`
 - Findings: `plan/02_explore/<n>-<slug>/<repo>.md`, `plan/02_explore/<n>-<slug>/synthesis.md`
 - ADRs: `plan/04_architecture/adr/NNNN-<slug>.md`
-- Sync instructions: `plan/06_publish/sync.md`, with starters in `plan/06_publish/sync-examples/`
+- Sync instructions: `sync.md` at the workspace root, with starters in `sync-examples/`
 - Personas: `plan/<stage>/personas/<name>.md`
 - Templates: `plan/<stage>/templates/<artifact>.md`
 
@@ -99,7 +99,7 @@ plan/
 ├── 03_spec/              # analyst
 ├── 04_architecture/      # architect + adr/
 ├── 05_breakdown/         # architect
-├── 06_publish/           # publisher + sync.md
+├── 06_publish/           # publisher
 └── specs/                # per-change artifacts and tickets (<n>-<slug>/)
 ```
 

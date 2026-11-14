@@ -13,7 +13,7 @@ full build change, so make the fewest tickets that each ship as one reviewable P
   Context of each of that repo's stories. A repo's only story drops the template's
   split-reason line.
 - Add a feature only to group the stories of one capability that spans repos, and
-  only when the publish target groups tickets (see `plan/06_publish/sync.md`) or the
+  only when the publish target groups tickets (see `sync.md`) or the
   change has more than 8 stories. Add an epic only above two or more features. The 8
   allows grouping; it isn't a target. Never add an epic or feature to group one
   repo's tickets.
