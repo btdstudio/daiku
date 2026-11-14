@@ -457,6 +457,10 @@ func (t *Ticket) SetOrigin(o Origin) error {
 type Problem struct {
 	ID      string // the ticket, or its path if the id isn't usable
 	Message string
+	// Ref is the missing ticket's id when the problem is a reference (parent,
+	// depends_on or supersedes) that resolves to no ticket here, so a caller can
+	// treat a reference into another workspace differently. Empty otherwise.
+	Ref string
 }
 
 func (p Problem) String() string { return p.ID + ": " + p.Message }
@@ -580,7 +584,7 @@ func ValidateFile(t *Ticket) []Problem {
 		label = t.Path
 	}
 	add := func(format string, args ...any) {
-		problems = append(problems, Problem{label, fmt.Sprintf(format, args...)})
+		problems = append(problems, Problem{ID: label, Message: fmt.Sprintf(format, args...)})
 	}
 	if t.Schema != Schema {
 		add("schema must be %d, got %d", Schema, t.Schema)
@@ -678,30 +682,33 @@ func ValidateWorkspace(tickets []*Ticket, repos []string) []Problem {
 	for _, t := range sorted(tickets) {
 		problems = append(problems, ValidateFile(t)...)
 		if _, dup := byID[t.ID]; dup && t.ID != "" {
-			problems = append(problems, Problem{t.ID, "duplicate id"})
+			problems = append(problems, Problem{ID: t.ID, Message: "duplicate id"})
 		}
 		byID[t.ID] = t
 	}
 	for _, t := range sorted(tickets) {
 		add := func(format string, args ...any) {
-			problems = append(problems, Problem{t.ID, fmt.Sprintf(format, args...)})
+			problems = append(problems, Problem{ID: t.ID, Message: fmt.Sprintf(format, args...)})
+		}
+		missing := func(field, ref string) {
+			problems = append(problems, Problem{ID: t.ID, Message: fmt.Sprintf("%s %s doesn't exist", field, ref), Ref: ref})
 		}
 		if t.Parent != "" {
 			parent, ok := byID[t.Parent]
 			if !ok {
-				add("parent %s doesn't exist", t.Parent)
+				missing("parent", t.Parent)
 			} else if rank[parent.Type] <= rank[t.Type] {
 				add("parent %s is a %s, which isn't higher than a %s", t.Parent, parent.Type, t.Type)
 			}
 		}
 		for _, dep := range t.DependsOn {
 			if _, ok := byID[dep]; !ok {
-				add("depends_on %s doesn't exist", dep)
+				missing("depends_on", dep)
 			}
 		}
 		if t.Supersedes != "" {
 			if _, ok := byID[t.Supersedes]; !ok {
-				add("supersedes %s doesn't exist", t.Supersedes)
+				missing("supersedes", t.Supersedes)
 			}
 		}
 		if t.Repo != "" && !registered[t.Repo] {
@@ -709,7 +716,7 @@ func ValidateWorkspace(tickets []*Ticket, repos []string) []Problem {
 		}
 	}
 	if _, err := Order(tickets); err != nil {
-		problems = append(problems, Problem{"tickets", err.Error()})
+		problems = append(problems, Problem{ID: "tickets", Message: err.Error()})
 	}
 	return problems
 }
@@ -834,7 +841,7 @@ func LoadDir(dir string) ([]*Ticket, []Problem, error) {
 		}
 		t, err := Parse(data)
 		if err != nil {
-			problems = append(problems, Problem{path, err.Error()})
+			problems = append(problems, Problem{ID: path, Message: err.Error()})
 			continue
 		}
 		t.Path = path
