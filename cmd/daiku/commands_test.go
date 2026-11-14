@@ -92,3 +92,16 @@ func TestInitRefusesAZumenWorkspace(t *testing.T) {
 		t.Fatalf("init wrote %d entries", len(entries)-1)
 	}
 }
+
+// init over an AGENTS.md it can't merge says so and exits 0.
+func TestInitReportsAnUnmergeableAgents(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("mine\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	code, out := capture(t, func() int { return run([]string{"init", dir, "--no-git"}) })
+	if code != 0 || !strings.Contains(out, "skipped (edited) AGENTS.md: can't merge: no ## headings") {
+		t.Fatalf("init = %d:\n%s", code, out)
+	}
+}

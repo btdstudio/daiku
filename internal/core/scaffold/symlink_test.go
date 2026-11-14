@@ -91,3 +91,38 @@ func TestWritesRefuseSymlinkedFolders(t *testing.T) {
 		emptyDir(t, outside)
 	})
 }
+
+// Security finding 1 (S-0040): the manifest isn't written through a symlink in
+// its own place, and the link's target is left unchanged.
+func TestManifestRefusesSymlink(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks need privileges on Windows")
+	}
+	e := symlinkEngine()
+	dir := rootOnly(t, e)
+	m, err := e.ReadManifest(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := e.manifestPath(dir)
+	content, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	victim := filepath.Join(t.TempDir(), "victim")
+	if err := os.WriteFile(victim, content, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(p); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(victim, p); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.WriteManifest(dir, m); err == nil || !strings.Contains(err.Error(), "is a symlink") {
+		t.Fatalf("WriteManifest err = %v", err)
+	}
+	if got, _ := os.ReadFile(victim); string(got) != string(content) {
+		t.Fatalf("victim = %q", got)
+	}
+}

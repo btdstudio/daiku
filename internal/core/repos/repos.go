@@ -84,23 +84,22 @@ func readJSON(tool, path string, into any) error {
 	return nil
 }
 
-func writeJSON(path string, v any) error {
+// writeJSON writes v to path, which must be a file under root that isn't
+// reached through a symlink.
+func writeJSON(root, path string, v any) error {
 	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	return os.WriteFile(path, append(data, '\n'), 0o644)
+	return workspace.WriteFile(root, path, append(data, '\n'), 0o644)
 }
 
 // Save writes REPOS.json and .<tool>/paths.json.
 func (r Registry) Save() error {
-	if err := writeJSON(registryPath(r.root), map[string]any{"repos": r.Repos}); err != nil {
+	if err := writeJSON(r.root, registryPath(r.root), map[string]any{"repos": r.Repos}); err != nil {
 		return err
 	}
-	return writeJSON(pathsPath(r.root, r.tool), r.Paths)
+	return writeJSON(r.root, pathsPath(r.root, r.tool), r.Paths)
 }
 
 // Names lists the registered repos in order.

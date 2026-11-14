@@ -191,6 +191,22 @@ func ChangeGates(root, name string) (map[string]string, error) {
 // under plan/specs/ sorted by id, then the build loop's recorded changes.
 func KnownChanges(root string) ([]KnownChange, error) { return store.Known(root) }
 
+// PlanChanges is KnownChanges limited to the plan loop: the changes that have
+// a folder under plan/specs/, tickets and an overview.
+func PlanChanges(root string) ([]KnownChange, error) {
+	all, err := KnownChanges(root)
+	if err != nil {
+		return nil, err
+	}
+	var plan []KnownChange
+	for _, c := range all {
+		if c.Loop == PlanLoop {
+			plan = append(plan, c)
+		}
+	}
+	return plan, nil
+}
+
 // SwitchTo points the workspace at a different change folder.
 func SwitchTo(root, name string) (State, error) { return store.Switch(root, name) }
 
@@ -259,6 +275,17 @@ func Record(root string, lines []string, paths ...string) error {
 		return err
 	}
 	return s.Record(root, lines, paths...)
+}
+
+// CheckStateFiles refuses when STATE.json, the active pointer or LOG.md can't be
+// written safely. A command that writes its own files and then calls Record runs
+// it first, so a refusal leaves those files as they were.
+func CheckStateFiles(root string) error {
+	s, err := storeAt(root)
+	if err != nil {
+		return err
+	}
+	return s.CheckStateFiles(root)
 }
 
 // AppendLog appends one timestamped line to LOG.md.

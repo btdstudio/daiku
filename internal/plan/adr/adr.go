@@ -6,6 +6,7 @@ package adr
 
 import (
 	"fmt"
+	"github.com/btdstudio/daiku/internal/core/workspace"
 	"github.com/btdstudio/daiku/internal/plan/layout"
 	"os"
 	"path/filepath"
@@ -102,7 +103,7 @@ func render(n int, opts Options, date string) string {
 // overwrites.
 func Create(root, adrDir string, opts Options) (Record, error) {
 	dir := AdrDir(root, adrDir)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := workspace.MkdirAll(root, dir, 0o755); err != nil {
 		return Record{}, err
 	}
 	n := NextNumber(root, adrDir)
@@ -116,7 +117,7 @@ func Create(root, adrDir string, opts Options) (Record, error) {
 		return Record{}, fmt.Errorf("daiku: adr %s already exists; not overwriting", name)
 	}
 	date := time.Now().Format("2006-01-02")
-	if err := os.WriteFile(p, []byte(render(n, opts, date)), 0o644); err != nil {
+	if err := workspace.WriteFile(root, p, []byte(render(n, opts, date)), 0o644); err != nil {
 		return Record{}, err
 	}
 	return Record{Number: n, Slug: slug, Title: opts.Title, Status: STATUS_PROPOSED, Date: date, Deciders: opts.Deciders, Path: p}, nil

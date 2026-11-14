@@ -191,6 +191,11 @@ func TestBuildChangeActive(t *testing.T) {
 		"reopen":       func() int { return runReopen(root, []string{"ticket", "--reason", "r"}) },
 		"env":          func() int { return runEnv(root) },
 		"change close": func() int { return runChangeClose(root, []string{"S-0036", "--reason", "r"}) },
+		// Plan commands that use the active change (code review finding 1).
+		"tickets new":      func() int { return runTickets(root, []string{"new", "story", "X", "--repo", "app"}) },
+		"tickets ready":    func() int { return runTickets(root, []string{"ready", "--all"}) },
+		"overview":         func() int { return runOverview(root, nil) },
+		"overview <build>": func() int { return runOverview(root, []string{"S-0036"}) },
 	} {
 		if code, stderr := captureStderr(t, run); code != 1 || !strings.Contains(stderr, want) {
 			t.Errorf("%s = %d, stderr %q", name, code, stderr)
@@ -198,6 +203,15 @@ func TestBuildChangeActive(t *testing.T) {
 	}
 	if g := readLog(t, root); strings.Contains(g, "S-0036") {
 		t.Errorf("a refused build command logged:\n%s", g)
+	}
+	// Commands over the whole workspace still work, and see plan changes only.
+	for name, args := range map[string][]string{"tickets check": {"check"}, "tickets status": {"status"}, "tickets order": {"order"}} {
+		if code, stderr := captureStderr(t, func() int { return runTickets(root, args) }); code != 0 {
+			t.Errorf("%s = %d, stderr %q", name, code, stderr)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(root, "plan", "specs", "S-0036")); !os.IsNotExist(err) {
+		t.Error("a plan command made a plan/specs/S-0036 folder for a build change")
 	}
 }
 

@@ -21,6 +21,8 @@ import (
 	"github.com/btdstudio/daiku"
 	kiso "github.com/btdstudio/daiku/internal/core/state"
 	"github.com/btdstudio/daiku/internal/plan/source"
+
+	"github.com/btdstudio/daiku/internal/core/workspace"
 )
 
 // Dir is the ideas room, relative to the workspace root.
@@ -125,10 +127,13 @@ func New(root, title, today string) (Idea, error) {
 	}
 	summary := strings.NewReplacer("<id>", strconv.Itoa(id), "<title>", title, "<date>", today).Replace(string(tmpl))
 
-	if err := os.MkdirAll(roomDir(root), 0o755); err != nil {
+	if err := workspace.MkdirAll(root, roomDir(root), 0o755); err != nil {
 		return Idea{}, err
 	}
 	dir := filepath.Join(roomDir(root), name)
+	if err := workspace.CheckPath(root, dir); err != nil {
+		return Idea{}, err
+	}
 	if err := os.Mkdir(dir, 0o755); err != nil {
 		if errors.Is(err, fs.ErrExist) {
 			return Idea{}, fmt.Errorf("daiku: %s/%s already exists", Dir, name)
@@ -276,7 +281,7 @@ func apply(root string, id int, today string, c change) (Idea, error) {
 	if err != nil {
 		return Idea{}, fmt.Errorf("daiku: %s/%s/summary.md: %v", Dir, f.name, err)
 	}
-	if err := os.WriteFile(path, []byte(updated), 0o644); err != nil {
+	if err := workspace.WriteFile(root, path, []byte(updated), 0o644); err != nil {
 		return Idea{}, err
 	}
 	if err := appendLog(root, f, today, c.log); err != nil {
@@ -367,7 +372,7 @@ func appendLog(root string, f folder, today, text string) error {
 	if existing, err := os.ReadFile(path); err == nil && len(existing) > 0 && existing[len(existing)-1] != '\n' {
 		prefix = "\n" // a hand edit left no final newline
 	}
-	file, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
+	file, err := workspace.OpenFile(root, path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
 	if err != nil {
 		return err
 	}
