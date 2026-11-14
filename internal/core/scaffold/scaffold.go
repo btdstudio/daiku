@@ -126,10 +126,36 @@ func (e Engine) roomNames() []string {
 	return names
 }
 
-// roomExists reports whether a room's folder is in the workspace.
+// validRoom reports whether a room name is one folder inside the workspace: not
+// empty, no separators, and not "." or "..".
+func validRoom(room string) bool {
+	return room != "" && !strings.ContainsAny(room, `/\`) && room != "." && filepath.IsLocal(room)
+}
+
+// checkRooms refuses room names that aren't one folder in the workspace. Rooms
+// are compiled in, so this guards against a programming error writing outside
+// the workspace.
+func (e Engine) checkRooms() error {
+	for _, room := range e.roomNames() {
+		if !validRoom(room) {
+			return fmt.Errorf("%s: invalid room name %q", e.Tool, room)
+		}
+	}
+	return nil
+}
+
+// roomExists reports whether a room's folder is in the workspace as a real
+// folder. A symlink doesn't count, so Update and BuildManifest never write
+// through one to wherever it points.
 func roomExists(dir, room string) bool {
-	info, err := os.Stat(filepath.Join(dir, filepath.FromSlash(room)))
-	return err == nil && info.IsDir()
+	info, err := os.Lstat(filepath.Join(dir, filepath.FromSlash(room)))
+	return err == nil && info.IsDir() && info.Mode()&os.ModeSymlink == 0
+}
+
+// roomIsSymlink reports whether a room's path in the workspace is a symlink.
+func roomIsSymlink(dir, room string) bool {
+	info, err := os.Lstat(filepath.Join(dir, filepath.FromSlash(room)))
+	return err == nil && info.Mode()&os.ModeSymlink != 0
 }
 
 // trees are the root and every room whose folder exists in dir.
@@ -272,6 +298,9 @@ func (e Engine) Scaffold(dir string, opts Options) (Report, error) {
 	if err := e.checkVCS(); err != nil {
 		return rep, err
 	}
+	if err := e.checkRooms(); err != nil {
+		return rep, err
+	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return rep, err
 	}
@@ -408,6 +437,9 @@ func (e Engine) Update(dir string) (UpdateReport, error) {
 	if err := e.checkVCS(); err != nil {
 		return rep, err
 	}
+	if err := e.checkRooms(); err != nil {
+		return rep, err
+	}
 	cur, err := e.ReadManifest(dir)
 	if errors.Is(err, fs.ErrNotExist) {
 		if info, statErr := os.Stat(filepath.Join(dir, filepath.FromSlash(e.Marker))); statErr != nil || !info.IsDir() {
@@ -459,9 +491,10 @@ func (e Engine) Update(dir string) (UpdateReport, error) {
 // any, else the root.
 func (e Engine) writeManaged(dest, rel string) error {
 	fsys, p := e.FS, rel
-	for room, rfs := range e.Rooms {
+	// Room names have no separators, so at most one is a prefix of rel.
+	for _, room := range e.roomNames() {
 		if strings.HasPrefix(rel, room+"/") {
-			fsys, p = rfs, strings.TrimPrefix(rel, room+"/")
+			fsys, p = e.Rooms[room], strings.TrimPrefix(rel, room+"/")
 			break
 		}
 	}
@@ -477,6 +510,9 @@ func (e Engine) writeManaged(dest, rel string) error {
 // output.
 func (e Engine) Check() []string {
 	var problems []string
+	if err := e.checkRooms(); err != nil {
+		return []string{err.Error()}
+	}
 	if err := e.walk(e.allTrees(), func(rel string, data []byte) error {
 		if strings.Contains(string(data), "{{") {
 			problems = append(problems, rel+": contains template syntax")
