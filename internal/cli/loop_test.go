@@ -166,8 +166,9 @@ func writeBuildChange(t *testing.T, root string) {
 	}
 }
 
-// AC11: with a build change recorded, status works with either active, and the
-// verbs that act on a change refuse a build change clearly.
+// With a build change recorded, status works with either active, and the
+// plan-only verbs refuse a build change clearly. (The verbs every change has
+// work on builds: build_test.go.)
 func TestBuildChangeActive(t *testing.T) {
 	root := workspace(t)
 	writeBuildChange(t, root)
@@ -185,19 +186,18 @@ func TestBuildChangeActive(t *testing.T) {
 	if code != 0 || !strings.Contains(out, "loop:     build") || !strings.Contains(out, "gates:    ticket=draft requirements=") {
 		t.Fatalf("status with the build change active = %d:\n%s", code, out)
 	}
-	want := "daiku: S-0036 is a build change — build commands aren't in this version yet"
-	for name, run := range map[string]func() int{
-		"gate":         func() int { return runGate(root, []string{"ticket", "approved"}) },
-		"reopen":       func() int { return runReopen(root, []string{"ticket", "--reason", "r"}) },
-		"env":          func() int { return runEnv(root) },
-		"change close": func() int { return runChangeClose(root, []string{"S-0036", "--reason", "r"}) },
-		// Plan commands that use the active change (code review finding 1).
-		"tickets new":      func() int { return runTickets(root, []string{"new", "story", "X", "--repo", "app"}) },
-		"tickets ready":    func() int { return runTickets(root, []string{"ready", "--all"}) },
-		"overview":         func() int { return runOverview(root, nil) },
-		"overview <build>": func() int { return runOverview(root, []string{"S-0036"}) },
+	// Plan commands that use the active change (S-0040 code review finding 1).
+	for name, tc := range map[string]struct {
+		verb string
+		run  func() int
+	}{
+		"tickets new":      {"tickets new", func() int { return runTickets(root, []string{"new", "story", "X", "--repo", "app"}) }},
+		"tickets ready":    {"tickets ready --all", func() int { return runTickets(root, []string{"ready", "--all"}) }},
+		"overview":         {"overview", func() int { return runOverview(root, nil) }},
+		"overview <build>": {"overview", func() int { return runOverview(root, []string{"S-0036"}) }},
 	} {
-		if code, stderr := captureStderr(t, run); code != 1 || !strings.Contains(stderr, want) {
+		want := "daiku: S-0036 is a build change — " + tc.verb + " works on plan changes"
+		if code, stderr := captureStderr(t, tc.run); code != 1 || !strings.Contains(stderr, want) {
 			t.Errorf("%s = %d, stderr %q", name, code, stderr)
 		}
 	}

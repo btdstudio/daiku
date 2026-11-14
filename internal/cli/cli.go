@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/btdstudio/daiku/internal/build/lock"
+	"github.com/btdstudio/daiku/internal/build/ship"
 	"github.com/btdstudio/daiku/internal/core/repos"
 	kiso "github.com/btdstudio/daiku/internal/core/state"
 	"github.com/btdstudio/daiku/internal/icm"
@@ -76,19 +78,28 @@ func runStatus(root string) int {
 		return 0
 	}
 	fmt.Printf("change:   %s\n", st.Name)
-	machine := state.PlanMachine
-	if st.Loop == state.BuildLoop {
+	build := st.Loop == state.BuildLoop
+	if build {
 		// Plan changes print as they always have; only a build change says its loop.
 		fmt.Printf("loop:     %s\n", st.Loop)
-		machine = state.BuildMachine
+		if len(st.Repos) > 0 {
+			fmt.Printf("repo:     %s\n", st.Repos[0])
+		}
 	}
 	fmt.Printf("phase:    %s\n", st.Phase)
 	fmt.Printf("status:   %s\n", st.Status)
 	var gates []string
-	for _, p := range machine.Phases {
+	for _, p := range state.MachineFor(st.Loop).Phases {
 		gates = append(gates, p.Name+"="+st.Gates[p.Name])
 	}
 	fmt.Printf("gates:    %s\n", strings.Join(gates, " "))
+	if build {
+		// tomo's ticket and branch lines: the branch ship expects.
+		if t := changeTicket(root, st); t != nil {
+			fmt.Printf("ticket:   %s %s\n", t.ID, t.Title)
+			fmt.Printf("branch:   %s\n", ship.BranchName(t))
+		}
+	}
 	fmt.Printf("vcs:      %s\n", loaded.VCS)
 	warnSkippedExplore(root, st)
 	return 0
@@ -375,10 +386,7 @@ func runEnv(root string) int {
 		fmt.Fprintln(os.Stderr, "daiku: no active change — run `daiku switch <change>` first")
 		return 1
 	}
-	if err := requirePlan(st); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return 1
-	}
+	// A plan change's repos, or a build's one repo (spec R21).
 	return repos.RunEnv(root, "daiku", st.Repos, os.Stdout, os.Stderr)
 }
 
@@ -386,14 +394,6 @@ func runChangeClose(root string, args []string) int {
 	pos, reason, _, err := parseTransition(args)
 	if err != nil || len(pos) != 1 {
 		fmt.Fprintln(os.Stderr, usageLine("change", "close"))
-		return 1
-	}
-	rec, err := recorded(root, pos[0])
-	if err == nil {
-		err = requirePlan(rec)
-	}
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
 	st, err := state.CloseChange(root, pos[0], reason)
@@ -436,10 +436,6 @@ func runGate(root string, args []string) int {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
-	if err := requirePlan(st); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return 1
-	}
 	var notes []string
 	if st.Name != "" {
 		probe := st
@@ -447,20 +443,35 @@ func runGate(root string, args []string) int {
 			fmt.Fprintln(os.Stderr, err)
 			return 1
 		}
-		// Order and artifact problems go through one policy step, so a refusal
-		// lists them all.
+		// Order, artifact and lock problems go through one policy step, so a
+		// refusal lists them all. Each loop checks its own: a plan its artifacts,
+		// a build entering implement its repo's lock.
 		var violations []string
 		if violation := state.CheckGate(st, phase, status); violation != nil {
 			violations = append(violations, violation.Error())
 			notes = append(notes, "override: "+violation.Error())
 		}
-		if problems := state.PlanMachine.CheckArtifacts(root, st.Name, phase, status); len(problems) > 0 {
-			lines := []string{fmt.Sprintf("daiku: %s %s: %d artifact problem(s):", phase, status, len(problems))}
-			for _, p := range problems {
-				lines = append(lines, "  "+p.String())
-				notes = append(notes, "override: "+p.String())
+		if st.Loop == state.BuildLoop && phase == "implement" {
+			changes, err := state.ReadChanges(root)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				return 1
 			}
-			violations = append(violations, strings.Join(lines, "\n"))
+			if holder, at := lock.Holder(changes, st); holder != "" {
+				msg := lock.Message(st.Repos[0], holder, at)
+				violations = append(violations, msg)
+				notes = append(notes, "override: "+msg)
+			}
+		}
+		if st.Loop != state.BuildLoop {
+			if problems := state.PlanMachine.CheckArtifacts(root, st.Name, phase, status); len(problems) > 0 {
+				lines := []string{fmt.Sprintf("daiku: %s %s: %d artifact problem(s):", phase, status, len(problems))}
+				for _, p := range problems {
+					lines = append(lines, "  "+p.String())
+					notes = append(notes, "override: "+p.String())
+				}
+				violations = append(violations, strings.Join(lines, "\n"))
+			}
 		}
 		if len(violations) > 0 {
 			if err := gatePolicyAll(root, violations, force); err != nil {
@@ -482,14 +493,6 @@ func runReopen(root string, args []string) int {
 	pos, reason, _, err := parseTransition(args)
 	if err != nil || len(pos) != 1 {
 		fmt.Fprintln(os.Stderr, usageLine("reopen"))
-		return 1
-	}
-	active, err := state.LoadState(root)
-	if err == nil {
-		err = requirePlan(active)
-	}
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
 	st, err := state.Reopen(root, pos[0], reason)
