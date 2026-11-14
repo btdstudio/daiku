@@ -59,7 +59,9 @@ var handlers = map[string]func(root string, args []string) int{
 	"repo": func(root string, args []string) int {
 		return repos.Run(root, "daiku", args, os.Stdout, os.Stderr)
 	},
-	"env": func(root string, _ []string) int { return runEnv(root) },
+	"env":    func(root string, _ []string) int { return runEnv(root) },
+	"commit": runCommit,
+	"pr":     runPR,
 }
 
 func runStatus(root string) int {

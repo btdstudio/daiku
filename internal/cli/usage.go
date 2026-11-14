@@ -61,6 +61,8 @@ var commands = []command{
 	{path: []string{"references", "check"}, synopsis: "daiku references check", summary: "warn about unindexed references and bad index entries"},
 	{path: []string{"repo"}, raw: repos.Usage("daiku")},
 	{path: []string{"env"}, synopsis: "daiku env", summary: "print harness flags for the active change's repos"},
+	{path: []string{"commit"}, synopsis: "daiku commit [git commit args]", summary: "commit what's staged in the active build's repo"},
+	{path: []string{"pr"}, synopsis: "daiku pr [title]", summary: "open a pull request from the active build's repo, linking its ticket"},
 	{path: []string{"check"}, synopsis: "daiku check", summary: "validate the embedded scaffold"},
 	{path: []string{"version"}, synopsis: "daiku version", summary: "print the version"},
 	{path: []string{"help"}, synopsis: "daiku help [<command> [<verb>]]", summary: "this help, or one command's"},
