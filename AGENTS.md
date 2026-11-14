@@ -54,7 +54,7 @@ internal/
     changelog/    append-only log writer
     version/      version reporting (build info)
 testdata/             overview fixture and golden files
-scripts/coldstart.sh  the cold-start check, run by hand before tagging (README, Releasing)
+scripts/coldstart.sh  the optional cold-start check, run by hand before tagging (README, Releasing)
 ```
 
 Plan-only paths come from `internal/plan/layout` and build-only ones from
@@ -79,5 +79,7 @@ persona, room folder or command) goes.
   -update-overview` for the overview golden.
 - In a checkout under a `go.work` that doesn't list daiku, prefix commands
   with `GOWORK=off`.
-- CI runs both on Go 1.22 and 1.24 (`.github/workflows/test.yml`).
+- CI runs both on Go 1.22 and 1.24, plus a smoke job on the built binary
+  (`.github/workflows/test.yml`). Pushing a `v*` tag runs
+  `.github/workflows/release.yml`, which checks the tree and publishes the release.
 - Conventional commit messages.

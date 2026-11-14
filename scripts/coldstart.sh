@@ -1,5 +1,6 @@
 #!/bin/sh
-# coldstart.sh — the cold-start check, run by hand before tagging a release.
+# coldstart.sh — the optional cold-start check, run by hand before tagging a
+# release.
 #
 # It checks that an agent with no prior context can find its way in a fresh
 # daiku workspace from each of two opening prompts. It works with any agent:
