@@ -113,7 +113,9 @@ func (r Registry) Names() []string {
 	return names
 }
 
-var nameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
+// NameRe is the grammar for a logical repo name. It keeps a name safe to use as a
+// single folder name: no separators, and it can't be "." or "..".
+var NameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
 
 // checkRemote refuses remotes that shouldn't be committed or handed to git. The
 // registry comes from a shared repo, so a remote can reach `git clone` on another
@@ -135,7 +137,7 @@ func checkRemote(tool, remote string) error {
 
 // Add registers a repo. An empty branch means DefaultBranch.
 func (r *Registry) Add(name, remote, branch string) error {
-	if !nameRe.MatchString(name) {
+	if !NameRe.MatchString(name) {
 		return fmt.Errorf("%s: invalid repo name %q (use lowercase letters, digits, '.', '_' and '-')", r.tool, name)
 	}
 	if _, exists := r.Repos[name]; exists {
