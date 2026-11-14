@@ -2,8 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/btdstudio/daiku/internal/core/ticket"
 	"github.com/btdstudio/daiku/internal/state"
@@ -33,17 +31,4 @@ func recorded(root, name string) (state.State, error) {
 
 // changeTicket is a build's ticket, read in place from its source: the first
 // source that parses as a ticket with an id. It's nil when there's none.
-func changeTicket(root string, st state.State) *ticket.Ticket {
-	for _, src := range st.Sources {
-		path := filepath.Join(root, filepath.FromSlash(src))
-		data, err := os.ReadFile(path)
-		if err != nil {
-			continue
-		}
-		if t, err := ticket.Parse(data); err == nil && t.ID != "" {
-			t.Path = path
-			return t
-		}
-	}
-	return nil
-}
+func changeTicket(root string, st state.State) *ticket.Ticket { return state.BuildTicket(root, st) }
