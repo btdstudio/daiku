@@ -16,6 +16,14 @@ import (
 // script's output to each "workspace:" line, acts there (or doesn't), and
 // presses Enter.
 
+// gitIdentity lets the fresh workspaces commit on a machine with no git
+// identity, such as a CI runner: daiku init makes them git workspaces, and a
+// build or plan change commits. A person running the script has their own.
+var gitIdentity = []string{
+	"GIT_AUTHOR_NAME=coldstart", "GIT_AUTHOR_EMAIL=coldstart@example.com",
+	"GIT_COMMITTER_NAME=coldstart", "GIT_COMMITTER_EMAIL=coldstart@example.com",
+}
+
 // coldstart builds daiku and starts the script with DAIKU set and its own
 // TMPDIR, so the test can see what it leaves behind.
 func coldstart(t *testing.T) (cmd *exec.Cmd, stdin io.WriteCloser, lines *bufio.Scanner, daiku, tmp string) {
@@ -43,7 +51,7 @@ func coldstartEnv(t *testing.T, extra ...string) (cmd *exec.Cmd, stdin io.WriteC
 	}
 	tmp = t.TempDir()
 	cmd = exec.Command("sh", "scripts/coldstart.sh")
-	cmd.Env = append(append(os.Environ(), "DAIKU="+daiku, "TMPDIR="+tmp, "COLDSTART_KEEP="), extra...)
+	cmd.Env = append(append(append(os.Environ(), gitIdentity...), "DAIKU="+daiku, "TMPDIR="+tmp, "COLDSTART_KEEP="), extra...)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		t.Fatal(err)
@@ -148,6 +156,7 @@ func TestColdstartPasses(t *testing.T) {
 		}
 		c := exec.Command(agentDaiku, args...)
 		c.Dir = ws
+		c.Env = append(os.Environ(), gitIdentity...)
 		if b, err := c.CombinedOutput(); err != nil {
 			t.Fatalf("daiku %v in %s: %v\n%s", args, ws, err, b)
 		}
