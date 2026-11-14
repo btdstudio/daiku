@@ -131,7 +131,10 @@ stories and tasks as ticket files, each one repo's work in one reviewable PR;
 features and epics only where grouping helps. Publishing is agent work:
 `sync.md`, at the workspace root, tells an agent how to talk to your PM tool, and
 the CLI never calls one. Each change has a one-page overview,
-`plan/specs/<change>/README.md`, that `daiku overview` keeps current.
+`plan/specs/<change>/README.md`, that `daiku overview` keeps current. Its
+generated **Builds** section lists the plan's tickets with their repo and build
+phase; a build's gate, reopen and close rewrite it, and commit it with the
+transition, when the plan is in the workspace.
 
 ## The build loop
 
@@ -150,6 +153,15 @@ gating another into implement fails, naming the holder, until it's closed, its s
 is complete, or it's reopened to tasks. `--force` overrides and is logged. `daiku
 commit` and `daiku pr` run in the build's repo, and the pull request links the
 ticket and its external items.
+
+## Where things stand
+
+Bare `daiku status` shows the active change (its room, repo, phase, gates,
+initiative and code path), then every open plan, then every open build grouped
+by repo, with the active one marked `*` and each repo's lock holder named. A
+build that has shipped but isn't closed shows as done and holds nothing.
+`daiku status <plan-change>` lists that plan's tickets with their repo and
+build phase, or "not started". Both only read.
 
 ## Ideas
 

@@ -4,7 +4,9 @@ A plan change is an initiative, often across many repos, and ends in tickets. It
 flows through eight phases, each owned by a persona. Research, explore and
 synthesis are skippable, with a reason. `daiku change new` skips explore when
 there's no repo, and synthesis when there are fewer than two. `daiku status`
-warns if a repo's explore is skipped.
+warns if a repo's explore is skipped. `daiku status <plan-change>` lists the
+plan's tickets and how far each one's build has got, as the overview's Builds
+section does.
 
 `intake → [research] → [explore] → [synthesis] → spec → architecture → breakdown → publish`
 
