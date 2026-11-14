@@ -47,7 +47,9 @@ func TestScaffoldTextUsesPlanPaths(t *testing.T) {
 			return err
 		}
 		for i, line := range strings.Split(string(data), "\n") {
-			if m := bareRoomPath.FindStringSubmatch(line); m != nil {
+			// A directory-tree drawing nests folders under plan/ itself.
+			tree := strings.Contains(line, "├── ") || strings.Contains(line, "└── ")
+			if m := bareRoomPath.FindStringSubmatch(line); m != nil && !tree {
 				t.Errorf("%s:%d names %s outside plan/: %s", p, i+1, m[2], line)
 			}
 			for _, cmd := range []string{"`zumen ", "`tomo "} {

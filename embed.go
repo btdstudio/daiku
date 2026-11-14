@@ -23,6 +23,10 @@ var RootFS = mustSub("scaffold/root")
 // PlanFS is the plan room's tree, written under plan/ the first time it's used.
 var PlanFS = mustSub("scaffold/plan")
 
+// AgentsFS holds the AGENTS.md fragments: root.md, and one <room>.md per room.
+// They're assembled, never copied out as they are.
+var AgentsFS = mustSub("scaffold/agents")
+
 func mustSub(dir string) fs.FS {
 	sub, err := fs.Sub(ScaffoldFS, dir)
 	if err != nil {
