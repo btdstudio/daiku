@@ -20,6 +20,13 @@ import (
 // TMPDIR, so the test can see what it leaves behind.
 func coldstart(t *testing.T) (cmd *exec.Cmd, stdin io.WriteCloser, lines *bufio.Scanner, daiku, tmp string) {
 	t.Helper()
+	return coldstartEnv(t)
+}
+
+// coldstartEnv is coldstart with extra environment entries, which override the
+// defaults (the last entry for a key wins).
+func coldstartEnv(t *testing.T, extra ...string) (cmd *exec.Cmd, stdin io.WriteCloser, lines *bufio.Scanner, daiku, tmp string) {
+	t.Helper()
 	if runtime.GOOS == "windows" {
 		t.Skip("a POSIX sh script")
 	}
@@ -36,7 +43,7 @@ func coldstart(t *testing.T) (cmd *exec.Cmd, stdin io.WriteCloser, lines *bufio.
 	}
 	tmp = t.TempDir()
 	cmd = exec.Command("sh", "scripts/coldstart.sh")
-	cmd.Env = append(os.Environ(), "DAIKU="+daiku, "TMPDIR="+tmp, "COLDSTART_KEEP=")
+	cmd.Env = append(append(os.Environ(), "DAIKU="+daiku, "TMPDIR="+tmp, "COLDSTART_KEEP="), extra...)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		t.Fatal(err)
