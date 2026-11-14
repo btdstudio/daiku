@@ -73,10 +73,32 @@ func TestAssembleWithPlan(t *testing.T) {
 	if strings.Join(plan, ",") != strings.Join(want, ",") {
 		t.Errorf("plan sections = %v, want %v", plan, want)
 	}
-	// Order doesn't depend on how rooms are passed, and build has no fragment yet.
+	// Order doesn't depend on how rooms are passed: plan's sections, then build's,
+	// and no heading repeats across the three fragments.
+	both, err := Assemble("plan", "build")
+	if err != nil {
+		t.Fatal(err)
+	}
 	again, err := Assemble("build", "plan")
-	if err != nil || again != full {
-		t.Errorf("Assemble(build, plan) differs from Assemble(plan): %v", err)
+	if err != nil || again != both {
+		t.Errorf("Assemble(build, plan) differs from Assemble(plan, build): %v", err)
+	}
+	if !strings.HasPrefix(both, strings.TrimRight(full, "\n")) {
+		t.Error("the build sections don't follow the plan sections")
+	}
+	seen = map[string]bool{}
+	var build []string
+	for _, h := range headings(t, both) {
+		if seen[h] {
+			t.Errorf("heading %q repeats", h)
+		}
+		seen[h] = true
+		if strings.HasPrefix(h, "Build ") {
+			build = append(build, h)
+		}
+	}
+	if want := []string{"Build loop", "Build routing", "Build naming", "Build directory map"}; strings.Join(build, ",") != strings.Join(want, ",") {
+		t.Errorf("build sections = %v, want %v", build, want)
 	}
 	if _, err := Assemble("ideas"); err == nil {
 		t.Error("an unknown room was accepted")

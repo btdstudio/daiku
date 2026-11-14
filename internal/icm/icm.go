@@ -25,6 +25,9 @@ const WorkspaceDir = ".daiku"
 // PlanRoom is the plan room's folder.
 const PlanRoom = "plan"
 
+// BuildRoom is the build room's folder.
+const BuildRoom = "build"
+
 type (
 	Manifest = scaffold.Manifest
 	Options  = scaffold.Options
@@ -45,11 +48,14 @@ type UpdateReport struct {
 }
 
 var engine = scaffold.Engine{
-	Tool:   "daiku",
-	FS:     daiku.RootFS,
-	Rooms:  map[string]fs.FS{PlanRoom: daiku.PlanFS},
-	Marker: WorkspaceDir,
-	Seeds:  seeds,
+	Tool:  "daiku",
+	FS:    daiku.RootFS,
+	Rooms: map[string]fs.FS{PlanRoom: daiku.PlanFS, BuildRoom: daiku.BuildFS},
+	// build/tickets/ (the inbox) can exist before the build room is first used, so
+	// the room is there once its 01_design/ is.
+	RoomMarkers: map[string]string{BuildRoom: "01_design"},
+	Marker:      WorkspaceDir,
+	Seeds:       seeds,
 }
 
 // seeds generates settings, STATE.json, LOG.md and REPOS.json. They are
@@ -132,17 +138,25 @@ func Update(dir string) (UpdateReport, error) {
 	return rep, mergeAgentsFile(dir, &rep)
 }
 
+// EnsureBuild adds the build room the first time it's needed and merges its
+// AGENTS.md sections in. It reports whether it created the room; once the room
+// is there it does nothing. An inbox folder alone doesn't count as the room.
+func EnsureBuild(dir string) (created bool, err error) { return ensureRoom(dir, BuildRoom) }
+
 // EnsurePlan adds the plan room the first time it's needed and merges its
 // AGENTS.md sections in. It reports whether it created the room; once plan/
 // exists it does nothing.
-func EnsurePlan(dir string) (created bool, err error) {
+func EnsurePlan(dir string) (created bool, err error) { return ensureRoom(dir, PlanRoom) }
+
+// ensureRoom adds room through the engine and merges its AGENTS.md sections in.
+func ensureRoom(dir, room string) (created bool, err error) {
 	loaded, err := settings.LoadSettings(dir)
 	if err != nil {
 		return false, err
 	}
 	e := engine
 	e.VCS = loaded.VCS
-	rep, err := e.EnsureRoom(dir, PlanRoom)
+	rep, err := e.EnsureRoom(dir, room)
 	if err != nil || !rep.Created {
 		return false, err
 	}
@@ -158,7 +172,7 @@ const agentsFile = "AGENTS.md"
 func rooms(dir string) []string {
 	var out []string
 	for _, r := range agents.Rooms {
-		if info, err := os.Lstat(filepath.Join(dir, r)); err == nil && info.IsDir() {
+		if engine.HasRoom(dir, r) {
 			out = append(out, r)
 		}
 	}

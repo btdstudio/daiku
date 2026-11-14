@@ -18,9 +18,8 @@ import (
 var Rooms = []string{"plan", "build"}
 
 // Assemble returns the root fragment followed by each given room's fragment, in
-// Rooms order whatever order they're passed in. A room daiku doesn't have a
-// fragment for yet (build, until its version) contributes nothing; an unknown
-// room is an error.
+// Rooms order whatever order they're passed in. A room without a fragment
+// contributes nothing; an unknown room is an error.
 func Assemble(rooms ...string) (string, error) {
 	root, err := fs.ReadFile(daiku.AgentsFS, "root.md")
 	if err != nil {

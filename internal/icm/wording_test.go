@@ -1,9 +1,12 @@
 package icm
 
 import (
+	"io/fs"
 	"regexp"
 	"strings"
 	"testing"
+
+	daiku "github.com/btdstudio/daiku"
 )
 
 var (
@@ -64,5 +67,41 @@ func TestScaffoldCommitWordingIsConditional(t *testing.T) {
 			}
 			t.Errorf("%s: commit wording not qualified by `vcs: git`: %s", rel, strings.TrimSpace(block))
 		}
+	}
+}
+
+// N6: each room's text names only its own loop's phases. The build room never
+// calls a phase intake or plan, and the plan room never calls one ticket or tasks.
+func TestRoomsNameOnlyTheirOwnPhases(t *testing.T) {
+	buildBans := regexp.MustCompile(`\bintake\b|\*\*plan\*\*|\bplan phase|plan →|→ plan\b`)
+	planBans := regexp.MustCompile(`\*\*ticket\*\*|\*\*tasks\*\*|ticket →|→ tasks\b|\btasks phase`)
+	check := func(name, text string, bans *regexp.Regexp) {
+		if m := bans.FindString(text); m != "" {
+			t.Errorf("%s names another loop's phase: %q", name, m)
+		}
+	}
+	for name, fsys := range map[string]fs.FS{"build/": daiku.BuildFS, "plan/": daiku.PlanFS} {
+		bans := planBans
+		if name == "build/" {
+			bans = buildBans
+		}
+		err := fs.WalkDir(fsys, ".", func(rel string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return err
+			}
+			data, err := fs.ReadFile(fsys, rel)
+			check(name+rel, string(data), bans)
+			return err
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	for room, bans := range map[string]*regexp.Regexp{"build.md": buildBans, "plan.md": planBans} {
+		data, err := fs.ReadFile(daiku.AgentsFS, room)
+		if err != nil {
+			t.Fatal(err)
+		}
+		check("agents/"+room, string(data), bans)
 	}
 }
