@@ -6,6 +6,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/btdstudio/daiku/internal/state"
 )
 
 // Security finding 2 (S-0040): a committed settings file can't point the intake
@@ -179,5 +181,77 @@ func TestTicketCommandsRefuseBeforeWriting(t *testing.T) {
 				t.Fatal("LOG.md's target was written")
 			}
 		})
+	}
+}
+
+// AC8: a symlinked plan README refuses the build's gate, reopen and close
+// before any state changes, and the link's target is untouched.
+func TestSymlinkedPlanOverviewRefusesBuildTransitions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks")
+	}
+	root := plannedBuild(t, false)
+	gateAll(t, root, []string{"ticket", "approved"})
+	target := filepath.Join(t.TempDir(), "elsewhere.md")
+	if err := os.WriteFile(target, []byte("outside\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	readme := filepath.Join(root, filepath.FromSlash(authReadme))
+	if err := os.Remove(readme); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, readme); err != nil {
+		t.Fatal(err)
+	}
+	stateBefore, logBefore := readFile(t, state.StatePath(root)), readLog(t, root)
+	for _, tc := range []struct {
+		name string
+		run  func() int
+	}{
+		{"gate", func() int { return runGate(root, []string{"requirements", "approved"}) }},
+		{"reopen", func() int { return runReopen(root, []string{"ticket", "--reason", "r"}) }},
+		{"close", func() int { return runChange(root, []string{"close", "S-0001", "--reason", "r"}) }},
+	} {
+		code, stderr := captureStderr(t, tc.run)
+		if code == 0 || !strings.Contains(stderr, "is a symlink") || !strings.Contains(stderr, "README.md") {
+			t.Errorf("%s = %d: %s", tc.name, code, stderr)
+		}
+	}
+	if readFile(t, state.StatePath(root)) != stateBefore || readLog(t, root) != logBefore {
+		t.Fatal("a refused transition changed STATE.json or LOG.md")
+	}
+	if got := readFile(t, target); got != "outside\n" {
+		t.Fatalf("link target = %q", got)
+	}
+	if st, err := state.LoadState(root); err != nil || st.Name != "S-0001" {
+		t.Fatalf("active = %+v, %v", st, err)
+	}
+}
+
+// AC8 for a plan's own README: its gate refuses too.
+func TestSymlinkedOverviewRefusesAPlanGate(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks")
+	}
+	root := vcsWorkspace(t, `{"vcs": "none"}`)
+	if code := runChange(root, []string{"new", "Auth flow"}); code != 0 {
+		t.Fatal("change new")
+	}
+	target := filepath.Join(t.TempDir(), "elsewhere.md")
+	if err := os.WriteFile(target, []byte("outside\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	readme := filepath.Join(root, filepath.FromSlash(authReadme))
+	os.Remove(readme)
+	if err := os.Symlink(target, readme); err != nil {
+		t.Fatal(err)
+	}
+	stateBefore := readFile(t, state.StatePath(root))
+	code, stderr := gateStderr(t, root, "intake", "approved")
+	if code == 0 || !strings.Contains(stderr, "is a symlink") {
+		t.Fatalf("gate = %d: %s", code, stderr)
+	}
+	if readFile(t, state.StatePath(root)) != stateBefore || readFile(t, target) != "outside\n" {
+		t.Fatal("the refused gate changed something")
 	}
 }
