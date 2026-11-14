@@ -184,25 +184,30 @@ workspace.
 GOWORK=off go build -o daiku ./cmd/daiku   # build
 GOWORK=off go test ./...                    # all tests
 GOWORK=off go test ./internal/icm -update  # regenerate the scaffold golden
-sh scripts/coldstart.sh                    # the cold-start check, before a release
+sh scripts/coldstart.sh                    # the optional cold-start check before a release
 ```
 
 Runtime: Go >= 1.22, standard library only.
 
 ## Releasing
 
-1. Run `sh scripts/coldstart.sh`. It sets up two fresh workspaces and, for
-   each, prints a prompt to give an agent with no other context: "I have a
-   ticket, help me build it", then "Help me plan a password reset flow". Run
-   each in any agent, after running the `export PATH=…` line it prints in the
-   agent's shell, so the agent uses the daiku under test. Press Enter when the
-   agent stops, and check both print `PASS`. Don't tag until they do.
+Pushing a `v*` tag publishes the release. The `release` workflow checks the
+tree as CI does (gofmt, build, vet, test, `daiku check`), then creates the
+GitHub release with generated notes.
+
+1. **Optional, recommended for larger changes:** run
+   `sh scripts/coldstart.sh`. It sets up two fresh workspaces and prints a
+   prompt for an agent with no other context in each: "I have a ticket, help
+   me build it", then "Help me plan a password reset flow".
+   - In each agent's shell, first run the `export PATH=…` line it prints, so
+     the agent uses the daiku under test.
+   - Press Enter when the agent stops. Both should print `PASS`.
 2. Tag `main` and push the tag:
    `git tag -a vX.Y.Z -m vX.Y.Z && git push origin vX.Y.Z`.
-3. Publish the release, with notes listing the change's stories and their PRs:
-   `gh release create vX.Y.Z --title vX.Y.Z --notes-file notes.md`.
+3. Wait for the `release` workflow to publish the release, then edit its notes
+   to summarise the change, if the generated list of PRs isn't enough.
 4. Check the install in a clean `GOPATH`:
    `GOPATH=$(mktemp -d) GOFLAGS=-modcacherw go install github.com/btdstudio/daiku/cmd/daiku@vX.Y.Z`,
-   then run that `daiku version`, which prints `vX.Y.Z`. (`-modcacherw` keeps
-   the temp `GOPATH` deletable.) If the module proxy hasn't seen the tag yet,
-   set `GOPROXY=direct`.
+   then run that `daiku version`, which prints `vX.Y.Z`.
+   - `-modcacherw` keeps the temp `GOPATH` deletable.
+   - If the module proxy hasn't seen the tag yet, set `GOPROXY=direct`.
