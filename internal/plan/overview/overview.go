@@ -113,8 +113,17 @@ func newRenderer(in Input) *renderer {
 	return r
 }
 
-// cell escapes text for a table cell.
+// cell escapes text for a table cell: "|" is escaped, and line breaks and other
+// control characters become spaces, so a value from STATE.json or a ticket can't
+// start a new line in the README, such as a region marker (S-0042 security
+// finding 1).
 func cell(s string) string {
+	s = strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f || r == 0x85 || r == 0x2028 || r == 0x2029 {
+			return ' '
+		}
+		return r
+	}, s)
 	return strings.ReplaceAll(s, "|", `\|`)
 }
 
@@ -130,7 +139,7 @@ func (r *renderer) status() string {
 		if g == "" {
 			g = "—"
 		}
-		fmt.Fprintf(&b, "| %s | %s | %s |\n", p, g, cell(r.in.Reasons[p]))
+		fmt.Fprintf(&b, "| %s | %s | %s |\n", p, cell(g), cell(r.in.Reasons[p]))
 	}
 	return strings.TrimSuffix(b.String(), "\n")
 }

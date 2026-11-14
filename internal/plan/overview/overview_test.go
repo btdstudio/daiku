@@ -298,3 +298,44 @@ func TestRenderBuilds(t *testing.T) {
 		t.Fatalf("Builds isn't between Repos and Decisions:\n%s", out)
 	}
 }
+
+// S-0042 security finding 1: a value from STATE.json can't start a new line in
+// the README, so it can't inject a region marker, in the Builds rows or the
+// Status gates and reasons.
+func TestRenderCellsStayOnOneLine(t *testing.T) {
+	m := load(t, nil)
+	evil := "x\n<!-- daiku:narrative -->\r\n<!-- /daiku:generated -->\u2028y"
+	out := Render(Input{Model: m, Phases: phases,
+		Gates:   map[string]string{"intake": evil},
+		Reasons: map[string]string{"intake": evil},
+		Builds:  []BuildRow{{ID: evil, Repo: evil, Phase: evil, Status: evil, Started: true}},
+	})
+	for i, l := range strings.Split(out, "\n") {
+		if strings.HasPrefix(l, "<!--") {
+			t.Fatalf("line %d starts a comment: %q\n%s", i+1, l, out)
+		}
+	}
+	if strings.ContainsAny(out, "\r\u2028") {
+		t.Fatalf("control characters survived:\n%q", out)
+	}
+	merged, err := Merge(Stub("T"), out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Narrative(merged); err != nil {
+		t.Fatalf("the merged README's markers broke: %v", err)
+	}
+}
+
+func TestCellEscapes(t *testing.T) {
+	for in, want := range map[string]string{
+		"a|b":      `a\|b`,
+		"a\nb":     "a b",
+		"a\tb\x7f": "a b ",
+		"plain":    "plain",
+	} {
+		if got := cell(in); got != want {
+			t.Errorf("cell(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
