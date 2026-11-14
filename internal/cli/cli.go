@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/btdstudio/daiku/internal/build/lock"
-	"github.com/btdstudio/daiku/internal/build/ship"
 	"github.com/btdstudio/daiku/internal/core/repos"
 	kiso "github.com/btdstudio/daiku/internal/core/state"
 	"github.com/btdstudio/daiku/internal/icm"
@@ -43,7 +42,7 @@ func Run(args []string) int {
 // handlers are the commands Run dispatches; main dispatches init, update, check
 // and version itself.
 var handlers = map[string]func(root string, args []string) int{
-	"status":     func(root string, _ []string) int { return runStatus(root) },
+	"status":     runStatus,
 	"settings":   func(root string, _ []string) int { return runSettings(root) },
 	"switch":     runSwitch,
 	"source":     runSource,
@@ -62,50 +61,6 @@ var handlers = map[string]func(root string, args []string) int{
 	"env":    func(root string, _ []string) int { return runEnv(root) },
 	"commit": runCommit,
 	"pr":     runPR,
-}
-
-func runStatus(root string) int {
-	loaded, err := settings.LoadSettings(root)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return 1
-	}
-	st, err := state.LoadState(root)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return 1
-	}
-	if st.Name == "" {
-		fmt.Println("no active change")
-		fmt.Printf("vcs:      %s\n", loaded.VCS)
-		return 0
-	}
-	fmt.Printf("change:   %s\n", st.Name)
-	build := st.Loop == state.BuildLoop
-	if build {
-		// Plan changes print as they always have; only a build change says its loop.
-		fmt.Printf("loop:     %s\n", st.Loop)
-		if len(st.Repos) > 0 {
-			fmt.Printf("repo:     %s\n", st.Repos[0])
-		}
-	}
-	fmt.Printf("phase:    %s\n", st.Phase)
-	fmt.Printf("status:   %s\n", st.Status)
-	var gates []string
-	for _, p := range state.MachineFor(st.Loop).Phases {
-		gates = append(gates, p.Name+"="+st.Gates[p.Name])
-	}
-	fmt.Printf("gates:    %s\n", strings.Join(gates, " "))
-	if build {
-		// tomo's ticket and branch lines: the branch ship expects.
-		if t := changeTicket(root, st); t != nil {
-			fmt.Printf("ticket:   %s %s\n", t.ID, t.Title)
-			fmt.Printf("branch:   %s\n", ship.BranchName(t))
-		}
-	}
-	fmt.Printf("vcs:      %s\n", loaded.VCS)
-	warnSkippedExplore(root, st)
-	return 0
 }
 
 // warnSkippedExplore warns when a change's intake is a repo but its explore phase

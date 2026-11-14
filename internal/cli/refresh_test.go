@@ -209,7 +209,7 @@ func TestOverviewInvalidSetting(t *testing.T) {
 	}
 	want := `daiku: invalid overview "sometimes" (expected auto|manual)`
 	for name, run := range map[string]func() int{
-		"status": func() int { return runStatus(root) },
+		"status": func() int { return runStatus(root, nil) },
 		"gate":   func() int { return runGate(root, []string{"intake", "approved"}) },
 	} {
 		if code, stderr := captureStderr(t, run); code == 0 || !strings.Contains(stderr, want) {
