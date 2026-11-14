@@ -123,6 +123,11 @@ func BuildRows(root, plan string) ([]overview.BuildRow, error) {
 		if c := changes[id]; c != nil && c.Loop == BuildLoop {
 			row.Started = true
 			row.Phase, row.Status, row.Closed = c.Phase, c.Status, c.IsClosed()
+			// The build's recorded repo is the one it holds; the ticket's may
+			// have been edited since (code review finding 2).
+			if len(c.Repos) > 0 {
+				row.Repo = c.Repos[0]
+			}
 		}
 		out = append(out, row)
 	}
@@ -156,4 +161,24 @@ func CheckOverview(root string, c State) error {
 		return nil
 	}
 	return workspace.CheckPath(root, filepath.Join(root, filepath.FromSlash(OverviewPath(plan))))
+}
+
+// CheckClose is CheckOverview for `change close <name>`. Close resolves a name
+// STATE.json doesn't record to the plan folder of that name, and refreshes it,
+// so that folder's README is checked too (code review finding 1).
+func CheckClose(root, name string) error {
+	changes, err := ReadChanges(root)
+	if err != nil {
+		return err
+	}
+	if c := changes[name]; c != nil {
+		return CheckOverview(root, *c)
+	}
+	if name == "" || !filepath.IsLocal(name) || strings.ContainsAny(name, `/\`) {
+		return nil
+	}
+	if info, err := os.Lstat(ChangeDir(root, name)); err != nil || !info.IsDir() {
+		return nil
+	}
+	return CheckOverview(root, State{Name: name, Loop: PlanLoop})
 }

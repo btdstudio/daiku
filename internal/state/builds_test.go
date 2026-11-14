@@ -127,3 +127,46 @@ func TestCheckOverview(t *testing.T) {
 		}
 	}
 }
+
+// Code review finding 2: once a build exists, its row shows the build's repo,
+// even if the ticket's repo was edited afterwards.
+func TestBuildRowsUseTheBuildsRepo(t *testing.T) {
+	root := overviewRoot(t, "")
+	rel := "plan/specs/1-auth/tickets/S-0002.md"
+	seedBuildOf(t, root, rel, ticket.Ticket{ID: "S-0002", Type: ticket.Story, Title: "Sign in", Repo: "api"})
+	writeTicket(t, root, rel, ticket.Ticket{ID: "S-0002", Type: ticket.Story, Title: "Sign in", Repo: "web"})
+	rows, err := BuildRows(root, "1-auth")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Repo != "api" {
+		t.Fatalf("rows = %+v, want S-0002 on api", rows)
+	}
+}
+
+// Code review finding 1: CheckClose checks a plan folder STATE.json doesn't
+// record, and ignores names that aren't folders.
+func TestCheckCloseCoversUnrecordedPlanFolders(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks")
+	}
+	root := overviewRoot(t, "")
+	dir := ChangeDir(root, "9-ghost")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(t.TempDir(), "x.md"), filepath.Join(dir, "README.md")); err != nil {
+		t.Fatal(err)
+	}
+	if err := CheckClose(root, "9-ghost"); err == nil || !strings.Contains(err.Error(), "is a symlink") {
+		t.Fatalf("unrecorded plan folder: err = %v", err)
+	}
+	for _, name := range []string{"8-missing", "../x", ""} {
+		if err := CheckClose(root, name); err != nil {
+			t.Errorf("%q: err = %v", name, err)
+		}
+	}
+	if err := CheckClose(root, "1-auth"); err != nil {
+		t.Errorf("recorded plan: err = %v", err)
+	}
+}
