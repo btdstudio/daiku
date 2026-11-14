@@ -188,3 +188,49 @@ func TestTicketsCheckCoversTheInbox(t *testing.T) {
 		t.Fatalf("check with an unregistered inbox repo = %d:\n%s", code, out)
 	}
 }
+
+// S-0043 D6: an inbox ticket's parent and depends_on planned in another
+// workspace are warnings; a planned ticket's missing parent is still an error.
+func TestTicketsCheckInboxReferencesPlannedElsewhere(t *testing.T) {
+	root := rootOnly(t)
+	if code := repoCmd(root, "add", "api", "https://github.com/org/api"); code != 0 {
+		t.Fatal("repo add")
+	}
+	draft := writeDraft(t, "github: org/api#1234", "Gateway auth")
+	text := strings.Replace(readFile(t, draft), "status: draft\n", "status: draft\nparent: F-0003\ndepends_on: [S-0002]\nrequirements: [R1, N2]\n", 1)
+	if err := os.WriteFile(draft, []byte(text), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if code := runTickets(root, []string{"pull", draft}); code != 0 {
+		t.Fatal("pull")
+	}
+	code, out := captureStdout(t, func() int { return runTickets(root, []string{"check"}) })
+	for _, want := range []string{
+		"! X-1234: parent F-0003 isn't in this workspace (planned elsewhere)\n",
+		"! X-1234: depends_on S-0002 isn't in this workspace (planned elsewhere)\n",
+		"1 tickets ok, 2 warning(s)\n",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("check lacks %q:\n%s", want, out)
+		}
+	}
+	if code != 0 || strings.Contains(out, "✗") {
+		t.Fatalf("check = %d:\n%s", code, out)
+	}
+
+	planned := workspace(t)
+	ticketRepo(t, planned)
+	writeArtifacts(t, planned)
+	if code := runTickets(planned, []string{"new", "story", "Login", "--repo", "app"}); code != 0 {
+		t.Fatal("tickets new")
+	}
+	p := ticketPath(planned, "S-0001")
+	text = strings.Replace(readFile(t, p), "repo: app\n", "repo: app\nparent: F-0009\n", 1)
+	if err := os.WriteFile(p, []byte(text), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	code, out = captureStdout(t, func() int { return runTickets(planned, []string{"check"}) })
+	if code != 1 || !strings.Contains(out, "✗ S-0001: parent F-0009 doesn't exist") {
+		t.Fatalf("planned check = %d:\n%s", code, out)
+	}
+}

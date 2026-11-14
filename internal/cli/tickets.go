@@ -283,13 +283,27 @@ func ticketsCheck(root string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	problems = append(problems, ticket.ValidateWorkspace(append(slices.Clone(all), inboxed...), reg.Names())...)
+	// An inbox ticket may point at tickets planned in another workspace, which
+	// aren't here: that's a warning, not an error (S-0043 D6). A planned ticket's
+	// missing reference stays an error.
+	inInbox := map[string]bool{}
+	for _, t := range inboxed {
+		inInbox[t.ID] = true
+	}
+	var elsewhere []string
+	for _, p := range ticket.ValidateWorkspace(append(slices.Clone(all), inboxed...), reg.Names()) {
+		if p.Ref != "" && inInbox[p.ID] {
+			elsewhere = append(elsewhere, p.ID+": "+strings.TrimSuffix(p.Message, " doesn't exist")+" isn't in this workspace (planned elsewhere)")
+			continue
+		}
+		problems = append(problems, p)
+	}
 	// A ready ticket whose breakdown was reopened is warned about, not reverted.
 	changes, err := state.ReadChanges(root)
 	if err != nil {
 		return 0, err
 	}
-	var warnings []string
+	warnings := elsewhere
 	for _, t := range all {
 		if t.Status != ticket.StatusReady {
 			continue

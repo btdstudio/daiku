@@ -1159,3 +1159,31 @@ func TestQAEmptyCheckboxIsNotACriterion(t *testing.T) {
 		}
 	}
 }
+
+// S-0043 D6: Ref names the missing ticket on exactly the three reference
+// problems, so a caller can tell a reference into another workspace apart.
+func TestMissingReferencesCarryRef(t *testing.T) {
+	orphan := mk(t, Ticket{ID: "X-1", Type: Task, Parent: "F-0003", DependsOn: []string{"S-0002"}, Supersedes: "X-0"})
+	other := mk(t, Ticket{ID: "X-2", Type: Task, Repo: "nowhere"})
+	refs := map[string]string{}
+	for _, p := range ValidateWorkspace([]*Ticket{orphan, other}, []string{"app"}) {
+		if p.Ref != "" {
+			refs[p.Message] = p.Ref
+		} else if strings.Contains(p.Message, "doesn't exist") {
+			t.Errorf("reference problem without Ref: %v", p)
+		}
+	}
+	want := map[string]string{
+		"parent F-0003 doesn't exist":     "F-0003",
+		"depends_on S-0002 doesn't exist": "S-0002",
+		"supersedes X-0 doesn't exist":    "X-0",
+	}
+	if len(refs) != len(want) {
+		t.Fatalf("refs = %v, want %v", refs, want)
+	}
+	for msg, ref := range want {
+		if refs[msg] != ref {
+			t.Errorf("%q: Ref = %q, want %q", msg, refs[msg], ref)
+		}
+	}
+}
