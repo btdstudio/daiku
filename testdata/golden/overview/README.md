@@ -90,6 +90,10 @@ flowchart LR
 | `app` | 2 | 0 | 1 | [S-0004](tickets/S-0004.md), [S-0006](tickets/S-0006.md), [T-0007](tickets/T-0007.md) |
 | `web` | 0 | 1 | 0 | [S-0005](tickets/S-0005.md) |
 
+## Builds
+
+_None yet._
+
 ## Decisions
 
 | ADR | Title | Status | Cited by |
