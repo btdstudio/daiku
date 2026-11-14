@@ -28,7 +28,17 @@ Re-running push is always safe, because finished tickets are skipped.
 
 ## fetch
 
-Read the live item by its external id. The build room's ticket phase and drift review use this.
+Read the live item by its external id. The build room's ticket phase and drift
+review use this. If the fetch fails, use the ticket file as it is, and say so in
+the requirements.
+
+To build an item that has no ticket yet, fetch it, write a draft ticket file with
+exactly one `external` entry (`<tool>: <item-id>`) and the item's title, type,
+repo and body, then run `daiku tickets pull <draft>`. It becomes
+`build/tickets/X-<pm-id>.md`, where the PM id is the text after the item id's last
+`#` (or the whole id when it has none): `org/app#1234` is `X-1234`, and `PROJ-123`
+is `X-PROJ-123`. Pulling the same item again replaces that ticket. Two repos'
+issue `#7` would both be `X-7`, so pull from one PM project per workspace.
 
 ## link
 

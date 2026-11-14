@@ -191,7 +191,6 @@ func TestBuildChangeActive(t *testing.T) {
 		verb string
 		run  func() int
 	}{
-		"tickets new":      {"tickets new", func() int { return runTickets(root, []string{"new", "story", "X", "--repo", "app"}) }},
 		"tickets ready":    {"tickets ready --all", func() int { return runTickets(root, []string{"ready", "--all"}) }},
 		"overview":         {"overview", func() int { return runOverview(root, nil) }},
 		"overview <build>": {"overview", func() int { return runOverview(root, []string{"S-0036"}) }},

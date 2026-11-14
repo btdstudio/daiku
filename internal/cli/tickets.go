@@ -7,10 +7,12 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
 	"github.com/btdstudio/daiku"
+	"github.com/btdstudio/daiku/internal/build/inbox"
 	"github.com/btdstudio/daiku/internal/core/repos"
 	"github.com/btdstudio/daiku/internal/core/ticket"
 	"github.com/btdstudio/daiku/internal/plan"
@@ -42,6 +44,8 @@ func runTickets(root string, args []string) int {
 		code, err = ticketsMarkPublished(root, args[1:])
 	case "unfreeze":
 		code, err = ticketsUnfreeze(root, args[1:])
+	case "pull":
+		code, err = ticketsPull(root, args[1:])
 	default:
 		fmt.Fprint(os.Stderr, usageText("tickets"))
 		return 1
@@ -93,8 +97,11 @@ func templateBody() (string, error) {
 func ticketsNew(root string, args []string) (int, error) {
 	var pos []string
 	f := ticket.Ticket{}
+	toInbox := false
 	for i := 0; i < len(args); i++ {
 		switch a := args[i]; {
+		case a == "--inbox":
+			toInbox = true
 		case a == "--parent" && i+1 < len(args):
 			i++
 			f.Parent = args[i]
@@ -121,14 +128,10 @@ func ticketsNew(root string, args []string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if st.Name == "" {
-		return 0, fmt.Errorf("daiku: no active change — run `daiku switch <change>` first")
-	}
-	if err := requirePlan(st, "tickets new"); err != nil {
-		return 0, err
-	}
-	if st.Status == "closed" {
-		return 0, fmt.Errorf("daiku: %s is closed", st.Name)
+	// Without an open plan change to plan it in, a ticket goes to the inbox
+	// (design D4): no active change, a closed one, or a build.
+	if toInbox || st.Name == "" || st.Loop == state.BuildLoop || st.Status == "closed" {
+		return inboxTicket(root, f)
 	}
 	if err := resolveTicketRepo(root, st, &f); err != nil {
 		return 0, err
@@ -269,11 +272,18 @@ func ticketsCheck(root string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	// The inbox is checked with the plan tickets, so a repo or schema problem in
+	// an N- or X- ticket is caught too, and an X- ticket outside it is an error.
+	inboxed, located, err := inboxProblems(root, all)
+	if err != nil {
+		return 0, err
+	}
+	problems = append(problems, located...)
 	reg, err := repos.Load(root, "daiku")
 	if err != nil {
 		return 0, err
 	}
-	problems = append(problems, ticket.ValidateWorkspace(all, reg.Names())...)
+	problems = append(problems, ticket.ValidateWorkspace(append(slices.Clone(all), inboxed...), reg.Names())...)
 	// A ready ticket whose breakdown was reopened is warned about, not reverted.
 	changes, err := state.ReadChanges(root)
 	if err != nil {
@@ -708,4 +718,81 @@ func ticketsUnfreeze(root string, args []string) (int, error) {
 	}
 	fmt.Printf("%s: unfrozen\n", pos[0])
 	return 0, nil
+}
+
+// inboxTicket writes a native ticket to the inbox, build/tickets/, with the next
+// N- id (design D4). A native ticket is a task with a registered repo, and has
+// no parent, dependencies or requirements: those belong to a plan change.
+func inboxTicket(root string, f ticket.Ticket) (int, error) {
+	if f.Parent != "" || len(f.DependsOn) > 0 || len(f.Requirements) > 0 {
+		return 0, errors.New("daiku: an inbox ticket has no --parent, --depends or --requirements; those belong to a plan change")
+	}
+	if f.Type != ticket.Task {
+		return 0, fmt.Errorf("daiku: an inbox ticket is a task, not a %s", f.Type)
+	}
+	if f.Repo == "" {
+		return 0, errors.New("daiku: an inbox ticket needs a repo (--repo <name>)")
+	}
+	reg, err := repos.Load(root, "daiku")
+	if err != nil {
+		return 0, err
+	}
+	if _, ok := reg.Repos[f.Repo]; !ok {
+		return 0, fmt.Errorf("daiku: repo %q isn't registered — run `daiku repo add %s <remote>`", f.Repo, f.Repo)
+	}
+	body, err := templateBody()
+	if err != nil {
+		return 0, err
+	}
+	t, err := inbox.New(root, inbox.NewOptions{Title: f.Title, Repo: f.Repo, Body: body})
+	if err != nil {
+		return 0, err
+	}
+	fmt.Printf("created %s %s\n", t.ID, t.Path)
+	return 0, nil
+}
+
+// ticketsPull records a draft ticket fetched from a PM tool as X-<pm-id> in the
+// inbox, replacing an earlier pull of the same item, then logs it and, under
+// vcs: git, commits it. Nothing is written when a state file is unsafe.
+func ticketsPull(root string, args []string) (int, error) {
+	if len(args) != 1 || strings.HasPrefix(args[0], "-") {
+		return 0, errors.New(usageLine("tickets", "pull"))
+	}
+	draft, err := os.ReadFile(args[0])
+	if err != nil {
+		return 0, fmt.Errorf("daiku: cannot read %s: %v", args[0], err)
+	}
+	if err := state.CheckStateFiles(root); err != nil {
+		return 0, err
+	}
+	t, err := inbox.Pull(root, draft)
+	if err != nil {
+		return 0, err
+	}
+	var tool string
+	for k := range t.External {
+		tool = k
+	}
+	rel := relTo(root, t.Path)
+	if err := state.Record(root, []string{fmt.Sprintf("%s: pulled from %s", t.ID, tool)}, rel); err != nil {
+		return 0, err
+	}
+	fmt.Printf("pulled %s %s\n", t.ID, rel)
+	return 0, nil
+}
+
+// inboxProblems reads the inbox and adds the X- location rule (spec R27): a pulled
+// ticket lives in build/tickets/, so one among the plan tickets is an error.
+func inboxProblems(root string, planned []*ticket.Ticket) ([]*ticket.Ticket, []ticket.Problem, error) {
+	all, problems, err := inbox.List(root)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, t := range planned {
+		if prefix, _, _ := strings.Cut(t.ID, "-"); prefix == ticket.PulledPrefix {
+			problems = append(problems, ticket.Problem{ID: t.ID, Message: "pulled tickets live in build/tickets/, not " + relTo(root, t.Path)})
+		}
+	}
+	return all, problems, nil
 }

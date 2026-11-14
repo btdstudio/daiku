@@ -289,7 +289,7 @@ func TestGroupHelpListsEveryVerb(t *testing.T) {
 		"adr":        {"new", "list", "show"},
 		"build":      {"new"},
 		"change":     {"new", "close"},
-		"tickets":    {"new", "check", "status", "order", "ready", "mark-published", "unfreeze"},
+		"tickets":    {"new", "check", "status", "order", "ready", "mark-published", "unfreeze", "pull"},
 		"repo":       {"add", "list", "path", "doctor"},
 		"references": {"check"},
 		"idea":       {"new", "list", "show", "park", "drop", "reopen", "promote"},
