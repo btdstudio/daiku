@@ -1,0 +1,236 @@
+package icm
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+// Scaffold text for diagrams, the narrative and requirement citations (S-0030).
+
+// AC3: a fresh workspace's architecture template has ## Diagrams right after
+// the Overview section, and each required diagram precedes a mermaid fence.
+func TestScaffoldArchitectureTemplateDiagrams(t *testing.T) {
+	dir := t.TempDir()
+	if _, err := Scaffold(dir, Options{NoGit: true}, "none"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := EnsurePlan(dir); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "plan", "04_architecture", "templates", "architecture.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var h2 []string
+	lines := strings.Split(string(data), "\n")
+	for _, l := range lines {
+		if strings.HasPrefix(l, "## ") {
+			h2 = append(h2, l)
+		}
+	}
+	if len(h2) < 2 || h2[0] != "## Overview" || h2[1] != "## Diagrams" {
+		t.Fatalf("sections = %q, want ## Overview then ## Diagrams", h2)
+	}
+	for _, heading := range []string{"### Context", "### Layers", "### Flow:"} {
+		found := false
+		for i, l := range lines {
+			if !strings.HasPrefix(l, heading) {
+				continue
+			}
+			for _, next := range lines[i+1:] {
+				if strings.HasPrefix(next, "#") {
+					break
+				}
+				if next == "```mermaid" {
+					found = true
+					break
+				}
+			}
+		}
+		if !found {
+			t.Errorf("%s has no mermaid fence", heading)
+		}
+	}
+}
+
+// AC5: the personas, contexts, spec template and AGENTS.md carry the new
+// guidance.
+func TestScaffoldGuidanceText(t *testing.T) {
+	for _, tc := range []struct{ file, want string }{
+		{"04_architecture/templates/architecture.md", "Use standard `mermaid`"},
+		{"04_architecture/templates/architecture.md", "about 15 nodes per diagram"},
+		{"04_architecture/templates/architecture.md", "Every repo in the change appears in Layers"},
+		{"04_architecture/templates/architecture.md", "in backticks"},
+		{"04_architecture/personas/architect.md", "Draw the `## Diagrams`"},
+		{"04_architecture/context.md", "`<!-- daiku:narrative -->`"},
+		{"04_architecture/context.md", "about 250 words"},
+		{"04_architecture/context.md", "run `daiku overview` first"},
+		{"05_breakdown/context.md", "refresh the narrative"},
+		{"05_breakdown/personas/architect.md", "[--requirements <id,...>]"},
+		{"05_breakdown/personas/architect.md", "cites the requirements it satisfies"},
+		{"05_breakdown/personas/architect.md", "stories and tasks with no parent"},
+		{"05_breakdown/personas/architect.md", "one reviewable PR"},
+		{"05_breakdown/personas/architect.md", "too large to review"},
+		{"05_breakdown/personas/architect.md", "ship at different times"},
+		{"05_breakdown/personas/architect.md", "A repo's only story drops the template's split-reason line"},
+		{"05_breakdown/personas/architect.md", "more than 8 stories"},
+		{"05_breakdown/personas/architect.md", "Never add an epic or feature to group one"},
+		{"05_breakdown/personas/architect.md", "There are no release tickets"},
+		{"05_breakdown/personas/architect.md", "its last story"},
+		{"05_breakdown/personas/architect.md", "a native ticket in the build room's inbox"},
+		{"05_breakdown/personas/architect.md", "Tickets, not file-scoped tasks"},
+		{"05_breakdown/personas/architect.md", "Never set `status: ready`"},
+		{"05_breakdown/personas/architect.md", "publish target groups tickets"},
+		{"05_breakdown/personas/architect.md", "Add an epic only above two or more features"},
+		{"05_breakdown/personas/architect.md", "it isn't a target"},
+		{"05_breakdown/personas/architect.md", "Use a task for work in one repo"},
+		{"05_breakdown/personas/architect.md", "`depends_on` the last story of the repo it bumps"},
+		{"05_breakdown/personas/architect.md", "A story lands in one repo"},
+		{"05_breakdown/templates/ticket.md", "too large to review as one PR"},
+		{"05_breakdown/context.md", "features and epics only where grouping helps"},
+		{"AGENTS.md", "features and epics only where grouping helps"},
+		{"AGENTS.md", "Edits inside daiku's `##` sections are overwritten by `daiku update`"},
+		{"AGENTS.md", "Any phase may also open a file listed in `references/index.md`"},
+		{"AGENTS.md", "references/ # reference files + your own index.md (daiku never edits it)"},
+		{"references/context.md", "`purpose`, `from` and `added` are required"},
+		{"references/context.md", "`summary` is optional, but required when an agent may not be able to read the format"},
+		{"references/context.md", "start it with `AI chat`"},
+		{"references/context.md", "`index.md` is yours: daiku never creates, edits or overwrites it"},
+		{"references/context.md", "`daiku references check` warns about"},
+		{"references/context.md", "A folder isn't an entry: list each file in it separately"},
+		{"ideas/context.md", "An idea isn't a change"},
+		{"ideas/context.md", "Ideas are dropped, never deleted"},
+		{"ideas/context.md", "`daiku idea new` uses a built-in copy of `templates/summary.md`"},
+		{"ideas/context.md", "An idea can be promoted more than once, to split it"},
+		{"ideas/context.md", "Promote only when the person asks"},
+		{"ideas/context.md", "goes in that idea's log"},
+		{"ideas/context.md", "a `from` that starts with `AI chat`"},
+		{"ideas/personas/facilitator.md", "Draw out the person's options before offering your own"},
+		{"ideas/personas/facilitator.md", "Label who raised each option in the log: person or agent"},
+		{"ideas/personas/facilitator.md", "Skip a step only by noting the skip and the reason in the log"},
+		{"ideas/personas/facilitator.md", "Write the session's entry in `log.md` before you stop"},
+		{"ideas/personas/facilitator.md", "Append to the log, never rewrite it"},
+		{"ideas/personas/facilitator.md", "Never write intakes, specs or tickets. Never promote an idea unless the person asks"},
+		{"ideas/personas/facilitator.md", "a `from` that starts with `AI chat`"},
+		{"ideas/templates/log-entry.md", "**Questions asked**"},
+		{"ideas/templates/log-entry.md", "<option> (person)"},
+		{"ideas/templates/log-entry.md", "<option> (agent)"},
+		{"ideas/templates/log-entry.md", "**Choice**"},
+		{"ideas/templates/log-entry.md", "**Reason**"},
+		{"AGENTS.md", "| Work an idea | `ideas/` | facilitator | `ideas/context.md`, `ideas/<n>-<slug>/*`, `references/index.md` | `plan/specs/*`, the repos |"},
+		{"AGENTS.md", "**Think an idea through** — `daiku idea new \"Title\"`"},
+		{"AGENTS.md", "- Ideas: `ideas/<n>-<slug>/summary.md|log.md`"},
+		{"AGENTS.md", "ideas/ # ideas, one <n>-<slug>/ folder each (summary.md, log.md)"},
+		{"06_publish/sync.md", "only for a ticket that has a parent"},
+		{"06_publish/sync-examples/github.md", "needed only when the change has epics or features"},
+		{"06_publish/sync.md", "Its parent (if it has one)"},
+		{"06_publish/sync-examples/github.md", "Its parent (if it has one)"},
+		{"06_publish/sync-examples/github.md", "Only for a ticket that has a parent"},
+		{"06_publish/sync-examples/github.md", "needs no planning repo"},
+		{"03_spec/personas/analyst.md", "on one line"},
+		{"03_spec/templates/functional-spec.md", "all on one line"},
+		{"AGENTS.md", "`daiku tickets new <type> <title> [--parent <id>] [--repo <name>] [--depends <id,id>] [--requirements <id,id>]`"},
+	} {
+		data := scaffoldText(t, tc.file)
+		// Whitespace is collapsed, so rewrapping a paragraph can't hide a phrase.
+		if !strings.Contains(strings.Join(strings.Fields(data), " "), tc.want) {
+			t.Errorf("%s lacks %q", tc.file, tc.want)
+		}
+	}
+}
+
+// AC4: no description of breakdown in the scaffold says it always produces epics
+// and features. Whitespace is collapsed, so a rewrap can't hide it. (The repo
+// README's wording is checked in the daiku package.)
+func TestBreakdownWordingIsNotAlwaysEpics(t *testing.T) {
+	for name, text := range scaffoldMarkdown(t) {
+		flat := strings.Join(strings.Fields(text), " ")
+		for _, old := range []string{"epics, features, stories and tasks", "epics, then features"} {
+			if strings.Contains(flat, old) {
+				t.Errorf("%s still says %q", name, old)
+			}
+		}
+	}
+}
+
+// AC4: every routing row can read the references index.
+func TestRoutingRowsReadTheReferencesIndex(t *testing.T) {
+	rows := 0
+	inTable := false
+	for _, line := range strings.Split(scaffoldText(t, "AGENTS.md"), "\n") {
+		switch {
+		case strings.HasPrefix(line, "| Task / Intent"):
+			inTable = true
+		case inTable && strings.HasPrefix(line, "|---"):
+		case inTable && strings.HasPrefix(line, "| "):
+			rows++
+			cells := strings.Split(line, "|")
+			if len(cells) != 7 || !strings.Contains(cells[4], "`references/index.md`") {
+				t.Errorf("a routing row's Read column lacks references/index.md: %s", line)
+			}
+		default:
+			inTable = false
+		}
+	}
+	if rows < 8 {
+		t.Errorf("found %d routing rows, want at least 8", rows)
+	}
+}
+
+// N3: the references guide names no third-party tool.
+func TestReferencesGuideNamesNoTools(t *testing.T) {
+	text := strings.ToLower(scaffoldText(t, "references/context.md"))
+	for _, tool := range []string{"obsidian", "notion", "confluence", "chatgpt", "claude", "gemini", "copilot", "slack", "github", "google", "onenote", "evernote"} {
+		if strings.Contains(text, tool) {
+			t.Errorf("references/context.md names %q", tool)
+		}
+	}
+}
+
+// AC10: the facilitator works in five ordered steps.
+func TestFacilitatorStepsAreInOrder(t *testing.T) {
+	text := strings.Join(strings.Fields(scaffoldText(t, "ideas/personas/facilitator.md")), " ")
+	last := -1
+	for n, step := range []string{
+		"1. **Clarify the problem.**",
+		"2. **Let it grow.**",
+		"3. **Challenge it with a pre-mortem.**",
+		"4. **Cut scope.**",
+		"5. **Update the summary.**",
+	} {
+		i := strings.Index(text, step)
+		if i < 0 {
+			t.Fatalf("step %d, %q, isn't in the persona", n+1, step)
+		}
+		if i < last {
+			t.Errorf("step %d, %q, comes before an earlier step", n+1, step)
+		}
+		if strings.Count(text, step) != 1 {
+			t.Errorf("step %d, %q, appears more than once", n+1, step)
+		}
+		last = i
+	}
+	if strings.Contains(text, "6. **") {
+		t.Error("the persona has more than five numbered steps")
+	}
+	// A cut becomes a no-go or a parked idea.
+	for _, want := range []string{"as a no-go in the summary", "a new idea that you park"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("step 4 lacks %q", want)
+		}
+	}
+}
+
+// N4: the ideas room names no third-party tool.
+func TestIdeasRoomNamesNoTools(t *testing.T) {
+	for _, rel := range []string{"ideas/context.md", "ideas/personas/facilitator.md", "ideas/templates/log-entry.md", "ideas/templates/summary.md"} {
+		text := strings.ToLower(scaffoldText(t, rel))
+		for _, tool := range []string{"obsidian", "notion", "confluence", "chatgpt", "claude", "gemini", "copilot", "slack", "github", "google", "miro", "figma", "jira"} {
+			if strings.Contains(text, tool) {
+				t.Errorf("%s names %q", rel, tool)
+			}
+		}
+	}
+}
