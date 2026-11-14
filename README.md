@@ -55,6 +55,7 @@ daiku change new "Gateway"     # creates the plan room and a plan change
 | `daiku adr new --title <t> [--deciders <d>] [--context <c>] [--decision <d>] [--consequences <c>] [--file <path>]` | create an ADR in `plan/04_architecture/adr/` (`--file` reads the body from a file) |
 | `daiku adr list` | list ADRs |
 | `daiku adr show <number>` | show an ADR |
+| `daiku build new <ticket-id>` | create a build change for a ticket, in its repo; creates `build/` the first time |
 | `daiku change new <title> [--repo <name\|path>]... [--rev <r>] [--body <b>]` | create a plan change + intake + switch; creates `plan/` the first time |
 | `daiku change close <change> --reason <r>` | close a change |
 | `daiku gate <phase> <status> [--reason <r>] [--force]` | advance the active change's gate (earlier phases must be approved or skipped); `skipped` needs a reason |

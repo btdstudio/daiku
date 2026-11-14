@@ -252,12 +252,12 @@ func commandRows(t *testing.T, name string, data []byte) []string {
 }
 
 // TestCommandTablesMatchUsage pins the AGENTS.md fragments' command tables to
-// the usage table, so they can't drift: the root and plan fragments together
+// the usage table, so they can't drift: the root and room fragments together
 // list every synopsis, each exactly once. (The repo README's table is checked
 // with the README.)
 func TestCommandTablesMatchUsage(t *testing.T) {
 	seen := map[string]string{}
-	for _, name := range []string{"root.md", "plan.md"} {
+	for _, name := range []string{"root.md", "plan.md", "build.md"} {
 		data, err := fs.ReadFile(daiku.AgentsFS, name)
 		if err != nil {
 			t.Fatal(err)
@@ -287,6 +287,7 @@ func TestGroupHelpListsEveryVerb(t *testing.T) {
 	for group, verbs := range map[string][]string{
 		"source":     {"new", "list", "show"},
 		"adr":        {"new", "list", "show"},
+		"build":      {"new"},
 		"change":     {"new", "close"},
 		"tickets":    {"new", "check", "status", "order", "ready", "mark-published", "unfreeze"},
 		"repo":       {"add", "list", "path", "doctor"},

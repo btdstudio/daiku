@@ -97,7 +97,7 @@ func TestAssembleWithPlan(t *testing.T) {
 			build = append(build, h)
 		}
 	}
-	if want := []string{"Build loop", "Build routing", "Build naming", "Build directory map"}; strings.Join(build, ",") != strings.Join(want, ",") {
+	if want := []string{"Build loop", "Build commands", "Build routing", "Build naming", "Build directory map"}; strings.Join(build, ",") != strings.Join(want, ",") {
 		t.Errorf("build sections = %v, want %v", build, want)
 	}
 	if _, err := Assemble("ideas"); err == nil {

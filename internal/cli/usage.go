@@ -36,6 +36,7 @@ var commands = []command{
 		notes: "  --file     read the ADR body from a file\n"},
 	{path: []string{"adr", "list"}, synopsis: "daiku adr list", summary: "list ADRs (the default verb)"},
 	{path: []string{"adr", "show"}, synopsis: "daiku adr show <number>", summary: "show an ADR"},
+	{path: []string{"build", "new"}, synopsis: "daiku build new <ticket-id>", summary: "build a ticket in its repo; creates build/ the first time"},
 	{path: []string{"change", "new"}, synopsis: "daiku change new <title> [--repo <name|path>]... [--rev <r>] [--body <b>]", summary: "create a change + intake + switch"},
 	{path: []string{"change", "close"}, synopsis: "daiku change close <change> --reason <r>", summary: "close a change"},
 	{path: []string{"gate"}, synopsis: "daiku gate <phase> <status> [--reason <r>] [--force]", summary: "advance the active change's gate"},
