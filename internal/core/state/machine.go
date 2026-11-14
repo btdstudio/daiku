@@ -1,6 +1,6 @@
-// Package state is a generic per-change phase machine. A tool supplies its
+// Package state is a generic per-change phase machine. Each loop supplies its
 // ordered phases; the machine enforces their order, and a Store keeps every
-// change's record in a committed STATE.json.
+// change's record, whatever its loop, in one committed STATE.json.
 package state
 
 import "fmt"
@@ -48,6 +48,7 @@ type Machine struct {
 // that have a status, so a record stays small and merges cleanly.
 type Change struct {
 	Name      string            `json:"-"`
+	Loop      string            `json:"loop"` // the Store loop this change follows; required
 	Phase     string            `json:"phase"`
 	Status    string            `json:"status"`
 	Gates     map[string]string `json:"gates"`

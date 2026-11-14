@@ -7,10 +7,13 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/btdstudio/daiku/internal/core/workspace"
 )
 
 var machine = Machine{Tool: "sample", Phases: []Phase{
@@ -23,10 +26,10 @@ var machine = Machine{Tool: "sample", Phases: []Phase{
 
 func store() Store {
 	return Store{
-		Machine:  machine,
-		SpecsDir: "specs",
-		Now:      func() time.Time { return time.Date(2026, 11, 7, 1, 2, 3, 4_000_000, time.UTC) },
-		Warn:     &bytes.Buffer{},
+		Tool:  "sample",
+		Loops: map[string]Loop{planLoop: {Machine: machine, Dir: "specs"}},
+		Now:   func() time.Time { return time.Date(2026, 11, 7, 1, 2, 3, 4_000_000, time.UTC) },
+		Warn:  &bytes.Buffer{},
 	}
 }
 
@@ -186,7 +189,7 @@ func TestCloseRefusesFurtherTransitions(t *testing.T) {
 
 func TestSeedRecordsSkipsAndLogs(t *testing.T) {
 	root, s := t.TempDir(), store()
-	c, err := s.Seed(root, "1-x", SeedOptions{Sources: []string{"00_intake/1.md"}, Skip: map[string]string{"explore": "no repo"}})
+	c, err := s.Seed(root, "1-x", planLoop, SeedOptions{Sources: []string{"00_intake/1.md"}, Skip: map[string]string{"explore": "no repo"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,7 +216,7 @@ func TestSeedRecordsSkipsAndLogs(t *testing.T) {
 
 func TestSeedRecordsRepos(t *testing.T) {
 	root, s := t.TempDir(), store()
-	if _, err := s.Seed(root, "1-x", SeedOptions{Repos: []string{"a", "b"}}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{Repos: []string{"a", "b"}}); err != nil {
 		t.Fatal(err)
 	}
 	c, err := s.Load(root)
@@ -224,7 +227,7 @@ func TestSeedRecordsRepos(t *testing.T) {
 		t.Fatalf("repos = %v", c.Repos)
 	}
 	raw, _ := os.ReadFile(s.StatePath(root))
-	if _, err := s.Seed(root, "2-y", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "2-y", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	after, _ := os.ReadFile(s.StatePath(root))
@@ -235,10 +238,10 @@ func TestSeedRecordsRepos(t *testing.T) {
 
 func TestSeedRefusesBadNameAndUnskippablePhase(t *testing.T) {
 	root, s := t.TempDir(), store()
-	if _, err := s.Seed(root, "../evil", SeedOptions{}); err == nil || !strings.Contains(err.Error(), "invalid change name") {
+	if _, err := s.Seed(root, "../evil", planLoop, SeedOptions{}); err == nil || !strings.Contains(err.Error(), "invalid change name") {
 		t.Fatalf("err = %v", err)
 	}
-	if _, err := s.Seed(root, "1-x", SeedOptions{Skip: map[string]string{"review": "r"}}); err == nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{Skip: map[string]string{"review": "r"}}); err == nil {
 		t.Fatal("skipping an unskippable phase should fail")
 	}
 	if _, err := os.Stat(filepath.Join(root, "specs")); err == nil {
@@ -248,7 +251,7 @@ func TestSeedRefusesBadNameAndUnskippablePhase(t *testing.T) {
 
 func TestStateFileShape(t *testing.T) {
 	root, s := t.TempDir(), store()
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	raw, err := os.ReadFile(s.StatePath(root))
@@ -271,27 +274,6 @@ func TestStateFileShape(t *testing.T) {
 	}
 }
 
-func TestReadMigratesOldFileWithoutRewriting(t *testing.T) {
-	root, s := t.TempDir(), store()
-	old := []byte(`{"changes":{"1-x":{"phase":"intake","status":"approved","mode":"old","gates":{"intake":"approved","explore":""}}}}`)
-	if err := os.WriteFile(s.StatePath(root), old, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	s.Migrate = func(data []byte) ([]byte, error) {
-		return bytes.Replace(data, []byte(`"explore":""`), []byte(`"explore":"skipped"`), 1), nil
-	}
-	changes, err := s.ReadChanges(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := changes["1-x"].Gates; !reflect.DeepEqual(got, map[string]string{"intake": Approved, "explore": Skipped}) {
-		t.Fatalf("gates = %+v", got)
-	}
-	if after, _ := os.ReadFile(s.StatePath(root)); !bytes.Equal(after, old) {
-		t.Fatalf("a read rewrote the file: %s", after)
-	}
-}
-
 func TestReadRefusesNewerSchemaAndCorruptFile(t *testing.T) {
 	root, s := t.TempDir(), store()
 	if err := os.WriteFile(s.StatePath(root), []byte(`{"schema":99,"changes":{}}`), 0o644); err != nil {
@@ -304,38 +286,11 @@ func TestReadRefusesNewerSchemaAndCorruptFile(t *testing.T) {
 	if err := os.WriteFile(s.StatePath(root), corrupt, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err == nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err == nil {
 		t.Fatal("seed must fail on corrupt state")
 	}
 	if got, _ := os.ReadFile(s.StatePath(root)); !bytes.Equal(got, corrupt) {
 		t.Fatalf("corrupt file overwritten: %s", got)
-	}
-}
-
-func TestStoreSchemaOverridesDefault(t *testing.T) {
-	root, s := t.TempDir(), store()
-	s.Schema = 3
-	migrated := 0
-	s.Migrate = func(data []byte) ([]byte, error) {
-		migrated++
-		return []byte(`{"schema":3,"changes":{}}`), nil
-	}
-	if err := os.WriteFile(s.StatePath(root), []byte(`{"schema":2,"changes":{}}`), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := s.ReadChanges(root); err != nil || migrated != 1 {
-		t.Fatalf("migrated = %d, err = %v", migrated, err)
-	}
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
-		t.Fatal(err)
-	}
-	raw, _ := os.ReadFile(s.StatePath(root))
-	if !strings.Contains(string(raw), `"schema": 3`) {
-		t.Fatalf("wrote:\n%s", raw)
-	}
-	s.Schema = 2
-	if _, err := s.ReadChanges(root); err == nil || !strings.Contains(err.Error(), "newer") {
-		t.Fatalf("err = %v", err)
 	}
 }
 
@@ -354,10 +309,10 @@ func TestSwitch(t *testing.T) {
 			t.Errorf("switch(%q) err = %v", name, err)
 		}
 	}
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Seed(root, "2-y", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "2-y", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	before, _ := os.ReadFile(s.StatePath(root))
@@ -400,10 +355,10 @@ func TestAdvanceAndReopenRequireActiveFolder(t *testing.T) {
 	if _, err := s.Advance(root, "intake", Approved, ""); err == nil || !strings.Contains(err.Error(), "no active change") {
 		t.Fatalf("err = %v", err)
 	}
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.RemoveAll(s.ChangeDir(root, "1-x")); err != nil {
+	if err := os.RemoveAll(changeDir(root, "1-x")); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.Advance(root, "intake", Approved, ""); err == nil || !strings.Contains(err.Error(), "no folder") {
@@ -416,7 +371,7 @@ func TestAdvanceAndReopenRequireActiveFolder(t *testing.T) {
 
 func TestAdvanceLogsNotes(t *testing.T) {
 	root, s := t.TempDir(), store()
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.Advance(root, "review", Approved, "", "override: forced"); err != nil {
@@ -432,10 +387,10 @@ func TestAdvanceLogsNotes(t *testing.T) {
 
 func TestCloseChangeClearsActivePointerOnlyForActive(t *testing.T) {
 	root, s := t.TempDir(), store()
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Seed(root, "2-y", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "2-y", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.CloseChange(root, "1-x", "dropped"); err != nil {
@@ -497,7 +452,7 @@ func TestTransitionsCommitStateAndLog(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "00_intake", "1.md"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Seed(root, "1-x", SeedOptions{Paths: []string{"00_intake/1.md"}}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{Paths: []string{"00_intake/1.md"}}); err != nil {
 		t.Fatal(err)
 	}
 	seeded := run(t, root, "show", "--name-only", "--format=%s", "HEAD")
@@ -531,7 +486,7 @@ func TestTransitionsCommitStateAndLog(t *testing.T) {
 
 func TestGateCommitsTheChangesFolder(t *testing.T) {
 	root, s := gitRepo(t)
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	spec := filepath.Join(root, "specs", "1-x", "requirements.md")
@@ -566,8 +521,8 @@ func TestGateCommitsTheChangesFolder(t *testing.T) {
 
 func TestGateCommitsChangeDirsWhenPresent(t *testing.T) {
 	root, s := gitRepo(t)
-	s.ChangeDirs = []string{"research", "explore"}
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	s = withLoop(t, s, func(l *Loop) { l.ChangeDirs = []string{"research", "explore"} })
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.MkdirAll(filepath.Join(root, "research", "1-x"), 0o755); err != nil {
@@ -586,7 +541,7 @@ func TestGateCommitsChangeDirsWhenPresent(t *testing.T) {
 
 func TestRecordCommitsExtraPaths(t *testing.T) {
 	root, s := gitRepo(t)
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "ticket.md"), []byte("t\n"), 0o644); err != nil {
@@ -622,7 +577,7 @@ func TestGateOnEmptyUntrackedFolderStillCommitsState(t *testing.T) {
 
 func TestCommitLeavesOtherStagedWorkAlone(t *testing.T) {
 	root, s := gitRepo(t)
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	other := filepath.Join(root, "other.md")
@@ -644,7 +599,7 @@ func TestCommitLeavesOtherStagedWorkAlone(t *testing.T) {
 func TestNoCommitWhenDisabled(t *testing.T) {
 	root, s := gitRepo(t)
 	s.Commit = false
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if got := strings.TrimSpace(run(t, root, "log", "-1", "--format=%s")); got != "init" {
@@ -657,7 +612,7 @@ func TestOutsideGitWarnsAndStillApplies(t *testing.T) {
 	s.Commit = true
 	warnings := &bytes.Buffer{}
 	s.Warn = warnings
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(warnings.String(), "not committed") {
@@ -670,7 +625,7 @@ func TestOutsideGitWarnsAndStillApplies(t *testing.T) {
 
 func TestFailedCommitIsAnErrorButStateStands(t *testing.T) {
 	root, s := gitRepo(t)
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	hook := filepath.Join(root, ".git", "hooks", "pre-commit")
@@ -705,7 +660,7 @@ func TestOutsideGitWarningHintsAtVCSNone(t *testing.T) {
 	s.VCS = "git"
 	warnings := &bytes.Buffer{}
 	s.Warn = warnings
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	want := `this state change was not committed; set "vcs": "none" if this workspace is meant to be local` + "\n"
@@ -717,7 +672,7 @@ func TestOutsideGitWarningHintsAtVCSNone(t *testing.T) {
 func TestVCSNoneInsideRepoCommitsAndStagesNothing(t *testing.T) {
 	root, s := gitRepo(t)
 	s.VCS = "none"
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.Advance(root, "intake", AwaitApproval, ""); err != nil {
@@ -734,7 +689,7 @@ func TestVCSNoneInsideRepoCommitsAndStagesNothing(t *testing.T) {
 func TestVCSNoneSeedSkipsGitkeep(t *testing.T) {
 	root, s := t.TempDir(), store()
 	s.VCS = "none"
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if info, err := os.Stat(filepath.Join(root, "specs", "1-x")); err != nil || !info.IsDir() {
@@ -748,7 +703,7 @@ func TestVCSNoneSeedSkipsGitkeep(t *testing.T) {
 func TestInvalidVCSIsAnError(t *testing.T) {
 	root, s := t.TempDir(), store()
 	s.VCS = "svn"
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err == nil || !strings.Contains(err.Error(), `invalid vcs "svn"`) {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err == nil || !strings.Contains(err.Error(), `invalid vcs "svn"`) {
 		t.Fatalf("err = %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(root, "specs", "1-x")); !os.IsNotExist(err) {
@@ -780,7 +735,7 @@ func TestVCSNoneRunsNoGitAndWarnsNothing(t *testing.T) {
 	s.VCS = "none"
 	warnings := &bytes.Buffer{}
 	s.Warn = warnings
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.Advance(root, "intake", Approved, ""); err != nil {
@@ -817,7 +772,7 @@ func TestFakeGitDetectsCommits(t *testing.T) {
 	marker := fakeGit(t)
 	root, s := t.TempDir(), store()
 	s.Commit = true
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(marker); err != nil {
@@ -830,14 +785,14 @@ func TestFakeGitDetectsCommits(t *testing.T) {
 func TestVCSNoneInsideRepoAllTransitionsLeaveGitUntouched(t *testing.T) {
 	root, s := gitRepo(t)
 	s.VCS = "none"
-	s.ChangeDirs = []string{"00_intake"}
+	s = withLoop(t, s, func(l *Loop) { l.ChangeDirs = []string{"00_intake"} })
 	if err := os.MkdirAll(filepath.Join(root, "00_intake", "1-x"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "00_intake", "1-x", "n.md"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Seed(root, "1-x", SeedOptions{Paths: []string{"00_intake/1-x/n.md"}}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{Paths: []string{"00_intake/1-x/n.md"}}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.Advance(root, "intake", Approved, ""); err != nil {
@@ -866,10 +821,133 @@ func TestOutsideGitWarningHintsWhenVCSUnset(t *testing.T) {
 	s.Commit = true
 	warnings := &bytes.Buffer{}
 	s.Warn = warnings
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(warnings.String(), `set "vcs": "none" if this workspace is meant to be local`) {
 		t.Fatalf("warnings = %q", warnings)
+	}
+}
+
+func TestReadRefusesAChangeWithoutALoop(t *testing.T) {
+	root, s := t.TempDir(), store()
+	raw := `{"schema":1,"changes":{"1-x":{"phase":"intake","status":"draft","gates":{"intake":"draft"},"sources":[]}}}`
+	if err := os.WriteFile(s.StatePath(root), []byte(raw), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Load(root); err == nil || !strings.Contains(err.Error(), `change "1-x" records no loop`) {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestUnknownLoop(t *testing.T) {
+	root, s := t.TempDir(), store()
+	if _, err := s.Seed(root, "1-x", "build", SeedOptions{}); err == nil || !strings.Contains(err.Error(), `unknown loop "build"`) {
+		t.Fatalf("Seed err = %v", err)
+	}
+	if _, err := os.Stat(s.StatePath(root)); !os.IsNotExist(err) {
+		t.Fatal("a refused seed wrote STATE.json")
+	}
+	if err := os.MkdirAll(changeDir(root, "1-x"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	raw := `{"schema":1,"changes":{"1-x":{"loop":"gone","phase":"intake","status":"draft","gates":{"intake":"draft"},"sources":[]}}}`
+	if err := os.WriteFile(s.StatePath(root), []byte(raw), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := workspace.WriteActive(root, "sample", "1-x"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Advance(root, "intake", Approved, ""); err == nil || !strings.Contains(err.Error(), `unknown loop "gone" for change "1-x"`) {
+		t.Fatalf("Advance err = %v", err)
+	}
+	if _, err := s.NextID(root, "gone"); err == nil {
+		t.Fatal("NextID accepted an unknown loop")
+	}
+}
+
+func TestLoadRefusesLegacyWorkspaces(t *testing.T) {
+	for _, tool := range []string{"zumen", "tomo"} {
+		t.Run(tool, func(t *testing.T) {
+			root, s := t.TempDir(), store()
+			if err := os.Mkdir(filepath.Join(root, "."+tool), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := s.Load(root); err == nil || !strings.Contains(err.Error(), "a "+tool+" workspace") {
+				t.Fatalf("Load err = %v", err)
+			}
+			if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err == nil {
+				t.Fatal("Seed ran in a legacy workspace")
+			}
+			if _, err := os.Stat(s.StatePath(root)); !os.IsNotExist(err) {
+				t.Fatal("STATE.json written in a legacy workspace")
+			}
+		})
+	}
+}
+
+func TestPreflightRunsAfterTheLegacyCheck(t *testing.T) {
+	root, s := t.TempDir(), store()
+	calls := 0
+	s.Preflight = func(string) error { calls++; return nil }
+	if _, err := s.Load(root); err != nil || calls != 1 {
+		t.Fatalf("calls = %d, err = %v", calls, err)
+	}
+	if err := os.Mkdir(filepath.Join(root, ".tomo"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Load(root); err == nil || calls != 1 {
+		t.Fatalf("calls = %d, err = %v; the legacy check must refuse before Preflight", calls, err)
+	}
+}
+
+// A loop without a Dir has no folders to find, so an unrecorded name can't be
+// switched to: there'd be no loop to record it in.
+func TestSwitchNeedsARecordOutsideADir(t *testing.T) {
+	root, s := t.TempDir(), store()
+	s.Loops["flat"] = Loop{Machine: machine, Name: regexp.MustCompile(`^[A-Z]-\d{4}$`), Folder: func(c Change) (string, error) {
+		return filepath.Join("flat", c.Name), nil
+	}}
+	if err := os.MkdirAll(filepath.Join(root, "flat", "S-0001"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Switch(root, "S-0001"); err == nil || !strings.Contains(err.Error(), "unknown change") {
+		t.Fatalf("err = %v", err)
+	}
+	if _, err := s.Seed(root, "S-0002", "flat", SeedOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Switch(root, "S-0002"); err != nil {
+		t.Fatalf("switching to a recorded change: %v", err)
+	}
+	if _, err := s.NextID(root, "flat"); err == nil || !strings.Contains(err.Error(), "no numbered changes") {
+		t.Fatalf("NextID err = %v", err)
+	}
+}
+
+func TestSeedRecordsTheLoop(t *testing.T) {
+	root, s := t.TempDir(), store()
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(s.StatePath(root))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `"loop": "plan"`) {
+		t.Fatalf("STATE.json:\n%s", raw)
+	}
+}
+
+func TestFolderMustStayInsideTheWorkspace(t *testing.T) {
+	root, s := t.TempDir(), store()
+	s.Loops["bad"] = Loop{Machine: machine, Name: regexp.MustCompile(`^x$`), Folder: func(Change) (string, error) {
+		return "../escape", nil
+	}}
+	if _, err := s.Seed(root, "x", "bad", SeedOptions{}); err == nil || !strings.Contains(err.Error(), "outside the workspace") {
+		t.Fatalf("err = %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(filepath.Dir(root), "escape")); !os.IsNotExist(err) {
+		t.Fatal("a folder was created outside the workspace")
 	}
 }
