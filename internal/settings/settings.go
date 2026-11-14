@@ -61,7 +61,7 @@ func DefaultSettings() Settings {
 		Gates:      "block",                    // block | prompt | auto
 		SourceDir:  "plan/00_intake",           // the intake store
 		AdrDir:     "plan/04_architecture/adr", // architecture decision records
-		SyncFile:   "plan/06_publish/sync.md",  // how an agent talks to the PM tool
+		SyncFile:   "sync.md",                  // how an agent talks to the PM tool, for both rooms
 		Overview:   OverviewAuto,               // auto | manual: regenerate specs/<change>/README.md
 	}
 }

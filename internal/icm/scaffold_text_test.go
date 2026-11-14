@@ -123,12 +123,12 @@ func TestScaffoldGuidanceText(t *testing.T) {
 		{"AGENTS.md", "**Think an idea through** — `daiku idea new \"Title\"`"},
 		{"AGENTS.md", "- Ideas: `ideas/<n>-<slug>/summary.md|log.md`"},
 		{"AGENTS.md", "ideas/ # ideas, one <n>-<slug>/ folder each (summary.md, log.md)"},
-		{"06_publish/sync.md", "only for a ticket that has a parent"},
-		{"06_publish/sync-examples/github.md", "needed only when the change has epics or features"},
-		{"06_publish/sync.md", "Its parent (if it has one)"},
-		{"06_publish/sync-examples/github.md", "Its parent (if it has one)"},
-		{"06_publish/sync-examples/github.md", "Only for a ticket that has a parent"},
-		{"06_publish/sync-examples/github.md", "needs no planning repo"},
+		{"sync.md", "only for a ticket that has a parent"},
+		{"sync-examples/github.md", "needed only when the change has epics or features"},
+		{"sync.md", "Its parent (if it has one)"},
+		{"sync-examples/github.md", "Its parent (if it has one)"},
+		{"sync-examples/github.md", "Only for a ticket that has a parent"},
+		{"sync-examples/github.md", "needs no planning repo"},
 		{"03_spec/personas/analyst.md", "on one line"},
 		{"03_spec/templates/functional-spec.md", "all on one line"},
 		{"AGENTS.md", "`daiku tickets new <type> <title> [--parent <id>] [--repo <name>] [--depends <id,id>] [--requirements <id,id>]`"},
@@ -232,5 +232,25 @@ func TestIdeasRoomNamesNoTools(t *testing.T) {
 				t.Errorf("%s names %q", rel, tool)
 			}
 		}
+	}
+}
+
+// AC10 / spec R28: the scaffold ships one sync.md, at the workspace root, and the
+// plan room's publisher reads it.
+func TestOneSyncFileAtTheRoot(t *testing.T) {
+	var found []string
+	for path := range scaffoldMarkdown(t) {
+		if filepath.Base(path) == "sync.md" {
+			found = append(found, path)
+		}
+	}
+	if len(found) != 1 || found[0] != "sync.md" {
+		t.Fatalf("sync.md files = %v, want only the root one", found)
+	}
+	if !strings.Contains(scaffoldText(t, "06_publish/personas/publisher.md"), "the workspace's `sync.md`") {
+		t.Error("the publisher doesn't point at the root sync.md")
+	}
+	if text := scaffoldText(t, "sync.md"); !strings.Contains(text, "## fetch") || !strings.Contains(text, "## push") {
+		t.Error("sync.md doesn't define both push and fetch")
 	}
 }

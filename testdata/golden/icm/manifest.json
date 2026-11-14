@@ -27,13 +27,13 @@
     "plan/04_architecture/templates/adr.md": "5587205be6f92daf1250d1f197ea78db48dd24ee66d03232de8872b804784b4f",
     "plan/04_architecture/templates/architecture.md": "f74042f970bd98e2721b2acb4a0ddd4e53ebd54413c57f82753465c948ef9324",
     "plan/05_breakdown/context.md": "daecdf23e1e3f9227da38d4d1e78d5fc765520aa3d605bbc5bf0cf144daf85e2",
-    "plan/05_breakdown/personas/architect.md": "4d4b4223e6f437cec69f39b534e5875014737397521fffef423e7f619f6e6af5",
+    "plan/05_breakdown/personas/architect.md": "e881fce33a1f4e06c8ab45353156c60dd957290ebb57f34c2da46aa5da180b7a",
     "plan/05_breakdown/templates/ticket.md": "c109f680193c1d544f9cba93a5f419b1cf45c1c03046404fce4e21d530f3767f",
-    "plan/06_publish/context.md": "650b9c32b2c6a463b1e68eb00510f4939beefeec4064ba8ff3259a1b4f04bdec",
-    "plan/06_publish/personas/publisher.md": "7253cb7225ff8e0462b5f34bec285aa0c1bf492022c14198c999b90171bc5dcd",
-    "plan/06_publish/sync-examples/github.md": "713e3a66c519ad8c964ffe9c3f9d8f518a0228ba17ddddac9af8588d47df33f7",
-    "plan/06_publish/sync.md": "dfe45cd52db65430462aa39b27b58859d11e66da02603340cd7494832c841d9d",
+    "plan/06_publish/context.md": "cb18f52913ea848278bdc8d509c380f0bf35775e2d29c14ea4c9356fb77205d1",
+    "plan/06_publish/personas/publisher.md": "06a1dab7be3333892a590ca719a46ba4871b11f6ebc44cbb573aa26448ce158b",
     "plan/specs/.gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "references/context.md": "7befcfb9a046e4f51934c172ba091d82a29030fafc42db94f441c5674764f472"
+    "references/context.md": "7befcfb9a046e4f51934c172ba091d82a29030fafc42db94f441c5674764f472",
+    "sync-examples/github.md": "3e07aa8d164a355831c71193717684200f6104c34d556354b0cd5398e867e9b3",
+    "sync.md": "dfe45cd52db65430462aa39b27b58859d11e66da02603340cd7494832c841d9d"
   }
 }

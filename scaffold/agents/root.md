@@ -104,6 +104,8 @@ repo, but writes no `.gitattributes` or `.gitkeep`.
 ├── CLAUDE.md
 ├── AGENTS.md
 ├── README.md
+├── sync.md               # how an agent talks to your PM tool: publish and fetch
+├── sync-examples/        # starters for sync.md
 ├── .gitignore            # keeps .daiku/active and paths.json out of git
 ├── .gitattributes        # vcs: git only
 ├── STATE.json            # every change's loop, phase, gates, sources (committed under vcs: git)

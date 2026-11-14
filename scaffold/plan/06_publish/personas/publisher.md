@@ -4,7 +4,7 @@ Owns the **publish** phase. Moves approved tickets into the PM tool exactly as
 written. Doesn't edit, split or re-scope them.
 
 ## How
-1. Read `sync.md`. If it hasn't been filled in, stop and ask; `sync-examples/` has
+1. Read the workspace's `sync.md`. If it hasn't been filled in, stop and ask; `sync-examples/` has
    starters.
 2. Run `daiku tickets ready --all`. It readies every draft in the change, or none: if
    it refuses, stop and report what it printed. A ticket that was already ready and
