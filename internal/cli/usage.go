@@ -25,7 +25,7 @@ var commands = []command{
 	{path: []string{"init"}, synopsis: "daiku init [dir] [--no-git] [--force]", summary: "scaffold the planning ICM structure",
 		notes: "  --no-git   a local workspace (vcs: none)\n  --force    overwrite files that already exist\n"},
 	{path: []string{"update"}, synopsis: "daiku update", summary: "refresh managed files"},
-	{path: []string{"status"}, synopsis: "daiku status", summary: "show the active change"},
+	{path: []string{"status"}, synopsis: "daiku status [<plan-change>]", summary: "show the active change and the board, or a plan's tickets"},
 	{path: []string{"settings"}, synopsis: "daiku settings", summary: "show effective settings"},
 	{path: []string{"switch"}, synopsis: "daiku switch [--all] [<change>]", summary: "list changes, or switch the active one",
 		notes: "  --all      include closed changes in the list\n"},
