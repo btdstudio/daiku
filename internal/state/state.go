@@ -48,8 +48,8 @@ var PlanMachine = core.Machine{Tool: "daiku", Check: plan.CheckArtifacts, Phases
 	{Name: "publish", Kind: core.Run},
 }}
 
-// BuildMachine is the build loop's phases (spec R12). It has no artifact checks
-// yet: build behaviour arrives in a later version.
+// BuildMachine is the build loop's phases (spec R12). It has no artifact checks;
+// `daiku gate` runs the repo lock on a build entering implement.
 var BuildMachine = core.Machine{Tool: "daiku", Phases: []core.Phase{
 	{Name: "ticket", Kind: core.Gated},
 	{Name: "requirements", Kind: core.Gated},
@@ -210,13 +210,24 @@ func PlanChanges(root string) ([]KnownChange, error) {
 // SwitchTo points the workspace at a different change folder.
 func SwitchTo(root, name string) (State, error) { return store.Switch(root, name) }
 
-// SetGate starts the given phase and sets its status.
-func SetGate(st *State, phase, status, reason string) error {
-	return PlanMachine.SetGate(st, phase, status, reason)
+// MachineFor is the machine a loop runs: the build machine for build, and the
+// plan machine otherwise, so a change recorded without a loop is a plan change.
+func MachineFor(loop string) core.Machine {
+	if loop == BuildLoop {
+		return BuildMachine
+	}
+	return PlanMachine
 }
 
-// CheckGate reports whether setting phase to status respects the loop.
-func CheckGate(st State, phase, status string) error { return PlanMachine.CheckGate(st, phase, status) }
+// SetGate starts the given phase and sets its status, in the change's own loop.
+func SetGate(st *State, phase, status, reason string) error {
+	return MachineFor(st.Loop).SetGate(st, phase, status, reason)
+}
+
+// CheckGate reports whether setting phase to status respects the change's loop.
+func CheckGate(st State, phase, status string) error {
+	return MachineFor(st.Loop).CheckGate(st, phase, status)
+}
 
 // SeedChange creates a plan change folder and records its initial machine, making it
 // the active change. Without a repo there's nothing to explore, and with fewer than
@@ -236,6 +247,18 @@ func SeedChange(root, name string, hasRepo bool, sources []string, repos ...stri
 		return State{}, err
 	}
 	return s.Seed(root, name, PlanLoop, opts)
+}
+
+// SeedBuild creates a build change named by its ticket id, in build/<repo>/changes/<id>/,
+// and makes it active. Its one source is the ticket's path, relative to root: the
+// ticket is read in place, never copied. Under vcs: git the ticket is committed
+// with the new change, so a clone has what the record points at.
+func SeedBuild(root, id, repo, source string) (State, error) {
+	s, err := storeAt(root)
+	if err != nil {
+		return State{}, err
+	}
+	return s.Seed(root, id, BuildLoop, core.SeedOptions{Sources: []string{source}, Repos: []string{repo}, Paths: []string{source}})
 }
 
 // AdvanceGate sets a gate on the active change, logs it with any notes, and

@@ -2,6 +2,8 @@ package state
 
 import (
 	"os"
+	"path/filepath"
+	"reflect"
 	"testing"
 
 	core "github.com/btdstudio/daiku/internal/core/state"
@@ -72,5 +74,64 @@ func TestBuildMachine(t *testing.T) {
 		if p.Skippable != (p.Name == "security") {
 			t.Errorf("%s skippable = %v", p.Name, p.Skippable)
 		}
+	}
+}
+
+// localRoot is an empty workspace with vcs: none, so transitions run no git.
+func localRoot(t *testing.T) string {
+	t.Helper()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	root := t.TempDir()
+	if err := os.MkdirAll(Workspace(root), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(Workspace(root), "settings.json"), []byte(`{"vcs": "none"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return root
+}
+
+// Spec R16, R17: a build change is named by its ticket id, lives under its repo,
+// and records the ticket's path as its source.
+func TestSeedBuild(t *testing.T) {
+	root := localRoot(t)
+	st, err := SeedBuild(root, "N-0001", "api", "build/tickets/N-0001.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Loop != BuildLoop || st.Phase != "ticket" || st.Status != "draft" {
+		t.Fatalf("seeded = %+v", st)
+	}
+	if info, err := os.Stat(filepath.Join(root, "build", "api", "changes", "N-0001")); err != nil || !info.IsDir() {
+		t.Fatalf("change folder: %v", err)
+	}
+	loaded, err := LoadState(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Name != "N-0001" || !reflect.DeepEqual(loaded.Sources, []string{"build/tickets/N-0001.md"}) || !reflect.DeepEqual(loaded.Repos, []string{"api"}) {
+		t.Fatalf("loaded = %+v", loaded)
+	}
+}
+
+// Spec R12: gate checks follow the change's own loop.
+func TestGatesFollowTheChangesLoop(t *testing.T) {
+	build := State{Name: "N-0001", Loop: BuildLoop, Phase: "ticket", Status: "draft", Gates: map[string]string{"ticket": "draft"}}
+	if err := CheckGate(build, "ticket", "approved"); err != nil {
+		t.Fatalf("ticket approved: %v", err)
+	}
+	if err := CheckGate(build, "requirements", "approved"); err == nil {
+		t.Fatal("requirements approved before ticket")
+	}
+	probe := build
+	if err := SetGate(&probe, "intake", "approved", ""); err == nil {
+		t.Fatal("a build change accepted the plan phase intake")
+	}
+	plan := State{Name: "1-gateway", Phase: "intake", Status: "draft", Gates: map[string]string{"intake": "draft"}}
+	if err := SetGate(&plan, "ticket", "approved", ""); err == nil {
+		t.Fatal("a change with no loop accepted the build phase ticket")
+	}
+	if MachineFor(BuildLoop).Phases[0].Name != "ticket" || MachineFor("").Phases[0].Name != "intake" {
+		t.Fatal("MachineFor picked the wrong machine")
 	}
 }
