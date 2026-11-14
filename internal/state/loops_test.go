@@ -28,6 +28,16 @@ func TestPlanAndBuildRecordsLoad(t *testing.T) {
 	if _, err := KnownChanges(root); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.MkdirAll(ChangeDir(root, "1-gateway"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := PlanChanges(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plan) != 1 || plan[0].Name != "1-gateway" {
+		t.Fatalf("PlanChanges = %+v, want only 1-gateway", plan)
+	}
 }
 
 // N5: no phase name is in both loops, so a gate can't be read as the other

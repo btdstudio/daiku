@@ -5,6 +5,7 @@ package settings
 
 import (
 	"fmt"
+	"path/filepath"
 
 	core "github.com/btdstudio/daiku/internal/core/settings"
 )
@@ -29,6 +30,12 @@ var spec = core.Spec[Settings]{
 	Validate: func(s *Settings) error {
 		if err := core.CheckGates("daiku", s.Gates); err != nil {
 			return err
+		}
+		// A committed settings file must not point a store outside the workspace.
+		for name, dir := range map[string]string{"sourceDir": s.SourceDir, "adrDir": s.AdrDir, "syncFile": s.SyncFile} {
+			if dir != "" && !filepath.IsLocal(dir) {
+				return fmt.Errorf("daiku: %s %q must be a path inside the workspace", name, dir)
+			}
 		}
 		return checkOverview(s.Overview)
 	},

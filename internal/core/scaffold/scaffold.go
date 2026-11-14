@@ -283,10 +283,7 @@ func (e Engine) WriteManifest(dir string, m Manifest) error {
 		return err
 	}
 	data = append(data, '\n')
-	if err := os.MkdirAll(filepath.Dir(e.manifestPath(dir)), 0o755); err != nil {
-		return err
-	}
-	return os.WriteFile(e.manifestPath(dir), data, 0o644)
+	return workspace.WriteFile(dir, e.manifestPath(dir), data, 0o644)
 }
 
 // Scaffold writes the tree into dir, skipping existing files (unless Force),

@@ -8,6 +8,7 @@ package source
 import (
 	"errors"
 	"fmt"
+	"github.com/btdstudio/daiku/internal/core/workspace"
 	"github.com/btdstudio/daiku/internal/plan/layout"
 	"io/fs"
 	"math"
@@ -218,11 +219,11 @@ func WriteSource(root, sourceDir string, s Source) (Source, error) {
 		return Source{}, fmt.Errorf("daiku: intake id %d out of range", s.ID)
 	}
 	dir := SourceDir(root, sourceDir)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := workspace.MkdirAll(root, dir, 0o755); err != nil {
 		return Source{}, err
 	}
 	p := SourcePath(dir, s.ID)
-	f, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	f, err := workspace.OpenFile(root, p, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 	if errors.Is(err, fs.ErrExist) {
 		return Source{}, fmt.Errorf("daiku: source %d already exists at %s; not overwriting", s.ID, p)
 	}
