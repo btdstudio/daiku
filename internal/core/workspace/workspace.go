@@ -38,3 +38,19 @@ func WriteActive(root, tool, name string) error {
 	}
 	return os.WriteFile(ActivePath(root, tool), []byte(name+"\n"), 0o644)
 }
+
+// legacyTools are the tools daiku replaced. Their workspaces aren't migrated, so
+// daiku refuses to act in one rather than writing a daiku state file over it.
+var legacyTools = []string{"zumen", "tomo"}
+
+// CheckLegacy fails when root is a zumen or tomo workspace, which is recognized
+// by its .zumen/ or .tomo/ folder. The error names the tool.
+func CheckLegacy(root string) error {
+	for _, tool := range legacyTools {
+		info, err := os.Stat(filepath.Join(root, DirName(tool)))
+		if err == nil && info.IsDir() {
+			return fmt.Errorf("daiku: this is a %s workspace (found %s/) — use %s, or start a new daiku workspace", tool, DirName(tool), tool)
+		}
+	}
+	return nil
+}
