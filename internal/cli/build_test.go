@@ -248,8 +248,8 @@ func TestEnvForEachLoop(t *testing.T) {
 func TestStatusForABuild(t *testing.T) {
 	root := buildRoot(t)
 	seedBuild(t, root, "S-0036", "api")
-	code, out := captureStdout(t, func() int { return runStatus(root) })
-	for _, want := range []string{"change:   S-0036", "loop:     build", "repo:     api", "gates:    ticket=draft requirements=", "ticket:   S-0036 Fix login", "branch:   s-0036-fix-login"} {
+	code, out := captureStdout(t, func() int { return runStatus(root, nil) })
+	for _, want := range []string{"change:   S-0036", "room:     build", "repo:     api", "gates:    ticket=draft requirements=", "ticket:   S-0036 Fix login", "branch:   s-0036-fix-login"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("status lacks %q:\n%s", want, out)
 		}

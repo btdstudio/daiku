@@ -138,7 +138,7 @@ func TestStatusInAZumenWorkspace(t *testing.T) {
 		if err := os.Mkdir(filepath.Join(root, "."+tool), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		code, stderr := captureStderr(t, func() int { return runStatus(root) })
+		code, stderr := captureStderr(t, func() int { return runStatus(root, nil) })
 		if code != 1 || !strings.Contains(stderr, "a "+tool+" workspace") {
 			t.Errorf("%s: status = %d, stderr %q", tool, code, stderr)
 		}
@@ -172,8 +172,8 @@ func writeBuildChange(t *testing.T, root string) {
 func TestBuildChangeActive(t *testing.T) {
 	root := workspace(t)
 	writeBuildChange(t, root)
-	code, out := captureStdout(t, func() int { return runStatus(root) })
-	if code != 0 || !strings.Contains(out, "change:   1-auth-flow") || strings.Contains(out, "loop:") {
+	code, out := captureStdout(t, func() int { return runStatus(root, nil) })
+	if code != 0 || !strings.Contains(out, "change:   1-auth-flow\nroom:     plan\n") || strings.Contains(out, "loop:") {
 		t.Fatalf("status with the plan change active = %d:\n%s", code, out)
 	}
 	if code, out := captureStdout(t, func() int { return runSwitch(root, nil) }); code != 0 || !strings.Contains(out, "S-0036  build  ticket draft") || !strings.Contains(out, "1-auth-flow  plan  intake draft") {
@@ -182,8 +182,8 @@ func TestBuildChangeActive(t *testing.T) {
 	if code := runSwitch(root, []string{"S-0036"}); code != 0 {
 		t.Fatal("switch to the build change")
 	}
-	code, out = captureStdout(t, func() int { return runStatus(root) })
-	if code != 0 || !strings.Contains(out, "loop:     build") || !strings.Contains(out, "gates:    ticket=draft requirements=") {
+	code, out = captureStdout(t, func() int { return runStatus(root, nil) })
+	if code != 0 || !strings.Contains(out, "room:     build") || !strings.Contains(out, "gates:    ticket=draft requirements=") {
 		t.Fatalf("status with the build change active = %d:\n%s", code, out)
 	}
 	// Plan commands that use the active change (S-0040 code review finding 1).
