@@ -54,6 +54,7 @@ internal/
     changelog/    append-only log writer
     version/      version reporting (build info)
 testdata/             overview fixture and golden files
+scripts/coldstart.sh  the cold-start check, run by hand before tagging (README, Releasing)
 ```
 
 Plan-only paths come from `internal/plan/layout` and build-only ones from
@@ -65,6 +66,9 @@ no shell; tests swap them to record calls. Every workspace write goes through
 `workspace.WriteFile`, `OpenFile` or `MkdirAll` (or, for scaffold files,
 `workspace.ThroughSymlink`), so a committed symlink can't send a file outside the
 workspace. Path settings must be local (`filepath.IsLocal`).
+`daiku check` lints each room's docs for the other loop's terms; the lists are in
+`internal/icm/lint.go`, which is where a new loop-only term (an artifact,
+persona, room folder or command) goes.
 
 ## Development
 
