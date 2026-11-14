@@ -27,7 +27,8 @@ again against the fixed code.
 **One build per repo in implement.** Gating a build into implement fails while
 another open build on the same repo is in implement, test, review, security or
 ship. Closing that build, finishing its ship, or reopening it to tasks frees the
-repo; `--force` overrides and is logged.
+repo; `--force` overrides and is logged. Bare `daiku status` names each repo's
+holder.
 
 ## Build commands
 
