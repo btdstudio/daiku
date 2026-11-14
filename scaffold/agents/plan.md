@@ -51,7 +51,7 @@ change.
 | `daiku adr list` | list ADRs |
 | `daiku adr show <number>` | show an ADR |
 | `daiku change new <title> [--repo <name\|path>]... [--rev <r>] [--body <b>]` | create a plan change + intake + switch; creates `plan/` the first time |
-| `daiku tickets new <type> <title> [--parent <id>] [--repo <name>] [--depends <id,id>] [--requirements <id,id>]` | create a ticket in the active change, citing the spec's requirements |
+| `daiku tickets new <type> <title> [--parent <id>] [--repo <name>] [--depends <id,id>] [--requirements <id,id>] [--inbox]` | create a ticket in the active change, citing the spec's requirements; with `--inbox`, or no open plan change, an `N-` task in `build/tickets/` |
 | `daiku tickets check` | validate every ticket: schema, parents, cycles, repos, readiness, drift. Errors (`✗`) exit 1; warnings (`!`) don't |
 | `daiku tickets status` | list tickets by draft, ready, published and drifted |
 | `daiku tickets order` | list tickets in publish order |

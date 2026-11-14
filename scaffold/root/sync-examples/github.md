@@ -68,6 +68,11 @@ daiku tickets mark-published <id> --external github=<owner>/<repo>#<number>
 gh issue view <number> --repo <owner>/<repo> --json title,body,state,labels,comments
 ```
 
+To pull an issue into the inbox, write its title, body and `external.github:
+<owner>/<repo>#<number>` into a draft ticket (type `task` unless you know better,
+`repo` from `daiku repo list`), then run `daiku tickets pull <draft>`; the ticket
+is `build/tickets/X-<number>.md`.
+
 ## link
 
 **Parent/child.** Only for a ticket that has a parent. Sub-issues take the child's

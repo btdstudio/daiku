@@ -34,6 +34,7 @@ repo; `--force` overrides and is logged.
 | Command | Purpose |
 |---|---|
 | `daiku build new <ticket-id>` | create a build change for a ticket, named by its id, in its repo; creates `build/` the first time. The ticket is read where it is: `plan/specs/<n>-<slug>/tickets/` for a ready or published planned ticket, or `build/tickets/` |
+| `daiku tickets pull <file>` | record a ticket an agent fetched from a PM tool (through `sync.md`) as `build/tickets/X-<pm-id>.md`; pulling the same item again replaces it |
 
 `gate`, `reopen`, `status`, `switch`, `change close` and `env` act on the active build too.
 
