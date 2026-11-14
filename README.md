@@ -37,6 +37,14 @@ cd my-workspace
 daiku change new "Gateway"     # creates the plan room and a plan change
 ```
 
+Or build straight away, without a plan:
+
+```sh
+daiku repo add api https://github.com/org/api --path ~/src/api
+daiku tickets new task "Fix login" --repo api --inbox   # build/tickets/N-0001.md
+daiku build new N-0001         # creates the build room and a build change
+```
+
 `AGENTS.md` names every way in: `daiku idea new`, `daiku change new` and
 `daiku build new`. It gains a room's sections once that room exists.
 
@@ -89,7 +97,7 @@ daiku change new "Gateway"     # creates the plan room and a plan change
 | `daiku help [<command> [<verb>]]` | usage; `daiku <command> --help` (or `-h`) prints one command's usage |
 
 `status`, `switch`, `gate`, `reopen`, `change close` and `env` act on the active
-change, whichever room it's in.
+change, whichever room it's in. `commit` and `pr` act on the active build.
 
 ## The workspace
 
@@ -99,11 +107,17 @@ change, whichever room it's in.
 ├── LOG.md             gate history (committed under vcs: git)
 ├── REPOS.json         logical repos and remotes (committed under vcs: git)
 ├── .daiku/            settings + manifest (committed under vcs: git), active change + repo paths (local)
+├── sync.md            how an agent talks to your PM tool: publish and fetch
+├── sync-examples/     starters for sync.md
 ├── references/        reference files + your own index.md (daiku never edits it)
 ├── ideas/             ideas, one <n>-<slug>/ folder each (summary.md, log.md)
-└── plan/              the plan room, once `daiku change new` has run
-    ├── 00_intake/ … 06_publish/
-    └── specs/         per-change artifacts and tickets (<n>-<slug>/)
+├── plan/              the plan room, once `daiku change new` has run
+│   ├── 00_intake/ … 06_publish/
+│   └── specs/         per-change artifacts and tickets (<n>-<slug>/)
+└── build/             the build room, once `daiku build new` has run
+    ├── tickets/       the inbox: N- and X- tickets
+    ├── 01_design/ … 04_refactoring/
+    └── <repo>/changes/<ticket-id>/   one folder per build
 ```
 
 `daiku references check` warns about unindexed files in `references/`.
@@ -115,9 +129,27 @@ change, whichever room it's in.
 Research, explore and synthesis are skippable, with a reason. Breakdown writes
 stories and tasks as ticket files, each one repo's work in one reviewable PR;
 features and epics only where grouping helps. Publishing is agent work:
-`plan/06_publish/sync.md` tells an agent how to talk to your PM tool, and the CLI
-never calls one. Each change has a one-page overview,
+`sync.md`, at the workspace root, tells an agent how to talk to your PM tool, and
+the CLI never calls one. Each change has a one-page overview,
 `plan/specs/<change>/README.md`, that `daiku overview` keeps current.
+
+## The build loop
+
+`ticket → requirements → design → tasks → implement → test → review → security → ship`
+
+A build takes one ticket into one repo and ends in a pull request. `daiku build new
+<ticket-id>` names the build by its ticket and reads the ticket where it is: a ready
+or published ticket in `plan/specs/<change>/tickets/`, or one in the inbox,
+`build/tickets/`. The inbox holds native tickets (`N-`, from `daiku tickets new …
+--inbox`) and tickets pulled from a PM tool (`X-<pm-id>`, from `daiku tickets pull`
+after an agent fetches the item through `sync.md`). Security is skippable, with a
+reason; implement and ship are run phases.
+
+Only one build per repo is in implement, test, review, security or ship at a time:
+gating another into implement fails, naming the holder, until it's closed, its ship
+is complete, or it's reopened to tasks. `--force` overrides and is logged. `daiku
+commit` and `daiku pr` run in the build's repo, and the pull request links the
+ticket and its external items.
 
 ## Ideas
 
