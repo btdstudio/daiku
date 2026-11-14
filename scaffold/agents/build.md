@@ -29,6 +29,14 @@ another open build on the same repo is in implement, test, review, security or
 ship. Closing that build, finishing its ship, or reopening it to tasks frees the
 repo; `--force` overrides and is logged.
 
+## Build commands
+
+| Command | Purpose |
+|---|---|
+| `daiku build new <ticket-id>` | create a build change for a ticket, named by its id, in its repo; creates `build/` the first time. The ticket is read where it is: `plan/specs/<n>-<slug>/tickets/` for a ready or published planned ticket, or `build/tickets/` |
+
+`gate`, `reopen`, `status`, `switch`, `change close` and `env` act on the active build too.
+
 ## Build routing
 
 | Task / Intent | Directory | Persona | Read | Skip |

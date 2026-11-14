@@ -3,9 +3,11 @@ package cli
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
+	"github.com/btdstudio/daiku/internal/build/inbox"
 	"github.com/btdstudio/daiku/internal/core/ticket"
 	"github.com/btdstudio/daiku/internal/state"
 )
@@ -254,5 +256,181 @@ func TestStatusForABuild(t *testing.T) {
 	}
 	if code != 0 {
 		t.Fatalf("status = %d", code)
+	}
+}
+
+// inboxRoot is a root-only workspace (as init leaves it, vcs: none) with repo api
+// registered and one native ticket for it in the inbox.
+func inboxRoot(t *testing.T) string {
+	t.Helper()
+	root := rootOnly(t)
+	if code := repoCmd(root, "add", "api", "https://github.com/org/api", "--path", filepath.Join(t.TempDir(), "api")); code != 0 {
+		t.Fatal("repo add api")
+	}
+	if _, err := inbox.New(root, inbox.NewOptions{Title: "Fix login", Repo: "api"}); err != nil {
+		t.Fatal(err)
+	}
+	return root
+}
+
+// AC1 / spec R5, R16: the first build new creates the build room and the change,
+// and never plan/.
+func TestBuildNewFromTheInbox(t *testing.T) {
+	root := inboxRoot(t)
+	code, out := captureStdout(t, func() int { return runBuild(root, []string{"new", "1"}) })
+	if code != 0 || !strings.HasPrefix(out, "created room build/\n") || !strings.Contains(out, "created build N-0001 for api (build/tickets/N-0001.md)") {
+		t.Fatalf("build new = %d:\n%s", code, out)
+	}
+	if !isDir(filepath.Join(root, "build", "api", "changes", "N-0001")) || !isDir(filepath.Join(root, "build", "01_design")) {
+		t.Error("build room or change folder missing")
+	}
+	if isDir(filepath.Join(root, "plan")) {
+		t.Error("build new created plan/")
+	}
+	agents, _ := os.ReadFile(filepath.Join(root, "AGENTS.md"))
+	if !strings.Contains(string(agents), "## Build loop") || strings.Contains(string(agents), "## Plan loop") {
+		t.Errorf("AGENTS.md doesn't have exactly the build sections:\n%s", agents)
+	}
+	st, err := state.LoadState(root)
+	if err != nil || st.Name != "N-0001" || st.Loop != state.BuildLoop || st.Phase != "ticket" {
+		t.Fatalf("active = %+v, %v", st, err)
+	}
+	// The next build doesn't recreate the room.
+	if _, err := inbox.New(root, inbox.NewOptions{Title: "Second", Repo: "api"}); err != nil {
+		t.Fatal(err)
+	}
+	code, out = captureStdout(t, func() int { return runBuild(root, []string{"new", "N-0002"}) })
+	if code != 0 || strings.Contains(out, "created room") {
+		t.Fatalf("second build new = %d:\n%s", code, out)
+	}
+}
+
+// AC2 / spec R17: a planned ticket is read in place; nothing is copied.
+func TestBuildNewFromAPlannedTicket(t *testing.T) {
+	root := readyWorkspace(t, "breakdown")
+	if code, out := captureStdout(t, func() int { return runTickets(root, []string{"ready", "S-0001"}) }); code != 0 {
+		t.Fatalf("ready = %d: %s", code, out)
+	}
+	if code, stderr := captureStderr(t, func() int { return runBuild(root, []string{"new", "S-0001"}) }); code != 0 {
+		t.Fatalf("build new = %d: %s", code, stderr)
+	}
+	st, err := state.LoadState(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Name != "S-0001" || len(st.Sources) != 1 || st.Sources[0] != "plan/specs/1-auth-flow/tickets/S-0001.md" || st.Repos[0] != "app" {
+		t.Fatalf("build = %+v", st)
+	}
+	if entries, _ := os.ReadDir(filepath.Join(root, "build", "tickets")); len(entries) > 1 {
+		t.Fatalf("build/tickets/ has %d entries; the ticket was copied", len(entries))
+	}
+	if _, err := os.Stat(filepath.Join(root, "build", "tickets", "S-0001.md")); !os.IsNotExist(err) {
+		t.Fatal("the planned ticket was copied into the inbox")
+	}
+}
+
+// D3: what build new refuses, writing nothing.
+func TestBuildNewRefusals(t *testing.T) {
+	writeInbox := func(t *testing.T, root, id, text string) {
+		t.Helper()
+		if err := os.MkdirAll(inbox.Dir(root), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(inbox.Path(root, id), []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	native := func(id, repo string) string {
+		return "---\nschema: 1\nid: " + id + "\ntype: task\ntitle: x\nrepo: " + repo + "\nlabels: []\nstatus: draft\n---\n\n"
+	}
+	for _, tc := range []struct {
+		name, id, want string
+		setup          func(t *testing.T, root string)
+	}{
+		{"not an id", "../x", "isn't a ticket id", nil},
+		{"unknown", "N-0009", "no ticket N-0009", nil},
+		{"unregistered repo", "N-0005", `repo "web" isn't registered`, func(t *testing.T, root string) {
+			writeInbox(t, root, "N-0005", native("N-0005", "web"))
+		}},
+		{"no repo", "N-0006", "repo is required for a task", func(t *testing.T, root string) {
+			writeInbox(t, root, "N-0006", strings.Replace(native("N-0006", "api"), "repo: api\n", "", 1))
+		}},
+		{"planned id in the inbox", "S-0007", "planned ticket in the inbox", func(t *testing.T, root string) {
+			writeInbox(t, root, "S-0007", strings.Replace(native("S-0007", "api"), "type: task", "type: story", 1))
+		}},
+		{"invalid ticket", "N-0008", "invalid ticket", func(t *testing.T, root string) {
+			writeInbox(t, root, "N-0008", strings.Replace(native("N-0008", "api"), "type: task", "type: story", 1))
+		}},
+		{"already a change", "N-0001", "already a change", func(t *testing.T, root string) {
+			if code := runBuild(root, []string{"new", "N-0001"}); code != 0 {
+				t.Fatal("first build new")
+			}
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := inboxRoot(t)
+			if tc.setup != nil {
+				tc.setup(t, root)
+			}
+			before := readFile(t, filepath.Join(root, "STATE.json"))
+			code, stderr := captureStderr(t, func() int { return runBuild(root, []string{"new", tc.id}) })
+			if code != 1 || !strings.Contains(stderr, tc.want) {
+				t.Fatalf("build new %s = %d, stderr %q", tc.id, code, stderr)
+			}
+			if readFile(t, filepath.Join(root, "STATE.json")) != before {
+				t.Fatal("a refused build new changed STATE.json")
+			}
+		})
+	}
+}
+
+// A planned ticket that isn't ready can't be built, and an id in two places is
+// refused, naming both.
+func TestBuildNewRefusesADraftPlannedTicketAndDuplicates(t *testing.T) {
+	root := readyWorkspace(t, "breakdown")
+	if code, stderr := captureStderr(t, func() int { return runBuild(root, []string{"new", "S-0001"}) }); code != 1 || !strings.Contains(stderr, "S-0001 is draft; only a ready or published planned ticket") {
+		t.Fatalf("draft = %d: %s", code, stderr)
+	}
+	pulled := "---\nschema: 1\nid: X-12\ntype: task\ntitle: x\nrepo: app\nlabels: []\nstatus: draft\nexternal:\n  github: \"#12\"\n---\n\n"
+	for _, dir := range []string{filepath.Join(state.ChangeDir(root, "1-auth-flow"), "tickets"), inbox.Dir(root)} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "X-12.md"), []byte(pulled), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	code, stderr := captureStderr(t, func() int { return runBuild(root, []string{"new", "X-12"}) })
+	if code != 1 || !strings.Contains(stderr, "more than one place: plan/specs/1-auth-flow/tickets/X-12.md, build/tickets/X-12.md") {
+		t.Fatalf("duplicate = %d: %s", code, stderr)
+	}
+}
+
+// AC12 (build new): with LOG.md a symlink, build new refuses before writing the
+// room or the change, and the link's target is unchanged.
+func TestBuildNewRefusesASymlinkedLog(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks need privileges on Windows")
+	}
+	root := inboxRoot(t)
+	logPath := filepath.Join(root, "LOG.md")
+	victim := filepath.Join(t.TempDir(), "victim")
+	if err := os.WriteFile(victim, []byte("keep\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	os.Remove(logPath)
+	if err := os.Symlink(victim, logPath); err != nil {
+		t.Fatal(err)
+	}
+	before := readFile(t, filepath.Join(root, "STATE.json"))
+	code, stderr := captureStderr(t, func() int { return runBuild(root, []string{"new", "N-0001"}) })
+	if code != 1 || !strings.Contains(stderr, "LOG.md is a symlink") {
+		t.Fatalf("build new = %d: %s", code, stderr)
+	}
+	if readFile(t, filepath.Join(root, "STATE.json")) != before || isDir(filepath.Join(root, "build", "01_design")) || isDir(filepath.Join(root, "build", "api")) {
+		t.Fatal("a refused build new wrote the room, the change or STATE.json")
+	}
+	if readFile(t, victim) != "keep\n" {
+		t.Fatal("LOG.md's target was written")
 	}
 }
