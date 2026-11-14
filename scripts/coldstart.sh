@@ -28,11 +28,19 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT TERM
 
+# The daiku under test always lives in $bin, so there's one folder to put on
+# the agent's PATH: the agent must run this binary, not an older install.
+bin=$tmp/bin
+mkdir -p "$bin"
+daiku=$bin/daiku
 if [ -n "${DAIKU:-}" ]; then
-	daiku=$DAIKU
+	cp "$DAIKU" "$daiku"
 else
-	daiku=$tmp/bin/daiku
 	(cd "$here" && GOWORK=off go build -o "$daiku" ./cmd/daiku)
+fi
+echo "under test: $("$daiku" version) ($daiku)"
+if [ "$(command -v daiku 2>/dev/null || true)" != "$daiku" ]; then
+	echo "note: the daiku on your PATH isn't this one — put it first in the agent's shell, as shown below"
 fi
 # Keep the person's own daiku settings out of the fresh workspaces.
 XDG_CONFIG_HOME=$tmp/config
@@ -48,6 +56,10 @@ ask() {
 	echo "Start an agent in this folder, with no other context:"
 	echo
 	echo "workspace: $ws"
+	echo
+	echo "In the agent's shell, first put the daiku under test on PATH:"
+	echo
+	echo "    export PATH=\"$bin:\$PATH\""
 	echo
 	echo "and give it this prompt, word for word:"
 	echo

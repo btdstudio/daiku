@@ -71,3 +71,12 @@ func TestQALintReportsEveryTermStably(t *testing.T) {
 		}
 	}
 }
+
+// Code review finding 2: a line too long to scan is reported, not skipped.
+func TestLintReportsAnUnscannableFile(t *testing.T) {
+	long := strings.Repeat("x", 2<<20)
+	got := lintDocs([]lintRoom{room(BuildRoom, PlanRoom, planOnlyTerms, map[string]string{"big.md": long + "\nfunctional spec\n"})})
+	if len(got) != 1 || !strings.HasPrefix(got[0], "scaffold/build/big.md: can't lint: ") {
+		t.Fatalf("problems = %q", got)
+	}
+}
