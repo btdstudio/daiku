@@ -30,8 +30,14 @@ type Engine struct {
 	FS fs.FS
 	// Rooms are optional sub-trees by name. A room's files live under <room>/ in
 	// the workspace and share the root's manifest. Init writes only the root;
-	// EnsureRoom adds a room, and a room exists once its folder does. Optional.
+	// EnsureRoom adds a room, and a room exists once its folder (or its marker, see
+	// RoomMarkers) does. Optional.
 	Rooms map[string]fs.FS
+	// RoomMarkers name, per room, a slash-separated path under the room whose
+	// presence marks the room as there. Without one, the room's folder does. A
+	// room needs one when its folder can exist without it, such as an inbox other
+	// commands write before the room is first used. Optional.
+	RoomMarkers map[string]string
 	// Marker is a folder that identifies an existing workspace, so `update` can
 	// rebuild a lost manifest without writing into an unrelated directory.
 	Marker string
@@ -158,11 +164,30 @@ func roomIsSymlink(dir, room string) bool {
 	return err == nil && info.Mode()&os.ModeSymlink != 0
 }
 
-// trees are the root and every room whose folder exists in dir.
+// HasRoom reports whether room is in the workspace at dir: its folder is a real
+// folder and, when the room has a marker, the marker is there too, reached
+// through no symlink.
+func (e Engine) HasRoom(dir, room string) bool {
+	if !roomExists(dir, room) {
+		return false
+	}
+	marker := e.RoomMarkers[room]
+	if marker == "" {
+		return true
+	}
+	rel := path.Join(room, marker)
+	if workspace.ThroughSymlink(dir, rel) != "" {
+		return false
+	}
+	_, err := os.Lstat(filepath.Join(dir, filepath.FromSlash(rel)))
+	return err == nil
+}
+
+// trees are the root and every room that's in dir (HasRoom).
 func (e Engine) trees(dir string) []tree {
 	out := []tree{e.root()}
 	for _, room := range e.roomNames() {
-		if roomExists(dir, room) {
+		if e.HasRoom(dir, room) {
 			out = append(out, tree{fsys: e.Rooms[room], prefix: room})
 		}
 	}

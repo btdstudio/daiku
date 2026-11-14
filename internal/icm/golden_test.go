@@ -12,10 +12,13 @@ var update = flag.Bool("update", false, "update golden fixtures")
 
 // TestGoldenManifest pins the scaffold's byte-identity: any edit to scaffold/
 // changes a file hash and fails this test until the golden is regenerated. It
-// covers the root tree and the plan room.
+// covers the root tree and both rooms.
 func TestGoldenManifest(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.Mkdir(filepath.Join(dir, PlanRoom), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, BuildRoom, "01_design"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	m, err := BuildManifest(dir)

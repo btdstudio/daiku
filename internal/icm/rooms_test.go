@@ -238,3 +238,78 @@ func TestScaffoldSkipsAnUnmergeableAgents(t *testing.T) {
 		t.Error("init stopped before the rest of the root")
 	}
 }
+
+// Spec R5, R8: the build room appears on first use, with its rooms and inbox,
+// and its AGENTS.md sections; it never brings plan/.
+func TestEnsureBuild(t *testing.T) {
+	dir := scaffoldWorkspace(t)
+	created, err := EnsureBuild(dir)
+	if err != nil || !created {
+		t.Fatalf("created = %v, err = %v", created, err)
+	}
+	for _, rel := range []string{"01_design/context.md", "02_implementation/personas/coder.md", "03_testing/context.md", "04_refactoring/personas/security.md", "tickets"} {
+		if !exists(filepath.Join(dir, "build", filepath.FromSlash(rel))) {
+			t.Errorf("build/%s missing", rel)
+		}
+	}
+	if exists(filepath.Join(dir, "plan")) {
+		t.Error("EnsureBuild created plan/")
+	}
+	if text := agentsText(t, dir); !strings.Contains(text, "## Build loop") || strings.Contains(text, "## Plan loop") {
+		t.Errorf("AGENTS.md doesn't have exactly the build sections:\n%s", text)
+	}
+	before := agentsText(t, dir)
+	if again, err := EnsureBuild(dir); err != nil || again {
+		t.Fatalf("second EnsureBuild = %v, %v", again, err)
+	}
+	if agentsText(t, dir) != before {
+		t.Error("second EnsureBuild changed AGENTS.md")
+	}
+}
+
+// An inbox written before the room (tickets new --inbox) doesn't count as the
+// build room: AGENTS.md has no build sections, update leaves it, and EnsureBuild
+// still creates the room around the ticket.
+func TestInboxBeforeTheBuildRoom(t *testing.T) {
+	dir := scaffoldWorkspace(t)
+	inbox := filepath.Join(dir, "build", "tickets")
+	if err := os.MkdirAll(inbox, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	ticket := filepath.Join(inbox, "N-0001.md")
+	if err := os.WriteFile(ticket, []byte("mine\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Update(dir); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(agentsText(t, dir), "## Build loop") || exists(filepath.Join(dir, "build", "01_design")) {
+		t.Fatal("an inbox alone brought in the build room")
+	}
+	if created, err := EnsureBuild(dir); err != nil || !created {
+		t.Fatalf("EnsureBuild = %v, %v", created, err)
+	}
+	if got, _ := os.ReadFile(ticket); string(got) != "mine\n" {
+		t.Fatalf("the inbox ticket changed: %q", got)
+	}
+	if !strings.Contains(agentsText(t, dir), "## Build loop") {
+		t.Fatal("no build sections after EnsureBuild")
+	}
+}
+
+// N3: a symlinked build/ is refused, and nothing is written where it points.
+func TestEnsureBuildRefusesASymlink(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks need privileges on Windows")
+	}
+	dir, outside := scaffoldWorkspace(t), t.TempDir()
+	if err := os.Symlink(outside, filepath.Join(dir, "build")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := EnsureBuild(dir); err == nil || !strings.Contains(err.Error(), "symlink") {
+		t.Fatalf("err = %v", err)
+	}
+	if entries, _ := os.ReadDir(outside); len(entries) != 0 {
+		t.Fatalf("wrote %d entries outside", len(entries))
+	}
+}
