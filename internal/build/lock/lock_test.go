@@ -64,3 +64,26 @@ func TestMessage(t *testing.T) {
 		t.Fatalf("message = %q", got)
 	}
 }
+
+// Enters: a move takes the repo when a build goes into implement through ship
+// from outside that range (code review findings 1 and 2).
+func TestEnters(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		c     *core.Change
+		phase string
+		want  bool
+	}{
+		{"tasks to implement", build("A", "api", "tasks", "approved"), "implement", true},
+		{"tasks, forced to test", build("A", "api", "tasks", "approved"), "test", true},
+		{"ship complete, reopened to implement", build("A", "api", "ship", "complete"), "implement", true},
+		{"holder within the range", build("A", "api", "review", "approved"), "implement", false},
+		{"holder moving on", build("A", "api", "implement", "complete"), "test", false},
+		{"to tasks", build("A", "api", "ship", "complete"), "tasks", false},
+		{"a plan change", &core.Change{Name: "7-x", Loop: core.PlanLoopName, Phase: "breakdown", Repos: []string{"api"}}, "publish", false},
+	} {
+		if got := Enters(*tc.c, tc.phase); got != tc.want {
+			t.Errorf("%s: Enters = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}
