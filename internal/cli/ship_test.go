@@ -124,7 +124,7 @@ func TestPROpensFromTheBuildsRepo(t *testing.T) {
 	if code := runBuild(root, []string{"new", "X-1234"}); code != 0 {
 		t.Fatal("build new")
 	}
-	if _, out := captureStdout(t, func() int { return runStatus(root) }); !strings.Contains(out, "branch:   x-1234-fix-login") {
+	if _, out := captureStdout(t, func() int { return runStatus(root, nil) }); !strings.Contains(out, "branch:   x-1234-fix-login") {
 		t.Fatalf("status doesn't suggest the branch:\n%s", out)
 	}
 	calls := record(t, "x-1234-fix-login")

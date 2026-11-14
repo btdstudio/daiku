@@ -170,15 +170,16 @@ func TestStatusShowsVCS(t *testing.T) {
 	} {
 		root := vcsWorkspace(t, c.settings)
 		want := "vcs:      " + c.want + "\n"
-		code, out := captureStdout(t, func() int { return runStatus(root) })
+		code, out := captureStdout(t, func() int { return runStatus(root, nil) })
 		if code != 0 || !strings.Contains(out, "no active change\n"+want) {
 			t.Fatalf("settings %q, no change: code %d, out %q", c.settings, code, out)
 		}
 		if code := runChange(root, []string{"new", "Auth flow"}); code != 0 {
 			t.Fatalf("change new = %d", code)
 		}
-		code, out = captureStdout(t, func() int { return runStatus(root) })
-		if code != 0 || !strings.Contains(out, "gates:    ") || !strings.HasSuffix(out, want) {
+		code, out = captureStdout(t, func() int { return runStatus(root, nil) })
+		// The vcs line ends the active block; the board follows it (S-0042 D6).
+		if code != 0 || !strings.Contains(out, "gates:    ") || !strings.Contains(out, want+"\nplans:\n") {
 			t.Fatalf("settings %q, active change: code %d, out %q", c.settings, code, out)
 		}
 	}
@@ -187,7 +188,7 @@ func TestStatusShowsVCS(t *testing.T) {
 // AC11: an invalid vcs makes status fail, naming the key and the value.
 func TestStatusRejectsInvalidVCS(t *testing.T) {
 	root := vcsWorkspace(t, `{"vcs": "svn"}`)
-	code, stderr := captureStderr(t, func() int { return runStatus(root) })
+	code, stderr := captureStderr(t, func() int { return runStatus(root, nil) })
 	if code != 1 {
 		t.Fatalf("code = %d, want 1", code)
 	}
