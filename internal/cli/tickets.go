@@ -324,10 +324,10 @@ func ticketsCheck(root string) (int, error) {
 		return 1, nil
 	}
 	if len(warnings) > 0 {
-		fmt.Printf("%d tickets ok, %d warning(s)\n", len(all), len(warnings))
+		fmt.Printf("%d tickets ok, %d warning(s)\n", len(all)+len(inboxed), len(warnings))
 		return 0, nil
 	}
-	fmt.Printf("%d tickets ok\n", len(all))
+	fmt.Printf("%d tickets ok\n", len(all)+len(inboxed))
 	return 0, nil
 }
 

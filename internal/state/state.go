@@ -273,12 +273,12 @@ func AdvanceGate(root, phase, status, reason string, notes ...string) (State, er
 
 // Reopen moves the active change back to a phase, logs it and commits under
 // vcs: git.
-func Reopen(root, phase, reason string) (State, error) {
+func Reopen(root, phase, reason string, notes ...string) (State, error) {
 	s, err := storeAt(root)
 	if err != nil {
 		return State{}, err
 	}
-	return s.Reopen(root, phase, reason)
+	return s.Reopen(root, phase, reason, notes...)
 }
 
 // CloseChange closes a change by name, logs it and commits under vcs: git.

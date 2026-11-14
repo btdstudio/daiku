@@ -408,6 +408,24 @@ func runChangeClose(root string, args []string) int {
 	return 0
 }
 
+// lockViolation is the repo lock's refusal when moving st to phase would take a
+// repo another build holds (spec R29), or "" when it wouldn't. It runs for any
+// move into implement through ship from outside that range, by gate or reopen,
+// so neither a forced jump nor a reopen after ship puts two builds on one repo.
+func lockViolation(root string, st state.State, phase string) (string, error) {
+	if !lock.Enters(st, phase) {
+		return "", nil
+	}
+	changes, err := state.ReadChanges(root)
+	if err != nil {
+		return "", err
+	}
+	if holder, at := lock.Holder(changes, st); holder != "" {
+		return lock.Message(st.Repos[0], holder, at), nil
+	}
+	return "", nil
+}
+
 // parseTransition splits positional arguments from --reason and --force.
 func parseTransition(args []string) (pos []string, reason string, force bool, err error) {
 	for i := 0; i < len(args); i++ {
@@ -454,17 +472,12 @@ func runGate(root string, args []string) int {
 			violations = append(violations, violation.Error())
 			notes = append(notes, "override: "+violation.Error())
 		}
-		if st.Loop == state.BuildLoop && phase == "implement" {
-			changes, err := state.ReadChanges(root)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				return 1
-			}
-			if holder, at := lock.Holder(changes, st); holder != "" {
-				msg := lock.Message(st.Repos[0], holder, at)
-				violations = append(violations, msg)
-				notes = append(notes, "override: "+msg)
-			}
+		if msg, err := lockViolation(root, st, phase); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 1
+		} else if msg != "" {
+			violations = append(violations, msg)
+			notes = append(notes, "override: "+msg)
 		}
 		if st.Loop != state.BuildLoop {
 			if problems := state.PlanMachine.CheckArtifacts(root, st.Name, phase, status); len(problems) > 0 {
@@ -493,12 +506,30 @@ func runGate(root string, args []string) int {
 }
 
 func runReopen(root string, args []string) int {
-	pos, reason, _, err := parseTransition(args)
+	pos, reason, force, err := parseTransition(args)
 	if err != nil || len(pos) != 1 {
 		fmt.Fprintln(os.Stderr, usageLine("reopen"))
 		return 1
 	}
-	st, err := state.Reopen(root, pos[0], reason)
+	// Reopening a build into implement through ship takes its repo, as a gate
+	// does, so the lock applies here too (code review finding 1).
+	active, err := state.LoadState(root)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	var notes []string
+	if msg, err := lockViolation(root, active, pos[0]); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	} else if msg != "" {
+		if err := gatePolicyAll(root, []string{msg}, force); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 1
+		}
+		notes = append(notes, "override: "+msg)
+	}
+	st, err := state.Reopen(root, pos[0], reason, notes...)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1

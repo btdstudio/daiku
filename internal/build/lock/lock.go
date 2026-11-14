@@ -23,6 +23,14 @@ func Holds(c core.Change) bool {
 	return !(c.Phase == "ship" && c.Status == core.Complete)
 }
 
+// Enters reports whether moving c to phase takes its repo: c is a build, phase
+// is one that holds the repo, and c doesn't hold it already. Both a gate and a
+// reopen run the lock then, so neither can put a second build in implement
+// through ship on one repo.
+func Enters(c core.Change, phase string) bool {
+	return c.Loop == core.BuildLoopName && len(c.Repos) > 0 && held[phase] && !Holds(c)
+}
+
 // Holder returns the first other build, by name, holding c's repo, and its
 // record. It returns "" when the repo is free or c isn't a build.
 func Holder(changes map[string]*core.Change, c core.Change) (string, core.Change) {

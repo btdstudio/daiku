@@ -161,7 +161,7 @@ func TestTicketsCheckCoversTheInbox(t *testing.T) {
 	if code := runTickets(root, []string{"pull", writeDraft(t, `github: "#5"`, "Pulled")}); code != 0 {
 		t.Fatal("pull")
 	}
-	if code, out := captureStdout(t, func() int { return runTickets(root, []string{"check"}) }); code != 0 {
+	if code, out := captureStdout(t, func() int { return runTickets(root, []string{"check"}) }); code != 0 || !strings.Contains(out, "1 tickets ok") {
 		t.Fatalf("check with a valid inbox = %d:\n%s", code, out)
 	}
 	misplaced := filepath.Join(activeChangeDir(t, root), "tickets", "X-9.md")
