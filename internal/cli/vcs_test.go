@@ -238,6 +238,15 @@ func TestVCSNoneRunsNoGitForAnyRecordedCommand(t *testing.T) {
 			return runTickets(root, []string{"mark-published", "S-0001", "--external", "github=org/app#7"})
 		}},
 		{"change close", func() int { return runChange(root, []string{"close", "1-auth-flow", "--reason", "done"}) }},
+		// The build loop's recorded commands (S-0041, N7).
+		{"tickets new --inbox", func() int { return runTickets(root, []string{"new", "task", "Fix", "--repo", "app", "--inbox"}) }},
+		{"tickets pull", func() int {
+			draft := filepath.Join(t.TempDir(), "draft.md")
+			os.WriteFile(draft, []byte("---\nschema: 1\nid: D\ntype: task\ntitle: P\nrepo: app\nlabels: []\nstatus: draft\nexternal:\n  github: \"#3\"\n---\n\n"), 0o644)
+			return runTickets(root, []string{"pull", draft})
+		}},
+		{"build new", func() int { return runBuild(root, []string{"new", "N-0001"}) }},
+		{"build gate", func() int { return runGate(root, []string{"ticket", "approved"}) }},
 	}
 	for _, step := range steps {
 		code, stderr := captureStderr(t, step.run)

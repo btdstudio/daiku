@@ -35,6 +35,8 @@ repo; `--force` overrides and is logged.
 |---|---|
 | `daiku build new <ticket-id>` | create a build change for a ticket, named by its id, in its repo; creates `build/` the first time. The ticket is read where it is: `plan/specs/<n>-<slug>/tickets/` for a ready or published planned ticket, or `build/tickets/` |
 | `daiku tickets pull <file>` | record a ticket an agent fetched from a PM tool (through `sync.md`) as `build/tickets/X-<pm-id>.md`; pulling the same item again replaces it |
+| `daiku commit [git commit args]` | commit what's staged in the active build's repo. Split work into reviewed micro-commits: propose the groups, stage one, commit it with a conventional message, repeat |
+| `daiku pr [title]` | open a pull request from the active build's repo, linking the ticket, its external ids, its plan folder, spec and ADRs; warns when the branch lacks the ticket id |
 
 `gate`, `reopen`, `status`, `switch`, `change close` and `env` act on the active build too.
 

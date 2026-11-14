@@ -82,6 +82,8 @@ daiku change new "Gateway"     # creates the plan room and a plan change
 | `daiku repo path <name> <path>` | set a repo's local path |
 | `daiku repo doctor [--clone] [--into <dir>]` | check repos; `--clone` fetches missing ones |
 | `daiku env` | print harness flags (`--add-dir <path>`) for the active change's repos |
+| `daiku commit [git commit args]` | commit what's staged in the active build's repo, one reviewed group at a time |
+| `daiku pr [title]` | open a pull request from the active build's repo, linking its ticket |
 | `daiku check` | validate the embedded scaffold |
 | `daiku version` | print the version |
 | `daiku help [<command> [<verb>]]` | usage; `daiku <command> --help` (or `-h`) prints one command's usage |
