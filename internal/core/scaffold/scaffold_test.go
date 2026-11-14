@@ -98,7 +98,7 @@ func TestScaffoldSkipsExistingUnlessForced(t *testing.T) {
 
 func TestManifestIsDeterministicAndRoundTrips(t *testing.T) {
 	e := engine()
-	m, err := e.BuildManifest()
+	m, err := e.BuildManifest(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -288,7 +288,7 @@ func TestIsGitFile(t *testing.T) {
 }
 
 func TestManifestUnderVCSNoneKeepsOnlyGitignore(t *testing.T) {
-	m, err := localEngine().BuildManifest()
+	m, err := localEngine().BuildManifest(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -306,11 +306,11 @@ func TestManifestUnderVCSNoneKeepsOnlyGitignore(t *testing.T) {
 	for _, vcs := range []string{"", "git"} {
 		e := engine()
 		e.VCS = vcs
-		got, err := e.BuildManifest()
+		got, err := e.BuildManifest(t.TempDir())
 		if err != nil {
 			t.Fatal(err)
 		}
-		want, _ := engine().BuildManifest()
+		want, _ := engine().BuildManifest(t.TempDir())
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("vcs %q: manifest = %+v, want %+v", vcs, got, want)
 		}
