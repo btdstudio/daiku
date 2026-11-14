@@ -69,11 +69,13 @@ func TestCheckArtifacts(t *testing.T) {
 func TestAdvanceDoesNotRunCheck(t *testing.T) {
 	root, s := t.TempDir(), store()
 	calls := 0
-	s.Machine.Check = func(root, change, phase, status string) []Problem {
-		calls++
-		return []Problem{{Message: "would block"}}
-	}
-	if _, err := s.Seed(root, "1-x", SeedOptions{}); err != nil {
+	s = withLoop(t, s, func(l *Loop) {
+		l.Machine.Check = func(root, change, phase, status string) []Problem {
+			calls++
+			return []Problem{{Message: "would block"}}
+		}
+	})
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.Advance(root, "intake", Approved, ""); err != nil {

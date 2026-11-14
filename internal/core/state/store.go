@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -18,18 +19,39 @@ import (
 	"github.com/btdstudio/daiku/internal/core/workspace"
 )
 
-// Schema is the STATE.json version a Store writes unless it sets its own.
+// Schema is the STATE.json version. daiku starts at 1 and has no migrations: a
+// newer file is refused, and an older one can't exist.
 const Schema = 1
 
-// Store persists changes for one tool at the workspace root: a committed
-// STATE.json and LOG.md, change folders under SpecsDir, and a local active-change
-// pointer in .<tool>/active.
-type Store struct {
-	Machine  Machine
-	SpecsDir string // change folders, relative to the workspace root
+// Loop is one kind of change a Store holds: its phases, the names its changes
+// may have, and where their folders live.
+type Loop struct {
+	Machine Machine
+	// Name is the grammar for this loop's change names. It must keep a name from
+	// escaping its folder. Optional; nil means PlanNameRe.
+	Name *regexp.Regexp
+	// Dir holds this loop's change folders directly, relative to the workspace
+	// root, as <Dir>/<change>/. NextID and Known scan it. Optional when Folder is
+	// set.
+	Dir string
+	// Folder overrides <Dir>/<change> for a layout that needs fields of the
+	// record, such as its repo. It returns a path relative to the workspace root.
+	// Optional.
+	Folder func(c Change) (string, error)
 	// ChangeDirs are other folders holding a <dir>/<change>/ per change, relative
 	// to the workspace root. Gates commit these along with the change's folder.
 	ChangeDirs []string
+}
+
+// Store persists changes at the workspace root: a committed STATE.json and
+// LOG.md holding every loop's changes, each change's folder as its loop places
+// it, and a local active-change pointer in .<tool>/active.
+type Store struct {
+	// Tool prefixes messages and names the .<tool>/ folder.
+	Tool string
+	// Loops are the kinds of change this store holds, by name. Every change
+	// records one of these names in its Loop.
+	Loops map[string]Loop
 	// Commit makes each transition commit STATE.json and LOG.md, so an approval
 	// can't sit uncommitted.
 	Commit bool
@@ -41,15 +63,8 @@ type Store struct {
 	Now func() time.Time
 	// Warn receives warnings. Optional; defaults to os.Stderr.
 	Warn io.Writer
-	// Schema is this tool's STATE.json version. A tool bumps it when its phases
-	// change, and upgrades older files in Migrate. Optional; defaults to the
-	// package's Schema.
-	Schema int
-	// Migrate upgrades STATE.json bytes older than the store's schema. Optional.
-	// It should return bytes at the current schema.
-	Migrate func(data []byte) ([]byte, error)
-	// Preflight runs before STATE.json is read, to refuse layouts the tool no
-	// longer supports. Optional.
+	// Preflight runs before STATE.json is read, after the built-in refusal of
+	// zumen and tomo workspaces, to refuse other layouts. Optional.
 	Preflight func(root string) error
 	// Refresh runs after a transition saves STATE.json and before it records, so
 	// files it rewrites inside the change's folders go into the same commit.
@@ -63,13 +78,38 @@ type stateFile struct {
 	Changes map[string]*Change `json:"changes"`
 }
 
-func (s Store) tool() string { return s.Machine.Tool }
+func (s Store) tool() string { return s.Tool }
 
-func (s Store) schema() int {
-	if s.Schema > 0 {
-		return s.Schema
+// loop returns the named loop, with its Name rule defaulted.
+func (s Store) loop(name string) (Loop, error) {
+	l, ok := s.Loops[name]
+	if !ok {
+		return Loop{}, fmt.Errorf("%s: unknown loop %q", s.tool(), name)
 	}
-	return Schema
+	if l.Name == nil {
+		l.Name = PlanNameRe
+	}
+	return l, nil
+}
+
+// loopOf returns the loop a change records.
+func (s Store) loopOf(c Change) (Loop, error) {
+	l, err := s.loop(c.Loop)
+	if err != nil {
+		return Loop{}, fmt.Errorf("%s: unknown loop %q for change %q", s.tool(), c.Loop, c.Name)
+	}
+	return l, nil
+}
+
+// loopNames lists the loops in name order, so anything iterating them is
+// deterministic.
+func (s Store) loopNames() []string {
+	names := make([]string, 0, len(s.Loops))
+	for name := range s.Loops {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
 
 func (s Store) now() time.Time {
@@ -108,39 +148,71 @@ func (s Store) StatePath(root string) string { return filepath.Join(root, "STATE
 // LogPath is the committed log.
 func (s Store) LogPath(root string) string { return filepath.Join(root, "LOG.md") }
 
-// SpecsPath is the folder holding change folders.
-func (s Store) SpecsPath(root string) string { return filepath.Join(root, s.SpecsDir) }
-
-// ChangeDir is one change's folder. An empty change resolves to the specs folder
-// itself.
-func (s Store) ChangeDir(root, change string) string {
-	if change == "" {
-		return s.SpecsPath(root)
+// relDir is a change's folder relative to the workspace root, slash-separated:
+// its loop's Folder, or <Dir>/<name>. The name must match the loop's grammar, and
+// the folder must stay inside the workspace.
+func (s Store) relDir(c Change, l Loop) (string, error) {
+	if !l.Name.MatchString(c.Name) {
+		return "", fmt.Errorf("%s: invalid change name %q", s.tool(), c.Name)
 	}
-	return filepath.Join(s.SpecsPath(root), change)
+	rel := path.Join(filepath.ToSlash(l.Dir), c.Name)
+	if l.Folder != nil {
+		got, err := l.Folder(c)
+		if err != nil {
+			return "", err
+		}
+		rel = filepath.ToSlash(got)
+	}
+	if !filepath.IsLocal(filepath.FromSlash(rel)) {
+		return "", fmt.Errorf("%s: change %q has a folder outside the workspace: %s", s.tool(), c.Name, rel)
+	}
+	return path.Clean(rel), nil
+}
+
+// ChangeDir is a change's folder, as its loop places it.
+func (s Store) ChangeDir(root string, c Change) (string, error) {
+	l, err := s.loopOf(c)
+	if err != nil {
+		return "", err
+	}
+	rel, err := s.relDir(c, l)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(root, filepath.FromSlash(rel)), nil
 }
 
 var changeIDRe = regexp.MustCompile(`^(\d+)-`)
 
-// changeNameRe is the strict grammar for a change folder: a numeric id, a hyphen,
-// then the kebab-case slug Slugify produces. It keeps a name from escaping the
-// specs folder via `..` or a separator.
-var changeNameRe = regexp.MustCompile(`^(\d+)-[a-z0-9]+(?:-[a-z0-9]+)*$`)
+// PlanNameRe is the grammar for a numbered change: a numeric id, a hyphen, then
+// the kebab-case slug Slugify produces. It keeps a name from escaping its folder
+// via `..` or a separator. A Loop without a Name rule uses it.
+var PlanNameRe = regexp.MustCompile(`^(\d+)-[a-z0-9]+(?:-[a-z0-9]+)*$`)
 
-// NextID is the next sequential change id: the highest numeric `<id>-` prefix
-// among the change folders and the changes recorded in STATE.json, plus one.
-// Errors from reading either are returned, never treated as empty: a record
-// whose folder is gone must still keep its id from being reused.
-func (s Store) NextID(root string) (int, error) {
+// NextID is the next sequential change id in a loop: the highest numeric `<id>-`
+// prefix among that loop's folders under its Dir and its changes recorded in
+// STATE.json, plus one. Errors from reading either are returned, never treated
+// as empty: a record whose folder is gone must still keep its id from being
+// reused. A loop without a Dir has no numbered changes.
+func (s Store) NextID(root, loop string) (int, error) {
+	l, err := s.loop(loop)
+	if err != nil {
+		return 0, err
+	}
+	if l.Dir == "" {
+		return 0, fmt.Errorf("%s: loop %s has no numbered changes", s.tool(), loop)
+	}
 	changes, err := s.ReadChanges(root)
 	if err != nil {
 		return 0, err
 	}
 	max := 0
-	for name := range changes {
-		max = maxID(max, name)
+	for name, c := range changes {
+		if c.Loop == loop {
+			max = maxID(max, name)
+		}
 	}
-	dir := s.SpecsPath(root)
+	dir := filepath.Join(root, filepath.FromSlash(l.Dir))
 	entries, err := os.ReadDir(dir)
 	if err != nil && !os.IsNotExist(err) {
 		return 0, fmt.Errorf("%s: cannot read %s: %v", s.tool(), dir, err)
@@ -185,6 +257,9 @@ func NewChange(name string) Change {
 // unreadable or unparseable file is an error, never "no changes": a save writes
 // this map back, so treating it as empty would wipe every record.
 func (s Store) ReadChanges(root string) (map[string]*Change, error) {
+	if err := workspace.CheckLegacy(root); err != nil {
+		return nil, err
+	}
 	if s.Preflight != nil {
 		if err := s.Preflight(root); err != nil {
 			return nil, err
@@ -202,18 +277,8 @@ func (s Store) ReadChanges(root string) (map[string]*Change, error) {
 	if err := json.Unmarshal(data, &sf); err != nil {
 		return nil, fmt.Errorf("%s: cannot parse %s: %v", s.tool(), p, err)
 	}
-	if sf.Schema > s.schema() {
-		return nil, fmt.Errorf("%s: %s has schema %d, newer than this version supports (%d) — upgrade %s", s.tool(), p, sf.Schema, s.schema(), s.tool())
-	}
-	if sf.Schema < s.schema() && s.Migrate != nil {
-		upgraded, err := s.Migrate(data)
-		if err != nil {
-			return nil, fmt.Errorf("%s: cannot migrate %s: %v", s.tool(), p, err)
-		}
-		sf = stateFile{}
-		if err := json.Unmarshal(upgraded, &sf); err != nil {
-			return nil, fmt.Errorf("%s: cannot parse migrated %s: %v", s.tool(), p, err)
-		}
+	if sf.Schema > Schema {
+		return nil, fmt.Errorf("%s: %s has schema %d, newer than this version supports (%d) — upgrade %s", s.tool(), p, sf.Schema, Schema, s.tool())
 	}
 	if sf.Changes == nil {
 		return map[string]*Change{}, nil
@@ -224,6 +289,9 @@ func (s Store) ReadChanges(root string) (map[string]*Change, error) {
 			continue
 		}
 		c.Name = name
+		if c.Loop == "" {
+			return nil, fmt.Errorf("%s: %s: change %q records no loop", s.tool(), p, name)
+		}
 		if c.Gates == nil {
 			c.Gates = map[string]string{}
 		}
@@ -239,11 +307,30 @@ func (s Store) ReadChanges(root string) (map[string]*Change, error) {
 	return sf.Changes, nil
 }
 
-func (s Store) resolve(name string, changes map[string]*Change) Change {
+// resolve returns the recorded change, or for an unrecorded name, a new change
+// in the loop whose Dir holds a folder of that name (Loop "" if none does).
+func (s Store) resolve(root, name string, changes map[string]*Change) Change {
 	if c := changes[name]; c != nil {
 		return *c
 	}
-	return NewChange(name)
+	c := NewChange(name)
+	for _, loop := range s.loopNames() {
+		l, _ := s.loop(loop)
+		if l.Dir == "" || !l.Name.MatchString(name) {
+			continue
+		}
+		if realDir(filepath.Join(root, filepath.FromSlash(l.Dir), name)) {
+			c.Loop = loop
+			break
+		}
+	}
+	return c
+}
+
+// realDir reports whether p is a directory and not a symlink.
+func realDir(p string) bool {
+	info, err := os.Lstat(p)
+	return err == nil && info.IsDir() && info.Mode()&os.ModeSymlink == 0
 }
 
 // Load returns the active change. Its Name is "" when none is active.
@@ -256,7 +343,7 @@ func (s Store) Load(root string) (Change, error) {
 	if err != nil {
 		return Change{}, err
 	}
-	return s.resolve(name, changes), nil
+	return s.resolve(root, name, changes), nil
 }
 
 func (s Store) write(root string, c *Change) error {
@@ -272,7 +359,7 @@ func (s Store) write(root string, c *Change) error {
 		c.Sources = []string{}
 	}
 	changes[c.Name] = c
-	buf, err := json.MarshalIndent(stateFile{Schema: s.schema(), Changes: changes}, "", "  ")
+	buf, err := json.MarshalIndent(stateFile{Schema: Schema, Changes: changes}, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -288,66 +375,92 @@ func (s Store) Save(root string, c *Change) error {
 	return workspace.WriteActive(root, s.tool(), c.Name)
 }
 
-// KnownChange is one change folder annotated with any recorded progress.
+// KnownChange is one change annotated with any recorded progress.
 type KnownChange struct {
 	Name   string            `json:"name"`
-	ID     int               `json:"id"`
+	Loop   string            `json:"loop"`
+	ID     int               `json:"id"` // the numeric prefix; 0 for a change without one
 	Phase  string            `json:"phase"`
 	Status string            `json:"status"`
 	Gates  map[string]string `json:"gates"`
+	Repos  []string          `json:"repos,omitempty"`
 }
 
-// Known lists the numbered folders under the specs folder, sorted by id.
+// Known lists every loop's changes, loops in name order. A loop with a Dir lists
+// the numbered folders under it, sorted by id, with any recorded progress; a loop
+// without one lists its recorded changes, sorted by name.
 func (s Store) Known(root string) ([]KnownChange, error) {
 	changes, err := s.ReadChanges(root)
 	if err != nil {
 		return nil, err
 	}
 	out := []KnownChange{}
-	entries, err := os.ReadDir(s.SpecsPath(root))
-	if err != nil {
-		return out, nil
-	}
-	for _, e := range entries {
-		m := changeIDRe.FindStringSubmatch(e.Name())
-		if m == nil {
-			continue
+	for _, loop := range s.loopNames() {
+		l, _ := s.loop(loop)
+		var group []KnownChange
+		if l.Dir != "" {
+			entries, err := os.ReadDir(filepath.Join(root, filepath.FromSlash(l.Dir)))
+			if err != nil {
+				continue
+			}
+			for _, e := range entries {
+				m := changeIDRe.FindStringSubmatch(e.Name())
+				if m == nil {
+					continue
+				}
+				id, _ := strconv.Atoi(m[1])
+				kc := KnownChange{Name: e.Name(), Loop: loop, ID: id, Gates: map[string]string{}}
+				if c := changes[e.Name()]; c != nil && c.Loop == loop {
+					kc.Phase, kc.Status, kc.Gates, kc.Repos = c.Phase, c.Status, c.Gates, c.Repos
+				}
+				group = append(group, kc)
+			}
+			sort.SliceStable(group, func(i, j int) bool { return group[i].ID < group[j].ID })
+		} else {
+			for name, c := range changes {
+				if c.Loop != loop {
+					continue
+				}
+				group = append(group, KnownChange{Name: name, Loop: loop, Phase: c.Phase, Status: c.Status, Gates: c.Gates, Repos: c.Repos})
+			}
+			sort.Slice(group, func(i, j int) bool { return group[i].Name < group[j].Name })
 		}
-		id, _ := strconv.Atoi(m[1])
-		kc := KnownChange{Name: e.Name(), ID: id, Gates: map[string]string{}}
-		if c := changes[e.Name()]; c != nil {
-			kc.Phase, kc.Status, kc.Gates = c.Phase, c.Status, c.Gates
-		}
-		out = append(out, kc)
+		out = append(out, group...)
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out, nil
 }
 
-func (s Store) checkFolder(root, name string) error {
-	unknown := fmt.Errorf(`%s: unknown change "%s"`, s.tool(), name)
-	if !changeNameRe.MatchString(name) {
+// checkFolder holds a change to its loop's rules: a name that can't escape its
+// folder, and a real folder, not a symlink.
+func (s Store) checkFolder(root string, c Change) error {
+	unknown := fmt.Errorf(`%s: unknown change "%s"`, s.tool(), c.Name)
+	l, err := s.loopOf(c)
+	if err != nil {
 		return unknown
 	}
-	info, err := os.Lstat(s.ChangeDir(root, name))
-	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+	rel, err := s.relDir(c, l)
+	if err != nil {
+		return unknown
+	}
+	if !realDir(filepath.Join(root, filepath.FromSlash(rel))) {
 		return unknown
 	}
 	return nil
 }
 
-// Switch points the workspace at a change folder and resumes its machine. The
-// folder must exist and match the change-name grammar. Switching to a recorded
+// Switch points the workspace at a change and resumes its machine. The change's
+// folder must exist and its name must match its loop's grammar. An unrecorded
+// folder under a loop's Dir is recorded in that loop. Switching to a recorded
 // change moves only the local pointer, leaving STATE.json untouched.
 func (s Store) Switch(root, name string) (Change, error) {
-	if err := s.checkFolder(root, name); err != nil {
-		return Change{}, err
-	}
 	changes, err := s.ReadChanges(root)
 	if err != nil {
 		return Change{}, err
 	}
-	c := s.resolve(name, changes)
+	c := s.resolve(root, name, changes)
+	if err := s.checkFolder(root, c); err != nil {
+		return Change{}, err
+	}
 	if changes[name] != nil {
 		return c, workspace.WriteActive(root, s.tool(), name)
 	}
@@ -366,17 +479,23 @@ type SeedOptions struct {
 	Paths []string
 }
 
-// Seed creates a change folder and records its initial machine (the first phase
-// at draft), making it the active change. It refuses a name STATE.json already
-// records.
-func (s Store) Seed(root, name string, opts SeedOptions) (Change, error) {
-	if !changeNameRe.MatchString(name) {
+// Seed creates a change folder in a loop and records its initial machine (the
+// first phase at draft), making it the active change. It refuses a name that
+// doesn't match the loop's grammar, and a name STATE.json already records, in
+// any loop.
+func (s Store) Seed(root, name, loop string, opts SeedOptions) (Change, error) {
+	l, err := s.loop(loop)
+	if err != nil {
+		return Change{}, err
+	}
+	if !l.Name.MatchString(name) {
 		return Change{}, fmt.Errorf("%s: invalid change name %q", s.tool(), name)
 	}
 	if err := s.checkVCS(); err != nil {
 		return Change{}, err
 	}
-	if len(s.Machine.Phases) == 0 {
+	m := l.Machine
+	if len(m.Phases) == 0 {
 		return Change{}, fmt.Errorf("%s: machine has no phases", s.tool())
 	}
 	// Check before writing anything: Save would replace an existing record, and
@@ -389,24 +508,29 @@ func (s Store) Seed(root, name string, opts SeedOptions) (Change, error) {
 		return Change{}, fmt.Errorf("%s: change %q already exists in %s", s.tool(), name, s.StatePath(root))
 	}
 	c := NewChange(name)
+	c.Loop = loop
 	if opts.Sources != nil {
 		c.Sources = opts.Sources
 	}
 	c.Repos = opts.Repos
-	first := s.Machine.Phases[0].Name
+	rel, err := s.relDir(c, l)
+	if err != nil {
+		return Change{}, err
+	}
+	first := m.Phases[0].Name
 	lines := []string{name + ": created"}
-	for _, p := range s.Machine.Phases {
+	for _, p := range m.Phases {
 		if reason, ok := opts.Skip[p.Name]; ok {
-			if err := s.Machine.SetGate(&c, p.Name, Skipped, reason); err != nil {
+			if err := m.SetGate(&c, p.Name, Skipped, reason); err != nil {
 				return Change{}, err
 			}
 			lines = append(lines, transitionLine(name, p.Name, Skipped, reason))
 		}
 	}
-	if err := s.Machine.SetGate(&c, first, Draft, ""); err != nil {
+	if err := m.SetGate(&c, first, Draft, ""); err != nil {
 		return Change{}, err
 	}
-	dir := s.ChangeDir(root, name)
+	dir := filepath.Join(root, filepath.FromSlash(rel))
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return Change{}, err
 	}
@@ -417,7 +541,7 @@ func (s Store) Seed(root, name string, opts SeedOptions) (Change, error) {
 		if err := os.WriteFile(keep, nil, 0o644); err != nil {
 			return Change{}, err
 		}
-		paths = append(paths, filepath.ToSlash(filepath.Join(s.SpecsDir, name, ".gitkeep")))
+		paths = append(paths, path.Join(rel, ".gitkeep"))
 	}
 	if err := s.Save(root, &c); err != nil {
 		return Change{}, err
@@ -434,25 +558,46 @@ func transitionLine(name, phase, status, reason string) string {
 	return line
 }
 
-func (s Store) active(root string) (Change, error) {
+// active returns the active change and its loop.
+func (s Store) active(root string) (Change, Loop, error) {
 	c, err := s.Load(root)
 	if err != nil {
-		return Change{}, err
+		return Change{}, Loop{}, err
 	}
 	if c.Name == "" {
-		return Change{}, fmt.Errorf("%s: no active change — run `%s switch <change>` first", s.tool(), s.tool())
+		return Change{}, Loop{}, fmt.Errorf("%s: no active change — run `%s switch <change>` first", s.tool(), s.tool())
 	}
 	// The pointer is local, so a branch switch can leave it naming a change that
 	// doesn't exist here.
-	if _, err := os.Stat(s.ChangeDir(root, c.Name)); err != nil {
-		return Change{}, fmt.Errorf("%s: active change %q has no folder under %s/ — run `%s switch <change>`", s.tool(), c.Name, s.SpecsDir, s.tool())
+	if c.Loop == "" {
+		// Unrecorded, and no loop holds a valid folder of that name. Say whether
+		// something is there, so a crafted pointer reads as invalid, not missing.
+		for _, loop := range s.loopNames() {
+			if l, _ := s.loop(loop); l.Dir != "" {
+				if _, err := os.Lstat(filepath.Join(root, filepath.FromSlash(l.Dir), c.Name)); err == nil {
+					return Change{}, Loop{}, fmt.Errorf("%s: active change %q isn't a valid change folder — run `%s switch <change>`", s.tool(), c.Name, s.tool())
+				}
+			}
+		}
+		return Change{}, Loop{}, fmt.Errorf("%s: active change %q has no folder — run `%s switch <change>`", s.tool(), c.Name, s.tool())
+	}
+	l, err := s.loopOf(c)
+	if err != nil {
+		return Change{}, Loop{}, err
 	}
 	// The pointer is a plain file, so hold it to the same rules as Switch: a name
-	// that can't escape the specs folder, and a real folder, not a symlink.
-	if err := s.checkFolder(root, c.Name); err != nil {
-		return Change{}, fmt.Errorf("%s: active change %q isn't a valid change folder — run `%s switch <change>`", s.tool(), c.Name, s.tool())
+	// that can't escape its folder, and a real folder, not a symlink.
+	rel, err := s.relDir(c, l)
+	if err != nil {
+		return Change{}, Loop{}, fmt.Errorf("%s: active change %q isn't a valid change folder — run `%s switch <change>`", s.tool(), c.Name, s.tool())
 	}
-	return c, nil
+	if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(rel))); err != nil {
+		return Change{}, Loop{}, fmt.Errorf("%s: active change %q has no folder %s/ — run `%s switch <change>`", s.tool(), c.Name, rel, s.tool())
+	}
+	if err := s.checkFolder(root, c); err != nil {
+		return Change{}, Loop{}, fmt.Errorf("%s: active change %q isn't a valid change folder — run `%s switch <change>`", s.tool(), c.Name, s.tool())
+	}
+	return c, l, nil
 }
 
 // Advance sets a gate on the active change, runs Refresh, logs it along with any
@@ -461,11 +606,11 @@ func (s Store) active(root string) (Change, error) {
 // order is the caller's job, through CheckGate, since whether a violation blocks
 // is its policy.
 func (s Store) Advance(root, phase, status, reason string, notes ...string) (Change, error) {
-	c, err := s.active(root)
+	c, l, err := s.active(root)
 	if err != nil {
 		return Change{}, err
 	}
-	if err := s.Machine.SetGate(&c, phase, status, reason); err != nil {
+	if err := l.Machine.SetGate(&c, phase, status, reason); err != nil {
 		return Change{}, err
 	}
 	if err := s.Save(root, &c); err != nil {
@@ -476,31 +621,34 @@ func (s Store) Advance(root, phase, status, reason string, notes ...string) (Cha
 		lines = append(lines, c.Name+": "+note)
 	}
 	s.refresh(root, c)
-	return c, s.Record(root, lines, s.changePaths(root, c)...)
+	return c, s.Record(root, lines, s.changePaths(root, c, l)...)
 }
 
 // Reopen moves the active change back to a phase, runs Refresh, logs it and
 // commits, including the change's folders, as Advance does.
 func (s Store) Reopen(root, phase, reason string) (Change, error) {
-	c, err := s.active(root)
+	c, l, err := s.active(root)
 	if err != nil {
 		return Change{}, err
 	}
-	if err := s.Machine.Reopen(&c, phase, reason); err != nil {
+	if err := l.Machine.Reopen(&c, phase, reason); err != nil {
 		return Change{}, err
 	}
 	if err := s.Save(root, &c); err != nil {
 		return Change{}, err
 	}
 	s.refresh(root, c)
-	return c, s.Record(root, []string{c.Name + ": reopened " + phase + " (" + reason + ")"}, s.changePaths(root, c)...)
+	return c, s.Record(root, []string{c.Name + ": reopened " + phase + " (" + reason + ")"}, s.changePaths(root, c, l)...)
 }
 
-// changePaths lists a change's folders, relative to root: its folder under
-// SpecsDir, and <dir>/<change> for each ChangeDirs entry that exists.
-func (s Store) changePaths(root string, c Change) []string {
-	paths := []string{filepath.ToSlash(filepath.Join(s.SpecsDir, c.Name))}
-	for _, dir := range s.ChangeDirs {
+// changePaths lists a change's folders, relative to root: its own folder, and
+// <dir>/<change> for each of its loop's ChangeDirs that exists.
+func (s Store) changePaths(root string, c Change, l Loop) []string {
+	var paths []string
+	if rel, err := s.relDir(c, l); err == nil {
+		paths = append(paths, rel)
+	}
+	for _, dir := range l.ChangeDirs {
 		if _, err := os.Stat(filepath.Join(root, dir, c.Name)); err == nil {
 			paths = append(paths, filepath.ToSlash(filepath.Join(dir, c.Name)))
 		}
@@ -521,15 +669,19 @@ func (s Store) refresh(root string, c Change) {
 // CloseChange closes a change by name, logs it and commits. Closing the active
 // change clears the local pointer.
 func (s Store) CloseChange(root, name, reason string) (Change, error) {
-	if err := s.checkFolder(root, name); err != nil {
-		return Change{}, err
-	}
 	changes, err := s.ReadChanges(root)
 	if err != nil {
 		return Change{}, err
 	}
-	c := s.resolve(name, changes)
-	if err := s.Machine.Close(&c, reason); err != nil {
+	c := s.resolve(root, name, changes)
+	if err := s.checkFolder(root, c); err != nil {
+		return Change{}, err
+	}
+	l, err := s.loopOf(c)
+	if err != nil {
+		return Change{}, err
+	}
+	if err := l.Machine.Close(&c, reason); err != nil {
 		return Change{}, err
 	}
 	if err := s.write(root, &c); err != nil {
