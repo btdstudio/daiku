@@ -66,11 +66,13 @@ type Store struct {
 	// Preflight runs before STATE.json is read, after the built-in refusal of
 	// zumen and tomo workspaces, to refuse other layouts. Optional.
 	Preflight func(root string) error
-	// Refresh runs after a transition saves STATE.json and before it records, so
-	// files it rewrites inside the change's folders go into the same commit.
-	// Optional. Advance and Reopen call it. An error is printed as a warning; it
-	// doesn't fail the transition.
-	Refresh func(root string, c Change) error
+	// Refresh runs after a transition saves STATE.json and before it records.
+	// It returns the paths it wrote, relative to root, and those go into the
+	// transition's commit along with the change's own folders, so a file it
+	// rewrites elsewhere (a plan's overview, from a build) is committed too.
+	// Optional. Advance, Reopen and CloseChange call it. An error is printed as a
+	// warning; it doesn't fail the transition.
+	Refresh func(root string, c Change) (written []string, err error)
 }
 
 type stateFile struct {
@@ -650,8 +652,8 @@ func (s Store) Advance(root, phase, status, reason string, notes ...string) (Cha
 	for _, note := range notes {
 		lines = append(lines, c.Name+": "+note)
 	}
-	s.refresh(root, c)
-	return c, s.Record(root, lines, s.changePaths(root, c, l)...)
+	written := s.refresh(root, c)
+	return c, s.Record(root, lines, append(s.changePaths(root, c, l), written...)...)
 }
 
 // Reopen moves the active change back to a phase, runs Refresh, logs it along
@@ -667,12 +669,12 @@ func (s Store) Reopen(root, phase, reason string, notes ...string) (Change, erro
 	if err := s.Save(root, &c); err != nil {
 		return Change{}, err
 	}
-	s.refresh(root, c)
+	written := s.refresh(root, c)
 	lines := []string{c.Name + ": reopened " + phase + " (" + reason + ")"}
 	for _, note := range notes {
 		lines = append(lines, c.Name+": "+note)
 	}
-	return c, s.Record(root, lines, s.changePaths(root, c, l)...)
+	return c, s.Record(root, lines, append(s.changePaths(root, c, l), written...)...)
 }
 
 // changePaths lists a change's folders, relative to root: its own folder, and
@@ -690,18 +692,21 @@ func (s Store) changePaths(root string, c Change, l Loop) []string {
 	return paths
 }
 
-// refresh runs Refresh, if it's set, and turns an error into a warning.
-func (s Store) refresh(root string, c Change) {
+// refresh runs Refresh, if it's set, turns an error into a warning, and returns
+// the paths it wrote.
+func (s Store) refresh(root string, c Change) []string {
 	if s.Refresh == nil {
-		return
+		return nil
 	}
-	if err := s.Refresh(root, c); err != nil {
+	written, err := s.Refresh(root, c)
+	if err != nil {
 		fmt.Fprintf(s.warn(), "warning: %v\n", err)
 	}
+	return written
 }
 
-// CloseChange closes a change by name, logs it and commits. Closing the active
-// change clears the local pointer.
+// CloseChange closes a change by name, runs Refresh, logs it and commits.
+// Closing the active change clears the local pointer.
 func (s Store) CloseChange(root, name, reason string) (Change, error) {
 	changes, err := s.ReadChanges(root)
 	if err != nil {
@@ -733,7 +738,8 @@ func (s Store) CloseChange(root, name, reason string) (Change, error) {
 			return Change{}, err
 		}
 	}
-	return c, s.Record(root, []string{name + ": closed (" + reason + ")"})
+	written := s.refresh(root, c)
+	return c, s.Record(root, []string{name + ": closed (" + reason + ")"}, written...)
 }
 
 // Log appends one timestamped line to LOG.md without committing.

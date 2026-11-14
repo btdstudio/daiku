@@ -23,13 +23,12 @@ import (
 // through store, which Go would reject as an initialization cycle. storeAt
 // copies store at call time, so every transition carries it.
 func init() {
-	store.Refresh = func(root string, c core.Change) error {
+	store.Refresh = func(root string, c core.Change) ([]string, error) {
 		// Only plan changes have an overview; a build's comes in a later version.
 		if c.Loop != PlanLoop {
-			return nil
+			return nil, nil
 		}
-		_, err := RefreshOverview(root, c.Name)
-		return err
+		return RefreshOverview(root, c.Name)
 	}
 }
 
