@@ -23,6 +23,29 @@ type Input struct {
 	Repos          []string          // REPOS.json names, for validation
 	ADRDir         string            // the adrDir setting, for links
 	NarrativeEmpty bool
+	Builds         []BuildRow // the plan's tickets and their builds, in order
+}
+
+// BuildRow is one ticket of a plan and the build of it, if there is one.
+type BuildRow struct {
+	ID, Repo      string
+	Phase, Status string // the build's; empty when it isn't started
+	Started       bool   // a build change by the ticket's id exists
+	Closed        bool
+}
+
+// Build is the row's build as one cell: "not started", "closed",
+// "<phase> <status>", with " (done)" once ship is complete.
+func (b BuildRow) Build() string {
+	switch {
+	case !b.Started:
+		return "not started"
+	case b.Closed:
+		return "closed"
+	case b.Phase == "ship" && b.Status == "complete":
+		return b.Phase + " " + b.Status + " (done)"
+	}
+	return b.Phase + " " + b.Status
 }
 
 const none = "_None yet._"
@@ -44,6 +67,7 @@ func Render(in Input) string {
 		{"Work map", r.workMap},
 		{"Dependencies", r.dependencies},
 		{"Repos", r.repos},
+		{"Builds", r.builds},
 		{"Decisions", r.decisions},
 		{"Traceability", r.traceability},
 		{"Problems", r.problems},
@@ -361,6 +385,27 @@ func (r *renderer) repos() string {
 		rw := rows[n]
 		fmt.Fprintf(&b, "| `%s` | %d | %d | %d | %s |\n", n, rw.counts[ticket.StatusDraft], rw.counts[ticket.StatusReady],
 			rw.counts[ticket.StatusPublished], strings.Join(rw.ids, ", "))
+	}
+	return strings.TrimSuffix(b.String(), "\n")
+}
+
+// builds is a table of the plan's tickets and their builds, in the order given.
+func (r *renderer) builds() string {
+	if len(r.in.Builds) == 0 {
+		return none
+	}
+	var b strings.Builder
+	b.WriteString("| Ticket | Repo | Build |\n|---|---|---|\n")
+	for _, row := range r.in.Builds {
+		id := cell(row.ID)
+		if r.inThis[row.ID] {
+			id = ticketLink(row.ID)
+		}
+		repo := "—"
+		if row.Repo != "" {
+			repo = "`" + cell(row.Repo) + "`"
+		}
+		fmt.Fprintf(&b, "| %s | %s | %s |\n", id, repo, cell(row.Build()))
 	}
 	return strings.TrimSuffix(b.String(), "\n")
 }

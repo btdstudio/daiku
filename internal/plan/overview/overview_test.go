@@ -85,7 +85,7 @@ func TestRenderEmptyChange(t *testing.T) {
 			titles = append(titles, l[3:])
 		}
 	}
-	if strings.Join(titles, ",") != "Status,Diagrams,Work map,Dependencies,Repos,Decisions,Traceability,Problems" {
+	if strings.Join(titles, ",") != "Status,Diagrams,Work map,Dependencies,Repos,Builds,Decisions,Traceability,Problems" {
 		t.Fatalf("sections = %v", titles)
 	}
 	for _, s := range titles[1:] {
@@ -271,5 +271,30 @@ func TestLabelLength(t *testing.T) {
 	}
 	if got := label("S-0001", forty+"x"); got != "S-0001 · "+strings.Repeat("é", 39)+"…" {
 		t.Fatalf("41 runes = %q", got)
+	}
+}
+
+// S-0042 D3: one row per ticket, each build cell form, links only for this
+// change's tickets, and the rows in the order given.
+func TestRenderBuilds(t *testing.T) {
+	m := load(t, map[string]string{
+		"plan/specs/1-auth/tickets/S-0002.md": tk("S-0002", "story", "Sign in", "1-auth", "ready", ""),
+	})
+	in := Input{Model: m, Phases: phases, Builds: []BuildRow{
+		{ID: "S-0002", Repo: "app", Phase: "implement", Status: "in-progress", Started: true},
+		{ID: "S-0003", Repo: "app"},
+		{ID: "S-0004", Repo: "web", Phase: "ship", Status: "complete", Started: true},
+		{ID: "S-0005", Repo: "web", Phase: "test", Status: "approved", Started: true, Closed: true},
+		{ID: "X-12", Phase: "design", Status: "draft", Started: true},
+	}}
+	out := Render(in)
+	wantSection(t, out, "Builds", "| Ticket | Repo | Build |\n|---|---|---|\n"+
+		"| [S-0002](tickets/S-0002.md) | `app` | implement in-progress |\n"+
+		"| S-0003 | `app` | not started |\n"+
+		"| S-0004 | `web` | ship complete (done) |\n"+
+		"| S-0005 | `web` | closed |\n"+
+		"| X-12 | — | design draft |")
+	if i, j := strings.Index(out, "## Repos"), strings.Index(out, "## Builds"); !(i < j && j < strings.Index(out, "## Decisions")) {
+		t.Fatalf("Builds isn't between Repos and Decisions:\n%s", out)
 	}
 }
