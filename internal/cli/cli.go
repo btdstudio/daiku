@@ -48,6 +48,7 @@ var handlers = map[string]func(root string, args []string) int{
 	"switch":     runSwitch,
 	"source":     runSource,
 	"adr":        runAdr,
+	"build":      runBuild,
 	"change":     runChange,
 	"gate":       runGate,
 	"reopen":     runReopen,

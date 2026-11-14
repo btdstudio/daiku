@@ -22,7 +22,7 @@ used yet has no sections here.
   spec, architecture and tickets, ending in tickets published to a PM tool.
 - **Build a ticket** — `daiku build new <ticket-id>` builds one ticket in one
   repo, in the `build/` room: requirements, design, tasks, code, review and a
-  pull request. The build room comes with a later daiku version.
+  pull request. The ticket can be planned, created here, or pulled from a PM tool.
 
 ## Commands (the `daiku` CLI)
 
