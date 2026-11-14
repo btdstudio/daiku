@@ -14,9 +14,13 @@ import (
 )
 
 // runStatus prints the active change's block and the board of every open change
-// (S-0042 D6, D8). It only reads: no file is written and git never runs.
+// (S-0042 D6, D8), or with a plan change's name, that plan's tickets and their
+// builds (D7). It only reads: no file is written and git never runs.
 func runStatus(root string, args []string) int {
-	if len(args) > 0 {
+	switch {
+	case len(args) == 1 && !strings.HasPrefix(args[0], "-"):
+		return runInitiative(root, args[0])
+	case len(args) > 0:
 		fmt.Fprintln(os.Stderr, usageLine("status"))
 		return 1
 	}
@@ -185,4 +189,45 @@ func board(changes map[string]*state.State, active string) string {
 		b.WriteString("no open changes\n")
 	}
 	return b.String()
+}
+
+// runInitiative prints a plan's phase, then one line per ticket: its id, repo and
+// build (R5). Anything but a plan change in this workspace is refused (R6).
+func runInitiative(root, name string) int {
+	changes, err := state.ReadChanges(root)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	ok, err := state.IsPlan(root, name)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	if !ok {
+		msg := fmt.Sprintf("daiku: %s isn't a plan change in this workspace", name)
+		if c := changes[name]; c != nil && c.Loop == state.BuildLoop {
+			msg += " (it's a build — bare daiku status lists it)"
+		}
+		fmt.Fprintln(os.Stderr, msg)
+		return 1
+	}
+	rows, err := state.BuildRows(root, name)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	c := changes[name]
+	fmt.Printf("%s  %s %s\n", name, c.Phase, c.Status)
+	if len(rows) == 0 {
+		fmt.Println("  no tickets yet")
+	}
+	for _, r := range rows {
+		repo := r.Repo
+		if repo == "" {
+			repo = "-"
+		}
+		fmt.Printf("  %s  %s  %s\n", r.ID, repo, r.Build())
+	}
+	return 0
 }

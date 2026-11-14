@@ -54,7 +54,7 @@ daiku build new N-0001         # creates the build room and a build change
 |---|---|
 | `daiku init [dir] [--no-git] [--force]` | scaffold a daiku workspace, root only (`--no-git`: a local workspace, vcs: none; `--force`: overwrite existing files) |
 | `daiku update` | refresh managed files to the installed version |
-| `daiku status` | show the active change's phase/status |
+| `daiku status [<plan-change>]` | show the active change and every open change by room and repo, or a plan's tickets and their builds |
 | `daiku settings` | show/merge settings |
 | `daiku switch [--all] [<change>]` | list changes (`--all` includes closed ones), or switch the active change |
 | `daiku source new --title <t> [--repo <path>] [--rev <r>] [--body <b>]` | add an intake source to `plan/00_intake/` |
