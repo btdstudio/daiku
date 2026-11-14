@@ -356,16 +356,9 @@ func runChangeClose(root string, args []string) int {
 	}
 	// A close refreshes the overview, so a README that can't be written
 	// safely refuses it before anything changes (S-0042 D5).
-	changes, err := state.ReadChanges(root)
-	if err != nil {
+	if err := state.CheckClose(root, pos[0]); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
-	}
-	if c := changes[pos[0]]; c != nil {
-		if err := state.CheckOverview(root, *c); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			return 1
-		}
 	}
 	st, err := state.CloseChange(root, pos[0], reason)
 	if err != nil {
