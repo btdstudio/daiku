@@ -461,7 +461,43 @@ type Problem struct {
 
 func (p Problem) String() string { return p.ID + ": " + p.Message }
 
-var idRe = regexp.MustCompile(`^([EFSTN])-(\d{4})$`)
+// PulledPrefix marks a ticket pulled from a PM tool. Its id is the PM tool's own
+// id, normalized by PulledID, so it carries no sequence number.
+const PulledPrefix = "X"
+
+const (
+	plannedPattern = `([EFSTN])-(\d{4})`
+	pulledPattern  = `X-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*`
+)
+
+// idRe is the grammar for planned and native ids: a prefix and a four-digit
+// sequence.
+var idRe = regexp.MustCompile(`^` + plannedPattern + `$`)
+
+// pulledRe is the grammar for pulled ids: X- and hyphen-separated runs of
+// letters and digits. Like idRe, it can't name a path.
+var pulledRe = regexp.MustCompile(`^` + pulledPattern + `$`)
+
+// IDRe matches any valid ticket id: planned, native or pulled. A build change is
+// named by one, so it doubles as a safe folder name.
+var IDRe = regexp.MustCompile(`^(?:` + plannedPattern + `|` + pulledPattern + `)$`)
+
+var pulledDrop = regexp.MustCompile(`[^A-Za-z0-9-]+`)
+var pulledHyphens = regexp.MustCompile(`-{2,}`)
+
+// PulledID turns a PM tool's item id into a pulled ticket id: it drops a leading
+// X-, keeps only letters, digits and hyphens, collapses repeated hyphens and
+// trims them from the ends, then prefixes X-. So "#1234" is X-1234, "PROJ-123"
+// is X-PROJ-123, and "X-#12" is X-12. An id with nothing left is an error.
+func PulledID(pmID string) (string, error) {
+	rest := strings.TrimPrefix(strings.TrimSpace(pmID), PulledPrefix+"-")
+	rest = pulledDrop.ReplaceAllString(rest, "")
+	rest = strings.Trim(pulledHyphens.ReplaceAllString(rest, "-"), "-")
+	if rest == "" {
+		return "", fmt.Errorf("ticket: PM id %q has no letters or digits", pmID)
+	}
+	return PulledPrefix + "-" + rest, nil
+}
 
 var acceptanceLineRe = regexp.MustCompile(`(?i)^##\s+Acceptance criteria\s*$`)
 var checkboxLineRe = regexp.MustCompile(`^\s*[-*]\s+\[[ xX]\]\s+\S`)
@@ -553,8 +589,17 @@ func ValidateFile(t *Ticket) []Problem {
 		add("unknown type %q", t.Type)
 	}
 	m := idRe.FindStringSubmatch(t.ID)
-	if m == nil {
-		add("id %q must look like S-0001", t.ID)
+	pulled := pulledRe.MatchString(t.ID)
+	if pulled {
+		// A pulled ticket may be any type; the PM tool decides that.
+		if len(t.External) != 1 {
+			add("a pulled %s- ticket needs exactly one external id, got %d", PulledPrefix, len(t.External))
+		}
+		if t.Origin != (Origin{}) {
+			add("a pulled %s- ticket can't have an origin", PulledPrefix)
+		}
+	} else if m == nil {
+		add("id %q must look like S-0001 or X-1234", t.ID)
 	} else if m[1] == NativePrefix {
 		if t.Type != Task {
 			add("a native %s- ticket must be a task", NativePrefix)
@@ -593,7 +638,7 @@ func ValidateFile(t *Ticket) []Problem {
 			add("status published requires an external id")
 		}
 	case StatusClosed:
-		if m != nil && m[1] != NativePrefix {
+		if pulled || (m != nil && m[1] != NativePrefix) {
 			add("only a native %s- ticket can be closed; the PM tool owns a published ticket's status", NativePrefix)
 		}
 	default:
