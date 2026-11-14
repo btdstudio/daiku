@@ -12,7 +12,7 @@ import (
 	"io/fs"
 )
 
-// ScaffoldFS is the whole embedded scaffold: root/, plan/ and agents/.
+// ScaffoldFS is the whole embedded scaffold: root/, plan/, build/ and agents/.
 //
 //go:embed all:scaffold
 var ScaffoldFS embed.FS
@@ -22,6 +22,9 @@ var RootFS = mustSub("scaffold/root")
 
 // PlanFS is the plan room's tree, written under plan/ the first time it's used.
 var PlanFS = mustSub("scaffold/plan")
+
+// BuildFS is the build room's tree, written under build/ the first time it's used.
+var BuildFS = mustSub("scaffold/build")
 
 // AgentsFS holds the AGENTS.md fragments: root.md, and one <room>.md per room.
 // They're assembled, never copied out as they are.

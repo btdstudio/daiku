@@ -23,9 +23,9 @@ type RoomReport struct {
 
 // EnsureRoom adds a room to an existing workspace the first time it's needed: it
 // writes the room's tree under <room>/ and records those files in the
-// workspace's manifest, alongside the root's. A room whose folder already exists
+// workspace's manifest, alongside the root's. A room that's already there (HasRoom)
 // is left alone and reported as not created; refreshing its files is Update's
-// job.
+// job. A room whose folder exists without its marker is written into that folder.
 func (e Engine) EnsureRoom(dir, room string) (RoomReport, error) {
 	rep := RoomReport{}
 	fsys, ok := e.Rooms[room]
@@ -41,7 +41,7 @@ func (e Engine) EnsureRoom(dir, room string) (RoomReport, error) {
 	if roomIsSymlink(dir, room) {
 		return rep, fmt.Errorf("%s: %s/ is a symlink, which could lead outside the workspace — replace it with a folder", e.Tool, room)
 	}
-	if roomExists(dir, room) {
+	if e.HasRoom(dir, room) {
 		return rep, nil
 	}
 	m, err := e.ReadManifest(dir)

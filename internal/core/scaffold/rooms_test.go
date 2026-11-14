@@ -316,3 +316,48 @@ func TestSymlinkedRoomIsRefused(t *testing.T) {
 		t.Fatalf("wrote %d entries through the symlinked room", len(entries))
 	}
 }
+
+// A room with a marker isn't there until its marker is, so a folder another
+// command made first (an inbox) doesn't stop EnsureRoom adding the room, and
+// Update doesn't refresh a room that was never added (S-0041).
+func TestRoomMarker(t *testing.T) {
+	e := roomEngine()
+	e.RoomMarkers = map[string]string{"build": "01_design"}
+	dir := rootOnly(t, e)
+	inbox := filepath.Join(dir, "build", "tickets")
+	if err := os.MkdirAll(inbox, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(inbox, "N-0001.md"), []byte("mine\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if e.HasRoom(dir, "build") {
+		t.Fatal("an inbox folder counted as the build room")
+	}
+	if _, err := e.Update(dir); err != nil {
+		t.Fatal(err)
+	}
+	if exists(filepath.Join(dir, "build", "01_design", "context.md")) {
+		t.Fatal("update wrote a room that was never added")
+	}
+	rep, err := e.EnsureRoom(dir, "build")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !rep.Created || !exists(filepath.Join(dir, "build", "01_design", "context.md")) || !e.HasRoom(dir, "build") {
+		t.Fatalf("EnsureRoom = %+v", rep)
+	}
+	if got, _ := os.ReadFile(filepath.Join(inbox, "N-0001.md")); string(got) != "mine\n" {
+		t.Fatalf("the inbox ticket changed: %q", got)
+	}
+	if rep, err := e.EnsureRoom(dir, "build"); err != nil || rep.Created {
+		t.Fatalf("second EnsureRoom = %+v, %v", rep, err)
+	}
+	// A room without a marker is there once its folder is, as before.
+	if err := os.MkdirAll(filepath.Join(dir, "plan"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if !e.HasRoom(dir, "plan") {
+		t.Fatal("plan/ without a marker isn't the plan room")
+	}
+}
