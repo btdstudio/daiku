@@ -5,6 +5,7 @@ package workspace
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -53,4 +54,26 @@ func CheckLegacy(root string) error {
 		}
 	}
 	return nil
+}
+
+// ThroughSymlink returns the first existing path component of rel, a
+// slash-separated path under root, that is a symlink, or "" if there's none.
+// Components that don't exist yet are fine: they'll be created as real folders
+// or files. Checking every component, not only the last, keeps a committed
+// symlink such as build/<repo>, plan/specs or references/ from sending a write
+// outside the workspace. root itself isn't checked, so a workspace may live
+// under a symlinked path.
+func ThroughSymlink(root, rel string) string {
+	cur := root
+	for _, part := range strings.Split(path.Clean(filepath.ToSlash(rel)), "/") {
+		cur = filepath.Join(cur, part)
+		info, err := os.Lstat(cur)
+		if err != nil {
+			return ""
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return cur
+		}
+	}
+	return ""
 }
