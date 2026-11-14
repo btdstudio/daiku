@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -258,4 +259,60 @@ func contains(list []string, s string) bool {
 		}
 	}
 	return false
+}
+
+func TestInvalidRoomNamesAreRefusedEverywhere(t *testing.T) {
+	for _, bad := range []string{"../x", "a/b", `a\b`, ".", ".."} {
+		e := roomEngine()
+		e.Rooms[bad] = fstest.MapFS{"a.md": {Data: []byte("a")}}
+		dir := t.TempDir()
+		if _, err := e.Scaffold(dir, Options{NoGit: true}); err == nil || !strings.Contains(err.Error(), "invalid room name") {
+			t.Errorf("%q: Scaffold err = %v", bad, err)
+		}
+		good := rootOnly(t, roomEngine())
+		if err := os.MkdirAll(filepath.Join(good, filepath.FromSlash(bad)), 0o755); err != nil && bad != `a\b` {
+			t.Fatal(err)
+		}
+		if _, err := e.Update(good); err == nil || !strings.Contains(err.Error(), "invalid room name") {
+			t.Errorf("%q: Update err = %v", bad, err)
+		}
+		if got := e.Check(); len(got) != 1 || !strings.Contains(got[0], "invalid room name") {
+			t.Errorf("%q: Check = %v", bad, got)
+		}
+		if exists(filepath.Join(filepath.Dir(good), "x", "a.md")) {
+			t.Errorf("%q: a room file was written outside the workspace", bad)
+		}
+	}
+}
+
+// Security finding 2: a committed symlink in a room's place isn't a room, so
+// EnsureRoom refuses it and Update writes nothing through it.
+func TestSymlinkedRoomIsRefused(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks need privileges on Windows")
+	}
+	e := roomEngine()
+	dir := rootOnly(t, e)
+	outside := t.TempDir()
+	if err := os.Symlink(outside, filepath.Join(dir, "build")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.EnsureRoom(dir, "build"); err == nil || !strings.Contains(err.Error(), "is a symlink") {
+		t.Fatalf("EnsureRoom err = %v", err)
+	}
+	if _, err := e.Update(dir); err != nil {
+		t.Fatal(err)
+	}
+	m, err := e.BuildManifest(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rel := range m.Files {
+		if strings.HasPrefix(rel, "build/") {
+			t.Errorf("manifest lists %s through the symlink", rel)
+		}
+	}
+	if entries, _ := os.ReadDir(outside); len(entries) != 0 {
+		t.Fatalf("wrote %d entries through the symlinked room", len(entries))
+	}
 }

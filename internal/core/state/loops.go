@@ -27,8 +27,12 @@ func PlanLoop(m Machine) Loop {
 // its ticket id, which name must match, and lives under
 // build/<repo>/changes/<ticket-id>/, where <repo> is the change's first repo.
 // The caller passes the ticket id grammar (ticket.IDRe) so that state stays
-// independent of the ticket package.
+// independent of the ticket package. It's required: a nil name would fall back
+// to PlanNameRe and let plan names into the build loop, so it panics.
 func BuildLoop(m Machine, name *regexp.Regexp) Loop {
+	if name == nil {
+		panic("state.BuildLoop: the name rule is required (pass ticket.IDRe)")
+	}
 	return Loop{Machine: m, Name: name, Folder: buildFolder}
 }
 

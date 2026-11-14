@@ -858,8 +858,21 @@ func TestUnknownLoop(t *testing.T) {
 	if err := workspace.WriteActive(root, "sample", "1-x"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Advance(root, "intake", Approved, ""); err == nil || !strings.Contains(err.Error(), `unknown loop "gone" for change "1-x"`) {
-		t.Fatalf("Advance err = %v", err)
+	for name, call := range map[string]func() error{
+		"Load":    func() error { _, err := s.Load(root); return err },
+		"Known":   func() error { _, err := s.Known(root); return err },
+		"Advance": func() error { _, err := s.Advance(root, "intake", Approved, ""); return err },
+	} {
+		if err := call(); err == nil || !strings.Contains(err.Error(), `change "1-x" records unknown loop "gone"`) {
+			t.Errorf("%s err = %v", name, err)
+		}
+	}
+	if got, _ := os.ReadFile(s.StatePath(root)); string(got) != raw {
+		t.Fatal("a refused file was rewritten")
+	}
+	// A change built in memory with an unknown loop is still refused.
+	if _, err := s.ChangeDir(root, Change{Name: "1-x", Loop: "gone"}); err == nil || !strings.Contains(err.Error(), `unknown loop "gone" for change "1-x"`) {
+		t.Errorf("ChangeDir err = %v", err)
 	}
 	if _, err := s.NextID(root, "gone"); err == nil {
 		t.Fatal("NextID accepted an unknown loop")

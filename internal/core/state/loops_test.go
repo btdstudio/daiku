@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -157,5 +158,86 @@ func TestBuildLoopHasNoNumberedIDs(t *testing.T) {
 	root, s := t.TempDir(), daikuStore()
 	if _, err := s.NextID(root, BuildLoopName); err == nil {
 		t.Fatal("NextID worked for the build loop")
+	}
+}
+
+func TestBuildLoopRequiresANameRule(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("BuildLoop(m, nil) didn't panic")
+		}
+	}()
+	BuildLoop(buildMachine, nil)
+}
+
+// Under vcs git, a build change's folder, its ChangeDirs and every transition
+// are committed, and the tree ends clean.
+func TestBuildChangeCommitsUnderGit(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	root := t.TempDir()
+	git := func(args ...string) string {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-C", root}, args...)...)
+		cmd.Env = append(os.Environ(), "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null")
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v: %s", args, err, out)
+		}
+		return string(out)
+	}
+	git("init", "-q")
+	git("config", "user.email", "qa@example.com")
+	git("config", "user.name", "qa")
+	git("config", "commit.gpgsign", "false")
+	git("commit", "-q", "--allow-empty", "-m", "root")
+
+	s := daikuStore()
+	s.VCS, s.Commit = settings.VCSGit, true
+	build := s.Loops[BuildLoopName]
+	build.ChangeDirs = []string{"build/notes"}
+	s.Loops[BuildLoopName] = build
+
+	if _, err := s.Seed(root, "S-0036", BuildLoopName, SeedOptions{Repos: []string{"api"}}); err != nil {
+		t.Fatal(err)
+	}
+	note := filepath.Join(root, "build", "notes", "S-0036", "n.md")
+	if err := os.MkdirAll(filepath.Dir(note), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(note, []byte("note\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	design := filepath.Join(root, "build", "api", "changes", "S-0036", "design.md")
+	if err := os.WriteFile(design, []byte("design\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Advance(root, "ticket", Approved, ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Reopen(root, "ticket", "redo"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.CloseChange(root, "S-0036", "done"); err != nil {
+		t.Fatal(err)
+	}
+
+	log := git("log", "--name-only", "--format=%s")
+	for _, want := range []string{
+		"daiku: S-0036: created",
+		"build/api/changes/S-0036/.gitkeep",
+		"daiku: S-0036: ticket → approved",
+		"build/api/changes/S-0036/design.md",
+		"build/notes/S-0036/n.md",
+		"daiku: S-0036: reopened ticket (redo)",
+		"daiku: S-0036: closed (done)",
+	} {
+		if !strings.Contains(log, want) {
+			t.Errorf("git log is missing %q:\n%s", want, log)
+		}
+	}
+	if st := git("status", "--porcelain"); strings.TrimSpace(st) != "" {
+		t.Errorf("uncommitted after the transitions:\n%s", st)
 	}
 }

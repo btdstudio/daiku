@@ -8,8 +8,9 @@ zumen (planning), tomo (building) and their shared core, kiso, with one tool.
 - Go >= 1.22, standard library only — no third-party runtime or build deps.
   `go.mod` has no `require` block. `go test ./...` must stay green from a clean
   checkout.
-- `internal/core` holds no command behaviour. Its packages take the tool name and
-  their configuration from the caller, as kiso's did. The one daiku-specific
+- `internal/core` holds no daiku command wiring. Its packages take the tool name
+  and their configuration from the caller, as kiso's did; `repos` still ships
+  its reusable `repo` and `env` handlers. The one daiku-specific
   layout it owns is `state.PlanLoop` and `state.BuildLoop`, so the folder rules
   live in one place.
 - `state` must not import `ticket`, directly or through another package (a test

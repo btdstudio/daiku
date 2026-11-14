@@ -486,11 +486,14 @@ var pulledDrop = regexp.MustCompile(`[^A-Za-z0-9-]+`)
 var pulledHyphens = regexp.MustCompile(`-{2,}`)
 
 // PulledID turns a PM tool's item id into a pulled ticket id: it drops a leading
-// X-, keeps only letters, digits and hyphens, collapses repeated hyphens and
+// X- (in either case), keeps only letters, digits and hyphens, collapses repeated hyphens and
 // trims them from the ends, then prefixes X-. So "#1234" is X-1234, "PROJ-123"
 // is X-PROJ-123, and "X-#12" is X-12. An id with nothing left is an error.
 func PulledID(pmID string) (string, error) {
-	rest := strings.TrimPrefix(strings.TrimSpace(pmID), PulledPrefix+"-")
+	rest := strings.TrimSpace(pmID)
+	if len(rest) >= 2 && strings.EqualFold(rest[:2], PulledPrefix+"-") {
+		rest = rest[2:]
+	}
 	rest = pulledDrop.ReplaceAllString(rest, "")
 	rest = strings.Trim(pulledHyphens.ReplaceAllString(rest, "-"), "-")
 	if rest == "" {

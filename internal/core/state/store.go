@@ -255,7 +255,8 @@ func NewChange(name string) Change {
 
 // ReadChanges returns every recorded change (empty when STATE.json is absent). An
 // unreadable or unparseable file is an error, never "no changes": a save writes
-// this map back, so treating it as empty would wipe every record.
+// this map back, so treating it as empty would wipe every record. So is a change
+// with no loop, or with a loop the store doesn't have.
 func (s Store) ReadChanges(root string) (map[string]*Change, error) {
 	if err := workspace.CheckLegacy(root); err != nil {
 		return nil, err
@@ -292,6 +293,11 @@ func (s Store) ReadChanges(root string) (map[string]*Change, error) {
 		if c.Loop == "" {
 			return nil, fmt.Errorf("%s: %s: change %q records no loop", s.tool(), p, name)
 		}
+		// A change in a loop this store doesn't know would be invisible to Known
+		// and unusable everywhere else, so refuse the file instead.
+		if _, ok := s.Loops[c.Loop]; !ok {
+			return nil, fmt.Errorf("%s: %s: change %q records unknown loop %q", s.tool(), p, name, c.Loop)
+		}
 		if c.Gates == nil {
 			c.Gates = map[string]string{}
 		}
@@ -325,6 +331,26 @@ func (s Store) resolve(root, name string, changes map[string]*Change) Change {
 		}
 	}
 	return c
+}
+
+// throughSymlink returns the first existing path component of rel, under root,
+// that is a symlink, or "" if there's none. Components that don't exist yet are
+// fine: MkdirAll will create them as real folders. Checking every component, not
+// only the last, keeps a committed symlink such as build/<repo> or plan/specs
+// from sending a change's folder outside the workspace.
+func throughSymlink(root, rel string) string {
+	cur := root
+	for _, part := range strings.Split(path.Clean(rel), "/") {
+		cur = filepath.Join(cur, part)
+		info, err := os.Lstat(cur)
+		if err != nil {
+			return ""
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return cur
+		}
+	}
+	return ""
 }
 
 // realDir reports whether p is a directory and not a symlink.
@@ -431,7 +457,7 @@ func (s Store) Known(root string) ([]KnownChange, error) {
 }
 
 // checkFolder holds a change to its loop's rules: a name that can't escape its
-// folder, and a real folder, not a symlink.
+// folder, and a real folder reached without passing through a symlink.
 func (s Store) checkFolder(root string, c Change) error {
 	unknown := fmt.Errorf(`%s: unknown change "%s"`, s.tool(), c.Name)
 	l, err := s.loopOf(c)
@@ -442,7 +468,7 @@ func (s Store) checkFolder(root string, c Change) error {
 	if err != nil {
 		return unknown
 	}
-	if !realDir(filepath.Join(root, filepath.FromSlash(rel))) {
+	if throughSymlink(root, rel) != "" || !realDir(filepath.Join(root, filepath.FromSlash(rel))) {
 		return unknown
 	}
 	return nil
@@ -529,6 +555,9 @@ func (s Store) Seed(root, name, loop string, opts SeedOptions) (Change, error) {
 	}
 	if err := m.SetGate(&c, first, Draft, ""); err != nil {
 		return Change{}, err
+	}
+	if link := throughSymlink(root, rel); link != "" {
+		return Change{}, fmt.Errorf("%s: won't create %s: %s is a symlink, which could lead outside the workspace", s.tool(), rel, link)
 	}
 	dir := filepath.Join(root, filepath.FromSlash(rel))
 	if err := os.MkdirAll(dir, 0o755); err != nil {
