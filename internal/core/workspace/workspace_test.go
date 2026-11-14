@@ -96,3 +96,96 @@ func TestThroughSymlink(t *testing.T) {
 		}
 	}
 }
+
+func TestCheckPath(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "a"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	outside := t.TempDir()
+	if runtime.GOOS != "windows" {
+		if err := os.Symlink(outside, filepath.Join(root, "linkdir")); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(filepath.Join(outside, "victim"), filepath.Join(root, "linkfile")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ok := []string{"a/x.md", "STATE.json", "new/deeper/x.md"}
+	for _, rel := range ok {
+		if err := CheckPath(root, filepath.Join(root, filepath.FromSlash(rel))); err != nil {
+			t.Errorf("CheckPath(%s) = %v", rel, err)
+		}
+	}
+	bad := map[string]string{
+		"../escape/x.md": "outside the workspace",
+		"a/../../x":      "outside the workspace",
+	}
+	if runtime.GOOS != "windows" {
+		bad["linkdir/x.md"] = "linkdir is a symlink"
+		bad["linkfile"] = "linkfile is a symlink"
+	}
+	for rel, want := range bad {
+		err := CheckPath(root, filepath.Join(root, filepath.FromSlash(rel)))
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("CheckPath(%s) = %v, want %q", rel, err, want)
+		}
+	}
+	if err := CheckPath(root, filepath.Join(t.TempDir(), "elsewhere")); err == nil {
+		t.Error("CheckPath accepted a path in another folder")
+	}
+}
+
+func TestWriteHelpers(t *testing.T) {
+	root := t.TempDir()
+	p := filepath.Join(root, "x", "y.md")
+	if err := WriteFile(root, p, []byte("hi"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := os.ReadFile(p); string(got) != "hi" {
+		t.Fatalf("file = %q", got)
+	}
+	f, err := OpenFile(root, p, os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.WriteString("!")
+	f.Close()
+	if got, _ := os.ReadFile(p); string(got) != "hi!" {
+		t.Fatalf("file = %q", got)
+	}
+	if runtime.GOOS == "windows" {
+		return
+	}
+	outside := t.TempDir()
+	victim := filepath.Join(outside, "victim")
+	os.WriteFile(victim, []byte("precious"), 0o644)
+	if err := os.Symlink(victim, filepath.Join(root, "link")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(root, "dir")); err != nil {
+		t.Fatal(err)
+	}
+	for name, run := range map[string]func() error{
+		"WriteFile through a file link":   func() error { return WriteFile(root, filepath.Join(root, "link"), []byte("x"), 0o644) },
+		"WriteFile through a folder link": func() error { return WriteFile(root, filepath.Join(root, "dir", "n"), []byte("x"), 0o644) },
+		"MkdirAll through a folder link":  func() error { return MkdirAll(root, filepath.Join(root, "dir", "sub"), 0o755) },
+		"OpenFile append through a link": func() error {
+			f, err := OpenFile(root, filepath.Join(root, "link"), os.O_APPEND|os.O_WRONLY, 0o644)
+			if f != nil {
+				f.Close()
+			}
+			return err
+		},
+	} {
+		if err := run(); err == nil || !strings.Contains(err.Error(), "is a symlink") {
+			t.Errorf("%s: err = %v", name, err)
+		}
+	}
+	if got, _ := os.ReadFile(victim); string(got) != "precious" {
+		t.Errorf("victim changed: %q", got)
+	}
+	if entries, _ := os.ReadDir(outside); len(entries) != 1 {
+		t.Errorf("outside has %d entries", len(entries))
+	}
+}

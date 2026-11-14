@@ -28,8 +28,14 @@ const PlanRoom = "plan"
 type (
 	Manifest = scaffold.Manifest
 	Options  = scaffold.Options
-	Report   = scaffold.Report
 )
+
+// Report is the engine's init report, plus an existing AGENTS.md init couldn't
+// merge into, and why. That file is left as it was.
+type Report struct {
+	scaffold.Report
+	NotMerged map[string]string
+}
 
 // UpdateReport is the engine's report, plus what daiku did to AGENTS.md.
 type UpdateReport struct {
@@ -78,22 +84,27 @@ func seeds() ([]scaffold.Seed, error) {
 // it's used. vcs is the new workspace's "vcs" setting ("" means git); under
 // "none" there's no git init and no git files, and the project settings record
 // "vcs": "none". A zumen or tomo workspace is refused before anything is
-// written.
+// written. An existing AGENTS.md that can't be merged is left alone and
+// reported in NotMerged, as `update` does, rather than failing init.
 func Scaffold(dir string, opts Options, vcs string) (Report, error) {
 	if err := workspace.CheckLegacy(dir); err != nil {
 		return Report{}, err
 	}
 	e := engine
 	e.VCS = vcs
-	rep, err := e.Scaffold(dir, opts)
+	base, err := e.Scaffold(dir, opts)
+	rep := Report{Report: base}
 	if err != nil {
 		return rep, err
 	}
 	written, _, err := WriteAgents(dir, opts.Force)
-	if err != nil {
+	var unmergeable errUnmergeable
+	switch {
+	case errors.As(err, &unmergeable):
+		rep.NotMerged = map[string]string{agentsFile: unmergeable.reason}
+	case err != nil:
 		return rep, err
-	}
-	if written {
+	case written:
 		rep.Written = append(rep.Written, agentsFile)
 	}
 	return rep, nil

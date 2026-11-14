@@ -50,9 +50,10 @@ testdata/             overview fixture and golden files
 ```
 
 Plan-only paths come from `internal/plan/layout`; no package hard-codes
-`plan/specs` or a room folder. Every scaffold write goes through
-`workspace.ThroughSymlink`, so a committed symlink can't send a file outside the
-workspace.
+`plan/specs` or a room folder. Every workspace write goes through
+`workspace.WriteFile`, `OpenFile` or `MkdirAll` (or, for scaffold files,
+`workspace.ThroughSymlink`), so a committed symlink can't send a file outside the
+workspace. Path settings must be local (`filepath.IsLocal`).
 
 ## Development
 

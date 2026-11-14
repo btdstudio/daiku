@@ -15,6 +15,8 @@ import (
 	"github.com/btdstudio/daiku/internal/plan/layout"
 	"github.com/btdstudio/daiku/internal/plan/overview"
 	"github.com/btdstudio/daiku/internal/settings"
+
+	"github.com/btdstudio/daiku/internal/core/workspace"
 )
 
 // Refresh is set here, not in the store literal: RefreshOverview reads state
@@ -134,7 +136,7 @@ func RefreshOverview(root string, changes ...string) (written []string, err erro
 		if existing != nil && bytes.Equal(existing, merged) {
 			continue
 		}
-		if err := os.WriteFile(filepath.Join(root, filepath.FromSlash(rel)), merged, 0o644); err != nil {
+		if err := workspace.WriteFile(root, filepath.Join(root, filepath.FromSlash(rel)), merged, 0o644); err != nil {
 			errs = append(errs, OverviewError(rel, err))
 			continue
 		}

@@ -71,6 +71,9 @@ func runInit(args []string) int {
 	for _, rel := range rep.Written {
 		fmt.Println("wrote", rel)
 	}
+	for rel, reason := range rep.NotMerged {
+		fmt.Printf("skipped (edited) %s: can't merge: %s\n", rel, reason)
+	}
 	if rep.GitInit {
 		fmt.Println("git init")
 	}

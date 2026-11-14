@@ -1,0 +1,183 @@
+package cli
+
+import (
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"testing"
+)
+
+// Security finding 2 (S-0040): a committed settings file can't point the intake
+// store, the ADR folder or the sync file outside the workspace.
+func TestSettingsPathsMustStayInside(t *testing.T) {
+	for _, key := range []string{"sourceDir", "adrDir", "syncFile"} {
+		t.Run(key, func(t *testing.T) {
+			root := workspace(t)
+			escape := filepath.Join(filepath.Dir(root), "escape-"+key)
+			p := filepath.Join(root, ".daiku", "settings.json")
+			if err := os.WriteFile(p, []byte(`{"`+key+`": "../escape-`+key+`"}`), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			for _, cmd := range []struct {
+				name string
+				run  func() int
+			}{
+				{"source new", func() int { return runSource(root, []string{"new", "--title", "Next"}) }},
+				{"adr new", func() int { return runAdr(root, []string{"new", "--title", "Use JWT"}) }},
+				{"change new", func() int { return runChange(root, []string{"new", "Gateway"}) }},
+			} {
+				code, stderr := captureStderr(t, cmd.run)
+				if code == 0 || !strings.Contains(stderr, "must be a path inside the workspace") {
+					t.Fatalf("%s = %d, stderr %q", cmd.name, code, stderr)
+				}
+			}
+			if _, err := os.Stat(escape); err == nil {
+				t.Fatalf("%s was created outside the workspace", escape)
+			}
+		})
+	}
+}
+
+// Security finding 3 (S-0040): plan-command writes refuse a symlinked folder
+// inside plan/ or ideas/ and leave the link's target empty.
+func TestPlanWritesRefuseSymlinkedFolders(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks need privileges on Windows")
+	}
+	cases := []struct {
+		name, folder string
+		setup        func(t *testing.T) string
+		run          func(root string) int
+	}{
+		{"source new", "plan/00_intake", workspace,
+			func(root string) int { return runSource(root, []string{"new", "--title", "Next"}) }},
+		{"adr new", "plan/04_architecture/adr", workspace,
+			func(root string) int { return runAdr(root, []string{"new", "--title", "Use JWT"}) }},
+		{"tickets new", "plan/specs/1-auth-flow/tickets", citeWorkspace,
+			func(root string) int { return runTickets(root, []string{"new", "story", "Login", "--repo", "app"}) }},
+		{"idea new", "ideas", workspace,
+			func(root string) int { return runIdea(root, []string{"new", "Faster imports"}) }},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			root := c.setup(t)
+			outside := t.TempDir()
+			link := filepath.Join(root, filepath.FromSlash(c.folder))
+			if err := os.RemoveAll(link); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Symlink(outside, link); err != nil {
+				t.Fatal(err)
+			}
+			code, stderr := captureStderr(t, func() int { return c.run(root) })
+			if code == 0 || !strings.Contains(stderr, "is a symlink") {
+				t.Fatalf("%s = %d, stderr %q", c.name, code, stderr)
+			}
+			if n := entries(t, outside); n != 0 {
+				t.Fatalf("wrote %d entries outside the workspace", n)
+			}
+		})
+	}
+}
+
+// Security finding 3 (S-0040): a regenerated overview README isn't written
+// through a symlink in its place, by daiku overview or by the refresh after a
+// ticket command.
+func TestOverviewRefusesSymlinkedReadme(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks need privileges on Windows")
+	}
+	root := citeWorkspace(t)
+	if code := runOverview(root, nil); code != 0 {
+		t.Fatalf("first overview = %d", code)
+	}
+	readme := filepath.Join(root, "plan", "specs", "1-auth-flow", "README.md")
+	// The target holds the README, so only the write is what's refused.
+	content, err := os.ReadFile(readme)
+	if err != nil {
+		t.Fatal(err)
+	}
+	victim := filepath.Join(t.TempDir(), "victim")
+	if err := os.WriteFile(victim, content, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	os.Remove(readme)
+	if err := os.Symlink(victim, readme); err != nil {
+		t.Fatal(err)
+	}
+	// A new ticket changes the overview; its automatic refresh is refused too.
+	newTicket(t, root, "story", "Login", "--repo", "app")
+	code, stderr := captureStderr(t, func() int { return runOverview(root, nil) })
+	if code == 0 || !strings.Contains(stderr, "is a symlink") {
+		t.Fatalf("overview = %d, stderr %q", code, stderr)
+	}
+	if got, _ := os.ReadFile(victim); string(got) != string(content) {
+		t.Fatalf("victim = %q", got)
+	}
+}
+
+// Code review finding 9 (S-0040): a ticket command that's refused because LOG.md
+// is a symlink leaves its ticket as it was, instead of changing it unlogged.
+func TestTicketCommandsRefuseBeforeWriting(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks need privileges on Windows")
+	}
+	for _, c := range []struct {
+		name  string
+		setup func(t *testing.T) string
+		run   func(root string) int
+	}{
+		{"ready", func(t *testing.T) string { return readyWorkspace(t, "breakdown") },
+			func(root string) int { return runTickets(root, []string{"ready", "S-0001"}) }},
+		{"mark-published", func(t *testing.T) string {
+			root := workspace(t)
+			ticketRepo(t, root)
+			startPublish(t, root)
+			newReady(t, root, "S-0001", "story", "Login", "--repo", "app")
+			return root
+		}, func(root string) int {
+			return runTickets(root, []string{"mark-published", "S-0001", "--external", "github=o/r#1"})
+		}},
+		{"unfreeze", func(t *testing.T) string {
+			root := workspace(t)
+			ticketRepo(t, root)
+			startPublish(t, root)
+			newReady(t, root, "S-0001", "story", "Login", "--repo", "app")
+			if code, out := markPublished(t, root, "S-0001", "--external", "github=o/r#1"); code != 0 {
+				t.Fatalf("mark-published = %d: %s", code, out)
+			}
+			return root
+		}, func(root string) int {
+			return runTickets(root, []string{"unfreeze", "S-0001", "--reason", "rework"})
+		}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			root := c.setup(t)
+			before := readFile(t, ticketPath(root, "S-0001"))
+			logPath := filepath.Join(root, "LOG.md")
+			victim := filepath.Join(t.TempDir(), "victim")
+			if err := os.WriteFile(victim, []byte(readFile(t, logPath)), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			logBefore := readFile(t, victim)
+			os.Remove(logPath)
+			if err := os.Symlink(victim, logPath); err != nil {
+				t.Fatal(err)
+			}
+			code, stderr := captureStderr(t, func() int { return c.run(root) })
+			if code == 0 || !strings.Contains(stderr, "LOG.md is a symlink") {
+				t.Fatalf("%s = %d, stderr %q", c.name, code, stderr)
+			}
+			if after := readFile(t, ticketPath(root, "S-0001")); after != before {
+				t.Fatalf("a refused %s changed the ticket:\n%s", c.name, after)
+			}
+			if readFile(t, victim) != logBefore {
+				t.Fatal("LOG.md's target was written")
+			}
+		})
+	}
+}

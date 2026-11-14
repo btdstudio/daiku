@@ -16,6 +16,8 @@ import (
 	"github.com/btdstudio/daiku/internal/plan"
 	"github.com/btdstudio/daiku/internal/plan/layout"
 	"github.com/btdstudio/daiku/internal/state"
+
+	coreworkspace "github.com/btdstudio/daiku/internal/core/workspace"
 )
 
 func runTickets(root string, args []string) int {
@@ -57,7 +59,7 @@ func ticketDir(root, change string) string {
 
 // loadTickets reads every ticket in the workspace, across all changes.
 func loadTickets(root string) ([]*ticket.Ticket, []ticket.Problem, error) {
-	changes, err := state.KnownChanges(root)
+	changes, err := state.PlanChanges(root)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -122,6 +124,9 @@ func ticketsNew(root string, args []string) (int, error) {
 	if st.Name == "" {
 		return 0, fmt.Errorf("daiku: no active change — run `daiku switch <change>` first")
 	}
+	if err := requirePlan(st); err != nil {
+		return 0, err
+	}
 	if st.Status == "closed" {
 		return 0, fmt.Errorf("daiku: %s is closed", st.Name)
 	}
@@ -152,10 +157,7 @@ func ticketsNew(root string, args []string) (int, error) {
 		return 0, err
 	}
 	path := filepath.Join(ticketDir(root, st.Name), f.ID+".md")
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return 0, err
-	}
-	if err := os.WriteFile(path, t.Bytes(), 0o644); err != nil {
+	if err := coreworkspace.WriteFile(root, path, t.Bytes(), 0o644); err != nil {
 		return 0, err
 	}
 	// Regenerated, but not recorded: the next recorded transition commits it.
@@ -387,7 +389,10 @@ func findTicket(root, id string) (*ticket.Ticket, error) {
 // effect in the same commit, so a sync that fails partway resumes from what's
 // already recorded.
 func saveTicket(root string, t *ticket.Ticket, lines ...string) error {
-	if err := os.WriteFile(t.Path, t.Bytes(), 0o644); err != nil {
+	if err := state.CheckStateFiles(root); err != nil {
+		return err
+	}
+	if err := coreworkspace.WriteFile(root, t.Path, t.Bytes(), 0o644); err != nil {
 		return err
 	}
 	rel, err := filepath.Rel(root, t.Path)
@@ -453,6 +458,9 @@ func ticketsReady(root string, args []string) (int, error) {
 		}
 		if st.Name == "" {
 			return 0, fmt.Errorf("daiku: no active change — run `daiku switch <change>` first")
+		}
+		if err := requirePlan(st); err != nil {
+			return 0, err
 		}
 		for _, t := range loaded {
 			if t.Change == st.Name && t.Status == ticket.StatusDraft {
@@ -535,9 +543,18 @@ func ticketsReady(root string, args []string) (int, error) {
 		return 1, nil
 	}
 
+	// Check every file before writing any, so a refusal leaves the tickets as they were.
+	if err := state.CheckStateFiles(root); err != nil {
+		return 0, err
+	}
+	for _, c := range copies {
+		if err := coreworkspace.CheckPath(root, c.Path); err != nil {
+			return 0, err
+		}
+	}
 	var paths []string
 	for _, c := range copies {
-		if err := os.WriteFile(c.Path, c.Bytes(), 0o644); err != nil {
+		if err := coreworkspace.WriteFile(root, c.Path, c.Bytes(), 0o644); err != nil {
 			return 0, err
 		}
 		rel, err := filepath.Rel(root, c.Path)

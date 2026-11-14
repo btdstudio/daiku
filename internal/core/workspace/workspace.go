@@ -34,10 +34,7 @@ func ReadActive(root, tool string) (string, error) {
 
 // WriteActive records name as the active change.
 func WriteActive(root, tool, name string) error {
-	if err := os.MkdirAll(Dir(root, tool), 0o755); err != nil {
-		return err
-	}
-	return os.WriteFile(ActivePath(root, tool), []byte(name+"\n"), 0o644)
+	return WriteFile(root, ActivePath(root, tool), []byte(name+"\n"), 0o644)
 }
 
 // legacyTools are the tools daiku replaced. Their workspaces aren't migrated, so

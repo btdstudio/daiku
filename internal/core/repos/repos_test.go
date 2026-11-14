@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -368,6 +369,31 @@ func TestNameReIsFolderSafe(t *testing.T) {
 	for _, name := range []string{"", ".", "..", "../x", "a/b", `a\b`, ".hidden", "-x", "API"} {
 		if NameRe.MatchString(name) {
 			t.Errorf("NameRe accepts %q", name)
+		}
+	}
+}
+
+// Security finding 1 (S-0040): REPOS.json and .<tool>/paths.json aren't written
+// through a symlink.
+func TestSaveRefusesSymlinks(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks need privileges on Windows")
+	}
+	for _, rel := range []string{"REPOS.json", ".sample/paths.json"} {
+		root := t.TempDir()
+		victim := filepath.Join(t.TempDir(), "victim")
+		os.WriteFile(victim, []byte("precious"), 0o644)
+		link := filepath.Join(root, filepath.FromSlash(rel))
+		os.MkdirAll(filepath.Dir(link), 0o755)
+		if err := os.Symlink(victim, link); err != nil {
+			t.Fatal(err)
+		}
+		r := Registry{root: root, tool: "sample", Repos: map[string]Repo{}, Paths: map[string]string{}}
+		if err := r.Save(); err == nil || !strings.Contains(err.Error(), "is a symlink") {
+			t.Errorf("%s: Save err = %v", rel, err)
+		}
+		if got, _ := os.ReadFile(victim); string(got) != "precious" {
+			t.Errorf("%s: victim = %q", rel, got)
 		}
 	}
 }

@@ -369,12 +369,29 @@ func (s Store) write(root string, c *Change) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(s.StatePath(root), append(buf, '\n'), 0o644)
+	return workspace.WriteFile(root, s.StatePath(root), append(buf, '\n'), 0o644)
+}
+
+// CheckStateFiles refuses when STATE.json, the active pointer or LOG.md can't be
+// written safely (see workspace.CheckPath). Transitions run it before their first
+// write, so a refusal leaves the workspace as it was instead of a gate recorded
+// in STATE.json but never logged or committed.
+func (s Store) CheckStateFiles(root string) error {
+	for _, p := range []string{s.StatePath(root), workspace.ActivePath(root, s.tool()), s.LogPath(root)} {
+		if err := workspace.CheckPath(root, p); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Save stamps updatedAt, writes the change's record (preserving every other
-// change's), and makes it the active change.
+// change's), and makes it the active change. It writes nothing when a state file
+// is unsafe to write.
 func (s Store) Save(root string, c *Change) error {
+	if err := s.CheckStateFiles(root); err != nil {
+		return err
+	}
 	if err := s.write(root, c); err != nil {
 		return err
 	}
@@ -500,6 +517,10 @@ func (s Store) Seed(root, name, loop string, opts SeedOptions) (Change, error) {
 	if err := s.checkVCS(); err != nil {
 		return Change{}, err
 	}
+	// Before the change folder is made, so a refusal leaves no folder behind.
+	if err := s.CheckStateFiles(root); err != nil {
+		return Change{}, err
+	}
 	m := l.Machine
 	if len(m.Phases) == 0 {
 		return Change{}, fmt.Errorf("%s: machine has no phases", s.tool())
@@ -547,7 +568,7 @@ func (s Store) Seed(root, name, loop string, opts SeedOptions) (Change, error) {
 	if !s.local() {
 		// Git drops empty folders, and a clone needs this one to switch to the change.
 		keep := filepath.Join(dir, ".gitkeep")
-		if err := os.WriteFile(keep, nil, 0o644); err != nil {
+		if err := workspace.WriteFile(root, keep, nil, 0o644); err != nil {
 			return Change{}, err
 		}
 		paths = append(paths, path.Join(rel, ".gitkeep"))
@@ -693,6 +714,9 @@ func (s Store) CloseChange(root, name, reason string) (Change, error) {
 	if err := l.Machine.Close(&c, reason); err != nil {
 		return Change{}, err
 	}
+	if err := s.CheckStateFiles(root); err != nil {
+		return Change{}, err
+	}
 	if err := s.write(root, &c); err != nil {
 		return Change{}, err
 	}
@@ -710,6 +734,9 @@ func (s Store) CloseChange(root, name, reason string) (Change, error) {
 
 // Log appends one timestamped line to LOG.md without committing.
 func (s Store) Log(root, line string) error {
+	if err := workspace.CheckPath(root, s.LogPath(root)); err != nil {
+		return err
+	}
 	return changelog.Append(s.LogPath(root), s.now(), line)
 }
 

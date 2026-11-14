@@ -185,8 +185,8 @@ func TestWriteSourceNeverOverwrites(t *testing.T) {
 		t.Skipf("symlinks unavailable: %v", err)
 	}
 	_, err = WriteSource(root, "", Source{ID: 2, Source: SOURCE_ISSUE, Title: "x"})
-	if err == nil || !strings.Contains(err.Error(), "not overwriting") {
-		t.Fatalf("dangling symlink: err = %v, want not overwriting", err)
+	if err == nil || !strings.Contains(err.Error(), "is a symlink") {
+		t.Fatalf("dangling symlink: err = %v, want a symlink refusal", err)
 	}
 	if _, err := os.Stat(target); err == nil {
 		t.Fatal("wrote through the symlink and created its target")

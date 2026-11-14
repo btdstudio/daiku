@@ -215,3 +215,26 @@ func TestUpdateRefusesSymlinks(t *testing.T) {
 		}
 	})
 }
+
+// Code review finding 2: init over an existing AGENTS.md it can't merge leaves
+// the file alone, reports it, and succeeds.
+func TestScaffoldSkipsAnUnmergeableAgents(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("no headings here\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rep, err := Scaffold(dir, Options{NoGit: true}, "none")
+	if err != nil {
+		t.Fatalf("Scaffold = %v", err)
+	}
+	if rep.NotMerged["AGENTS.md"] != "no ## headings" || slices.Contains(rep.Written, "AGENTS.md") {
+		t.Errorf("report = %+v", rep)
+	}
+	if agentsText(t, dir) != "no headings here\n" {
+		t.Error("init overwrote an AGENTS.md it couldn't merge")
+	}
+	if !exists(filepath.Join(dir, "STATE.json")) {
+		t.Error("init stopped before the rest of the root")
+	}
+}

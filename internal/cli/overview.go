@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/btdstudio/daiku/internal/state"
+
+	coreworkspace "github.com/btdstudio/daiku/internal/core/workspace"
 )
 
 // runOverview writes or checks plan/specs/<change>/README.md. Exit codes: 0 written
@@ -58,7 +60,7 @@ func runOverview(root string, args []string) int {
 		fmt.Printf("%s is up to date\n", rel)
 		return 0
 	}
-	if err := os.WriteFile(filepath.Join(root, filepath.FromSlash(rel)), merged, 0o644); err != nil {
+	if err := coreworkspace.WriteFile(root, filepath.Join(root, filepath.FromSlash(rel)), merged, 0o644); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
@@ -77,9 +79,17 @@ func buildOverview(root, change string) (merged, existing []byte, rel string, er
 		if st.Name == "" {
 			return nil, nil, "", errors.New("daiku: no active change — name one, or run `daiku switch <change>` first")
 		}
+		if err := requirePlan(st); err != nil {
+			return nil, nil, "", err
+		}
 		change = st.Name
 	}
-	known, err := state.KnownChanges(root)
+	if rec, err := recorded(root, change); err != nil {
+		return nil, nil, "", err
+	} else if err := requirePlan(rec); err != nil {
+		return nil, nil, "", err
+	}
+	known, err := state.PlanChanges(root)
 	if err != nil {
 		return nil, nil, "", err
 	}
