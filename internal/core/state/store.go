@@ -502,6 +502,10 @@ type SeedOptions struct {
 	// Paths are extra files to commit with the new change, relative to root, such
 	// as an intake file its record points at.
 	Paths []string
+	// Refresh runs the store's Refresh once the change is saved, and commits what
+	// it wrote with the new change, as a transition does. A build seeds with it,
+	// so its plan's overview lists the build at once (S-0042).
+	Refresh bool
 }
 
 // Seed creates a change folder in a loop and records its initial machine (the
@@ -579,6 +583,9 @@ func (s Store) Seed(root, name, loop string, opts SeedOptions) (Change, error) {
 		return Change{}, err
 	}
 	paths = append(paths, opts.Paths...)
+	if opts.Refresh {
+		paths = append(paths, s.refresh(root, c)...)
+	}
 	return c, s.Record(root, lines, paths...)
 }
 
