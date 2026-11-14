@@ -251,14 +251,15 @@ func SeedChange(root, name string, hasRepo bool, sources []string, repos ...stri
 
 // SeedBuild creates a build change named by its ticket id, in build/<repo>/changes/<id>/,
 // and makes it active. Its one source is the ticket's path, relative to root: the
-// ticket is read in place, never copied. Under vcs: git the ticket is committed
+// ticket is read in place, never copied. Its plan's overview, if the plan is here,
+// is refreshed to list it. Under vcs: git the ticket is committed
 // with the new change, so a clone has what the record points at.
 func SeedBuild(root, id, repo, source string) (State, error) {
 	s, err := storeAt(root)
 	if err != nil {
 		return State{}, err
 	}
-	return s.Seed(root, id, BuildLoop, core.SeedOptions{Sources: []string{source}, Repos: []string{repo}, Paths: []string{source}})
+	return s.Seed(root, id, BuildLoop, core.SeedOptions{Sources: []string{source}, Repos: []string{repo}, Paths: []string{source}, Refresh: true})
 }
 
 // AdvanceGate sets a gate on the active change, logs it with any notes, and

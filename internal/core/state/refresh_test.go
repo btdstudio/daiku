@@ -404,3 +404,35 @@ func TestRefreshWrittenPathsAreCommitted(t *testing.T) {
 		}
 	}
 }
+
+// SeedOptions.Refresh runs Refresh once the change is saved and commits what it
+// wrote with the new change; without it, Seed doesn't refresh.
+func TestSeedRefreshOption(t *testing.T) {
+	root, s := gitRepo(t)
+	calls := 0
+	s.Refresh = func(r string, c Change) ([]string, error) {
+		calls++
+		if _, err := s.ReadChanges(r); err != nil {
+			return nil, err
+		}
+		return []string{"overview.md"}, os.WriteFile(filepath.Join(r, "overview.md"), []byte(c.Name+"\n"), 0o644)
+	}
+	if _, err := s.Seed(root, "1-x", planLoop, SeedOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 0 {
+		t.Fatalf("Seed without Refresh ran it %d times", calls)
+	}
+	if _, err := s.Seed(root, "2-y", planLoop, SeedOptions{Refresh: true}); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 {
+		t.Fatalf("Seed with Refresh ran it %d times", calls)
+	}
+	if got := run(t, root, "show", "HEAD:overview.md"); got != "2-y\n" {
+		t.Fatalf("committed overview = %q", got)
+	}
+	if status := dirty(t, root); status != "" {
+		t.Fatalf("tree not clean:\n%s", status)
+	}
+}

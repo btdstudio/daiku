@@ -53,8 +53,12 @@ func buildNew(root string, args []string) error {
 	if err := checkBuildable(root, t); err != nil {
 		return err
 	}
-	// Refuse unsafe state files before the room or the change folder is written.
+	// Refuse unsafe state files, and a plan overview that can't be written
+	// safely, before the room or the change folder is written.
 	if err := state.CheckStateFiles(root); err != nil {
+		return err
+	}
+	if err := state.CheckOverview(root, state.State{Name: id, Loop: state.BuildLoop, Sources: []string{rel}}); err != nil {
 		return err
 	}
 	created, err := icm.EnsureBuild(root)
