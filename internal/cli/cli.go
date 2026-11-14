@@ -399,6 +399,19 @@ func runChangeClose(root string, args []string) int {
 		fmt.Fprintln(os.Stderr, usageLine("change", "close"))
 		return 1
 	}
+	// A close refreshes the overview, so a README that can't be written
+	// safely refuses it before anything changes (S-0042 D5).
+	changes, err := state.ReadChanges(root)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	if c := changes[pos[0]]; c != nil {
+		if err := state.CheckOverview(root, *c); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 1
+		}
+	}
 	st, err := state.CloseChange(root, pos[0], reason)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -459,6 +472,12 @@ func runGate(root string, args []string) int {
 	}
 	var notes []string
 	if st.Name != "" {
+		// The gate refreshes an overview: refuse now if it can't be written
+		// safely, before any state changes (S-0042 D5).
+		if err := state.CheckOverview(root, st); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 1
+		}
 		probe := st
 		if err := state.SetGate(&probe, phase, status, reason); err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -517,6 +536,12 @@ func runReopen(root string, args []string) int {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
+	}
+	if active.Name != "" {
+		if err := state.CheckOverview(root, active); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 1
+		}
 	}
 	var notes []string
 	if msg, err := lockViolation(root, active, pos[0]); err != nil {
