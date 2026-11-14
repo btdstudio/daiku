@@ -81,6 +81,11 @@ func lintDocs(rooms []lintRoom) []string {
 					}
 				}
 			}
+			// A line too long to scan stops the file; say so rather than skip the
+			// rest unlinted (code review finding 2).
+			if err := sc.Err(); err != nil {
+				problems = append(problems, fmt.Sprintf("%s: can't lint: %v", display, err))
+			}
 		}
 		for _, src := range room.sources {
 			if src.file != "" {

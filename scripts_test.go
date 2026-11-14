@@ -81,6 +81,22 @@ func nextWorkspace(t *testing.T, lines *bufio.Scanner, out *strings.Builder) str
 	return ""
 }
 
+// exportedBin is the folder the script's last `export PATH=` line names.
+func exportedBin(t *testing.T, out string) string {
+	t.Helper()
+	const prefix = `    export PATH="`
+	bin := ""
+	for _, l := range strings.Split(out, "\n") {
+		if rest, ok := strings.CutPrefix(l, prefix); ok {
+			bin, _, _ = strings.Cut(rest, `:$PATH"`)
+		}
+	}
+	if bin == "" {
+		t.Fatalf("no export PATH line:\n%s", out)
+	}
+	return bin
+}
+
 // finish presses Enter, reads the rest and waits, with a deadline.
 func finish(t *testing.T, cmd *exec.Cmd, stdin io.WriteCloser, lines *bufio.Scanner, out *strings.Builder) error {
 	t.Helper()
@@ -118,9 +134,19 @@ func leftovers(t *testing.T, tmp string) []string {
 func TestColdstartPasses(t *testing.T) {
 	cmd, stdin, lines, daiku, tmp := coldstart(t)
 	var out strings.Builder
+	// The agent runs the daiku the script tells it to put on PATH (code review
+	// finding 1): act with that binary, found through the printed line.
 	act := func(ws string, args ...string) {
 		t.Helper()
-		c := exec.Command(daiku, args...)
+		bin := exportedBin(t, out.String())
+		agentDaiku, err := exec.LookPath(filepath.Join(bin, "daiku"))
+		if err != nil {
+			t.Fatalf("the PATH line names %s, which has no daiku: %v", bin, err)
+		}
+		if agentDaiku == daiku {
+			t.Fatalf("the PATH line names the test's own binary, not the script's copy")
+		}
+		c := exec.Command(agentDaiku, args...)
 		c.Dir = ws
 		if b, err := c.CombinedOutput(); err != nil {
 			t.Fatalf("daiku %v in %s: %v\n%s", args, ws, err, b)
@@ -140,7 +166,7 @@ func TestColdstartPasses(t *testing.T) {
 	if err := finish(t, cmd, stdin, lines, &out); err != nil {
 		t.Fatalf("script failed: %v\n%s", err, out.String())
 	}
-	for _, want := range []string{"PASS build\n", "PASS plan\n", "cold start: both prompts passed\n"} {
+	for _, want := range []string{"under test: daiku ", "PASS build\n", "PASS plan\n", "cold start: both prompts passed\n"} {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("output lacks %q:\n%s", want, out.String())
 		}
