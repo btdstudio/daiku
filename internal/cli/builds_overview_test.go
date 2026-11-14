@@ -107,9 +107,15 @@ func TestBuildTransitionsRefreshThePlansOverview(t *testing.T) {
 	current(t, root, "after close")
 }
 
-// N5: under git, the plan's README goes into the build transition's commit.
+// N5: under git, the plan's README goes into the build's own commits: build
+// new lists the build at once, and each transition updates it.
 func TestBuildTransitionCommitsThePlansOverview(t *testing.T) {
 	root := plannedBuild(t, true)
+	inHead(t, root, "build new", authReadme)
+	if got := buildsRow(t, root); !strings.Contains(got, "| ticket draft |") {
+		t.Fatalf("after build new: %s", got)
+	}
+	current(t, root, "after build new")
 	gateAll(t, root, []string{"ticket", "approved"})
 	inHead(t, root, "build gate", authReadme)
 	if got := buildsRow(t, root); !strings.Contains(got, "| ticket approved |") {

@@ -255,3 +255,32 @@ func TestSymlinkedOverviewRefusesAPlanGate(t *testing.T) {
 		t.Fatal("the refused gate changed something")
 	}
 }
+
+// AC8 for build new: a symlinked plan README refuses it before the change is
+// recorded.
+func TestSymlinkedPlanOverviewRefusesBuildNew(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks")
+	}
+	root := readyWorkspace(t, "breakdown")
+	if code, out := captureStdout(t, func() int { return runTickets(root, []string{"ready", "S-0001"}) }); code != 0 {
+		t.Fatalf("ready = %d: %s", code, out)
+	}
+	target := filepath.Join(t.TempDir(), "elsewhere.md")
+	if err := os.WriteFile(target, []byte("outside\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	readme := filepath.Join(root, filepath.FromSlash(authReadme))
+	os.Remove(readme)
+	if err := os.Symlink(target, readme); err != nil {
+		t.Fatal(err)
+	}
+	stateBefore := readFile(t, state.StatePath(root))
+	code, stderr := captureStderr(t, func() int { return runBuild(root, []string{"new", "S-0001"}) })
+	if code == 0 || !strings.Contains(stderr, "is a symlink") {
+		t.Fatalf("build new = %d: %s", code, stderr)
+	}
+	if readFile(t, state.StatePath(root)) != stateBefore || readFile(t, target) != "outside\n" || isDir(filepath.Join(root, "build")) {
+		t.Fatal("the refused build new changed something")
+	}
+}
