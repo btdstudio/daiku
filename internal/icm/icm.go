@@ -242,8 +242,9 @@ func mergeAgentsFile(dir string, rep *UpdateReport) error {
 	return nil
 }
 
-// Check validates the embedded scaffold; see scaffold.Engine.Check.
-func Check() []string { return engine.Check() }
+// Check validates the embedded scaffold: scaffold.Engine.Check, then the docs
+// lint, which keeps each room's docs to its own loop's terms (lint.go).
+func Check() []string { return append(engine.Check(), lintDocs(scaffoldRooms())...) }
 
 // BuildManifest hashes the embedded trees present in dir.
 func BuildManifest(dir string) (Manifest, error) { return engine.BuildManifest(dir) }
