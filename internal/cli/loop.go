@@ -2,16 +2,19 @@ package cli
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
+	"github.com/btdstudio/daiku/internal/core/ticket"
 	"github.com/btdstudio/daiku/internal/state"
 )
 
-// requirePlan refuses a change whose loop has no commands yet. Every verb that
-// acts on a change goes through it, so the version that brings build commands
-// deletes this one function.
-func requirePlan(c state.State) error {
+// requirePlan refuses a build change for a verb that only works on plan changes,
+// such as tickets ready or overview. The verbs every change has (status, switch,
+// gate, reopen, change close, env) work on both loops.
+func requirePlan(c state.State, verb string) error {
 	if c.Loop == state.BuildLoop {
-		return fmt.Errorf("daiku: %s is a build change — build commands aren't in this version yet", c.Name)
+		return fmt.Errorf("daiku: %s is a build change — %s works on plan changes", c.Name, verb)
 	}
 	return nil
 }
@@ -26,4 +29,21 @@ func recorded(root, name string) (state.State, error) {
 		return *c, nil
 	}
 	return state.State{}, nil
+}
+
+// changeTicket is a build's ticket, read in place from its source: the first
+// source that parses as a ticket with an id. It's nil when there's none.
+func changeTicket(root string, st state.State) *ticket.Ticket {
+	for _, src := range st.Sources {
+		path := filepath.Join(root, filepath.FromSlash(src))
+		data, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		if t, err := ticket.Parse(data); err == nil && t.ID != "" {
+			t.Path = path
+			return t
+		}
+	}
+	return nil
 }

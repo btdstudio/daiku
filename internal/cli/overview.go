@@ -79,14 +79,14 @@ func buildOverview(root, change string) (merged, existing []byte, rel string, er
 		if st.Name == "" {
 			return nil, nil, "", errors.New("daiku: no active change — name one, or run `daiku switch <change>` first")
 		}
-		if err := requirePlan(st); err != nil {
+		if err := requirePlan(st, "overview"); err != nil {
 			return nil, nil, "", err
 		}
 		change = st.Name
 	}
 	if rec, err := recorded(root, change); err != nil {
 		return nil, nil, "", err
-	} else if err := requirePlan(rec); err != nil {
+	} else if err := requirePlan(rec, "overview"); err != nil {
 		return nil, nil, "", err
 	}
 	known, err := state.PlanChanges(root)

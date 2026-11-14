@@ -124,7 +124,7 @@ func ticketsNew(root string, args []string) (int, error) {
 	if st.Name == "" {
 		return 0, fmt.Errorf("daiku: no active change — run `daiku switch <change>` first")
 	}
-	if err := requirePlan(st); err != nil {
+	if err := requirePlan(st, "tickets new"); err != nil {
 		return 0, err
 	}
 	if st.Status == "closed" {
@@ -459,7 +459,7 @@ func ticketsReady(root string, args []string) (int, error) {
 		if st.Name == "" {
 			return 0, fmt.Errorf("daiku: no active change — run `daiku switch <change>` first")
 		}
-		if err := requirePlan(st); err != nil {
+		if err := requirePlan(st, "tickets ready --all"); err != nil {
 			return 0, err
 		}
 		for _, t := range loaded {
