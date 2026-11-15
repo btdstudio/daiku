@@ -1,0 +1,6 @@
+# Built binary
+/daiku
+/daiku.exe
+
+# OS noise
+.DS_Store
