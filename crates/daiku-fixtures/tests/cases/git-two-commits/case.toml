@@ -1,0 +1,2 @@
+args = ["write", "a.txt", "1", ";", "commit", "first", ";", "write", "a.txt", "2", ";", "write", "b/c.txt", "c", ";", "commit", "second"]
+git = true

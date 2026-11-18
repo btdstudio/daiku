@@ -1,0 +1,340 @@
+//! The `daiku-fixtures` binary: output and exit codes.
+
+use std::path::Path;
+use std::process::{Command, Output};
+
+fn fixtures(args: &[&str], cwd: &Path) -> Output {
+    Command::new(env!("CARGO_BIN_EXE_daiku-fixtures"))
+        .args(args)
+        .current_dir(cwd)
+        .output()
+        .expect("run daiku-fixtures")
+}
+
+fn stub() -> &'static str {
+    env!("CARGO_BIN_EXE_daiku-fixtures-stub")
+}
+
+fn text(b: &[u8]) -> String {
+    String::from_utf8_lossy(b).replace("\r\n", "\n")
+}
+
+fn write(path: &Path, s: &str) {
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(path, s).unwrap();
+}
+
+/// A case running the stub with `args` (a TOML list body).
+fn case(cases: &Path, name: &str, toml: &str) {
+    write(&cases.join(name).join("case.toml"), toml);
+}
+
+fn current_os() -> &'static str {
+    std::env::consts::OS
+}
+
+#[test]
+fn usage_errors_exit_2() {
+    let dir = tempfile::tempdir().unwrap();
+    for args in [
+        &[][..],
+        &["bogus"],
+        &["check"],
+        &["check", "--bin"],
+        &["check", "--bin", "x", "--usage", "u"],
+        &["coverage", "--bin", "x"],
+        &["coverage", "name"],
+        &["capture", "--nope"],
+    ] {
+        let out = fixtures(args, dir.path());
+        assert_eq!(
+            out.status.code(),
+            Some(2),
+            "{args:?}: {}",
+            text(&out.stderr)
+        );
+        assert!(text(&out.stderr).contains("usage:"), "{args:?}");
+    }
+}
+
+#[test]
+fn check_passes_fails_and_skips() {
+    let dir = tempfile::tempdir().unwrap();
+    let cases = dir.path().join("cases");
+    case(&cases, "good", "args = [\"print\", \"hi\"]\n");
+    case(
+        &cases,
+        "skipped",
+        &format!(
+            "args = [\"print\", \"hi\"]\nskip_on = [\"{}\"]\n",
+            current_os()
+        ),
+    );
+
+    let cases_arg = cases.to_str().unwrap();
+    let cap = fixtures(
+        &["capture", "--bin", stub(), "--cases", cases_arg],
+        dir.path(),
+    );
+    assert_eq!(cap.status.code(), Some(0), "{}", text(&cap.stdout));
+    assert_eq!(
+        text(&cap.stdout),
+        format!(
+            "captured good\nskip skipped ({})\n1 captured, 0 failed, 1 skipped\n",
+            current_os()
+        )
+    );
+
+    let ok = fixtures(
+        &["check", "--bin", stub(), "--cases", cases_arg],
+        dir.path(),
+    );
+    assert_eq!(ok.status.code(), Some(0), "{}", text(&ok.stdout));
+    assert_eq!(
+        text(&ok.stdout),
+        format!(
+            "ok   good\nskip skipped ({})\n1 passed, 0 failed, 1 skipped\n",
+            current_os()
+        )
+    );
+
+    case(&cases, "good", "args = [\"print\", \"ho\"]\n");
+    let bad = fixtures(
+        &["check", "--bin", stub(), "--cases", cases_arg, "good"],
+        dir.path(),
+    );
+    assert_eq!(bad.status.code(), Some(1));
+    let s = text(&bad.stdout);
+    assert!(s.starts_with("FAIL good\n  stdout:\n"), "{s}");
+    assert!(s.contains("-hi") && s.contains("+ho"), "{s}");
+    assert!(s.ends_with("0 passed, 1 failed, 0 skipped\n"), "{s}");
+}
+
+#[test]
+fn run_errors_fail_the_case() {
+    let dir = tempfile::tempdir().unwrap();
+    let cases = dir.path().join("cases");
+    case(&cases, "a", "args = []\n");
+    let out = fixtures(
+        &[
+            "check",
+            "--bin",
+            "/no/such/daiku",
+            "--cases",
+            cases.to_str().unwrap(),
+        ],
+        dir.path(),
+    );
+    assert_eq!(out.status.code(), Some(1));
+    assert!(
+        text(&out.stdout).starts_with("FAIL a\n  error: "),
+        "{}",
+        text(&out.stdout)
+    );
+
+    let out = fixtures(
+        &[
+            "capture",
+            "--bin",
+            "/no/such/daiku",
+            "--cases",
+            cases.to_str().unwrap(),
+        ],
+        dir.path(),
+    );
+    assert_eq!(out.status.code(), Some(1));
+}
+
+#[test]
+fn unknown_case_name_exits_1() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join("cases")).unwrap();
+    let out = fixtures(
+        &["check", "--bin", stub(), "--cases", "cases", "nope"],
+        dir.path(),
+    );
+    assert_eq!(out.status.code(), Some(1));
+    assert!(text(&out.stderr).contains("no such case"));
+}
+
+#[test]
+fn coverage_lists_uncovered_entries() {
+    let dir = tempfile::tempdir().unwrap();
+    write(
+        &dir.path().join("usage.txt"),
+        "  daiku init [dir]\n  daiku tickets check\n",
+    );
+    case(&dir.path().join("cases"), "init", "args = [\"init\"]\n");
+    let out = fixtures(
+        &["coverage", "--cases", "cases", "--usage", "usage.txt"],
+        dir.path(),
+    );
+    assert_eq!(out.status.code(), Some(1));
+    assert_eq!(
+        text(&out.stdout),
+        "uncovered: tickets check\n1 of 2 covered\n"
+    );
+
+    case(
+        &dir.path().join("cases"),
+        "check",
+        "args = [\"tickets\", \"check\"]\n",
+    );
+    let out = fixtures(
+        &["coverage", "--cases", "cases", "--usage", "usage.txt"],
+        dir.path(),
+    );
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(text(&out.stdout), "2 of 2 covered\n");
+}
+
+#[test]
+fn coverage_of_the_checked_in_usage_with_no_cases() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let out = fixtures(&["coverage"], &root);
+    assert_eq!(out.status.code(), Some(1));
+    let s = text(&out.stdout);
+    assert!(s.contains("uncovered: init\n") && s.contains("uncovered: tickets mark-published\n"));
+    assert!(
+        s.trim_end().ends_with(" covered") && s.contains("\n0 of "),
+        "{s}"
+    );
+}
+
+// ---- T10: the self-test case suite ----
+
+fn suite_dir() -> std::path::PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/cases")
+}
+
+/// Each case's result: `ok`, `skip`, or `FAIL <first part>`.
+fn results(stdout: &str) -> Vec<(String, String)> {
+    let lines: Vec<&str> = stdout.lines().collect();
+    let mut out = Vec::new();
+    for (i, line) in lines.iter().enumerate() {
+        if let Some(name) = line.strip_prefix("ok   ") {
+            out.push((name.to_string(), "ok".to_string()));
+        } else if let Some(rest) = line.strip_prefix("skip ") {
+            let name = rest.split(' ').next().unwrap();
+            out.push((name.to_string(), "skip".to_string()));
+        } else if let Some(name) = line.strip_prefix("FAIL ") {
+            let part = lines
+                .get(i + 1)
+                .map(|l| l.trim().trim_end_matches(':'))
+                .unwrap_or("");
+            out.push((name.to_string(), format!("FAIL {part}")));
+        }
+    }
+    out
+}
+
+#[test]
+fn suite_cases_give_their_intended_results() {
+    let suite = suite_dir();
+    let out = fixtures(
+        &["check", "--bin", stub(), "--cases", suite.to_str().unwrap()],
+        &suite,
+    );
+    let s = text(&out.stdout);
+    assert_eq!(out.status.code(), Some(1), "{s}");
+    let want: Vec<(String, String)> = [
+        ("empty-folder", "ok"),
+        ("exit-diff", "FAIL exit"),
+        ("git-two-commits", "ok"),
+        ("json-by-value", "ok"),
+        ("normalisation", "ok"),
+        ("pass", "ok"),
+        ("skip-on", "skip"),
+        ("stdout-diff", "FAIL stdout"),
+        ("tree-extra", "FAIL tree"),
+        ("tree-missing", "FAIL tree"),
+        ("unordered-stdout", "ok"),
+    ]
+    .iter()
+    .map(|(a, b)| (a.to_string(), b.to_string()))
+    .collect();
+    assert_eq!(results(&s), want, "{s}");
+    assert!(s.contains("    extra: f extra.txt\n"), "{s}");
+    assert!(s.contains("    missing: f gone.txt\n"), "{s}");
+    assert!(s.contains("    -world!\n    +world\n"), "{s}");
+    assert!(s.ends_with("6 passed, 4 failed, 1 skipped\n"), "{s}");
+}
+
+#[test]
+fn passing_suite_cases_check_alone_exit_0() {
+    let suite = suite_dir();
+    let out = fixtures(
+        &[
+            "check",
+            "--bin",
+            stub(),
+            "--cases",
+            suite.to_str().unwrap(),
+            "pass",
+            "normalisation",
+            "skip-on",
+        ],
+        &suite,
+    );
+    assert_eq!(out.status.code(), Some(0), "{}", text(&out.stdout));
+}
+
+#[test]
+fn capture_then_check_on_a_copied_case() {
+    let dir = tempfile::tempdir().unwrap();
+    let from = suite_dir().join("git-two-commits");
+    let to = dir.path().join("cases/copy");
+    write(
+        &to.join("case.toml"),
+        &std::fs::read_to_string(from.join("case.toml")).unwrap(),
+    );
+    let cases = dir.path().join("cases");
+    let cases = cases.to_str().unwrap();
+    assert_eq!(
+        fixtures(&["check", "--bin", stub(), "--cases", cases], dir.path())
+            .status
+            .code(),
+        Some(1)
+    );
+    assert_eq!(
+        fixtures(&["capture", "--bin", stub(), "--cases", cases], dir.path())
+            .status
+            .code(),
+        Some(0)
+    );
+    let ok = fixtures(&["check", "--bin", stub(), "--cases", cases], dir.path());
+    assert_eq!(ok.status.code(), Some(0), "{}", text(&ok.stdout));
+    assert_eq!(
+        std::fs::read(to.join("expect/git-log")).unwrap(),
+        std::fs::read(from.join("expect/git-log")).unwrap()
+    );
+}
+
+// ---- QA: AC8 with an explicit canary from the caller's environment ----
+
+#[test]
+fn caller_environment_does_not_reach_the_binary() {
+    let dir = tempfile::tempdir().unwrap();
+    let cases = dir.path().join("cases");
+    case(&cases, "env", "args = [\"env\"]\n");
+    let out = Command::new(env!("CARGO_BIN_EXE_daiku-fixtures"))
+        .args([
+            "capture",
+            "--bin",
+            stub(),
+            "--cases",
+            cases.to_str().unwrap(),
+        ])
+        .env("DAIKU_FX_CANARY", "leaked")
+        .env("TZ", "America/New_York")
+        .env("LANG", "fr_FR.UTF-8")
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(0), "{}", text(&out.stdout));
+    let env = std::fs::read_to_string(cases.join("env/expect/stdout")).unwrap();
+    assert!(!env.contains("DAIKU_FX_CANARY"), "{env}");
+    assert!(!env.contains("leaked"), "{env}");
+    assert!(env.lines().any(|l| l == "TZ=UTC"), "{env}");
+    assert!(env.lines().any(|l| l == "LANG=C"), "{env}");
+}

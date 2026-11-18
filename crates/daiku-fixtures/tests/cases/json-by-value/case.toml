@@ -1,0 +1,1 @@
+args = ["write", "data.json", "{\"b\":[1,2],\"a\":{\"x\":true}}"]

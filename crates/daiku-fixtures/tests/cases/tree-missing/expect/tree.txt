@@ -1,0 +1,2 @@
+f gone.txt
+f keep.txt

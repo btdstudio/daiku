@@ -1,0 +1,1 @@
+args = ["print", "hello", ";", "eprint", "note", ";", "write", "out.txt", "written"]

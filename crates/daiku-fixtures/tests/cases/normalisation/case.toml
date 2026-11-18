@@ -1,0 +1,2 @@
+args = ["now", ";", "today", ";", "pwd", ";", "write", "paths.txt", "{ROOT} {HOME} {CONFIG}", ";", "commit", "record paths"]
+git = true
