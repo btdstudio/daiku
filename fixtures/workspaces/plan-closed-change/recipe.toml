@@ -1,0 +1,5 @@
+from = "plan-intake-draft"
+steps = [
+  ["change", "new", "Billing"],
+  ["change", "close", "1-auth-flow", "--reason", "superseded"],
+]

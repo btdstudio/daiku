@@ -1,0 +1,8 @@
+from = "init"
+steps = [
+  ["idea", "new", "Faster sync"],
+  ["idea", "new", "Dark mode"],
+  ["idea", "new", "Offline edits"],
+  ["idea", "park", "2", "--reason", "after the beta"],
+  ["idea", "drop", "3", "--reason", "out of scope"],
+]

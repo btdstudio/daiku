@@ -1,0 +1,8 @@
+from = "build-ticket-draft"
+steps = [
+  ["gate", "ticket", "approved"],
+  ["gate", "requirements", "approved"],
+  ["gate", "design", "approved"],
+  ["gate", "tasks", "approved"],
+  ["gate", "implement", "in-progress"],
+]
