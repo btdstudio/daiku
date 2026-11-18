@@ -1,0 +1,13 @@
+[package]
+name = "daiku-core"
+description = "daiku's core: plan and build workspaces, returned as data"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
+# The core returns data and never prints.
+[lints.clippy]
+print_stdout = "deny"
+print_stderr = "deny"

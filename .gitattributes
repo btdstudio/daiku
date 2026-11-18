@@ -1,0 +1,3 @@
+# Fixture bytes are compared exactly; never convert line endings.
+fixtures/** -text
+crates/daiku-fixtures/tests/cases/** -text
