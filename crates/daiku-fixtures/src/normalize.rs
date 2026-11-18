@@ -36,7 +36,13 @@ pub fn civil(secs: i64) -> (String, String) {
     )
 }
 
+/// What a stored workspace gets in place of a run's timestamps and dates (D3).
+pub const FIXED_TIMESTAMP: &str = "2026-01-15T00:00:00.000Z";
+pub const FIXED_DATE: &str = "2026-01-15";
+
 pub(crate) struct Normalizer {
+    /// Write fixed past values instead of `{TIMESTAMP}` and `{TODAY}` (D3).
+    fixed: bool,
     timestamp: Regex,
     hex: Regex,
     dates: Vec<String>,
@@ -62,6 +68,14 @@ impl Normalizer {
         Normalizer::from_parts(paths, dates, commits.to_vec())
     }
 
+    /// The mode for stored workspaces: timestamps and the run's dates become fixed
+    /// past values; paths still become tokens; commit ids are left alone.
+    pub(crate) fn fixed(sb: &Sandbox, secs: &[i64]) -> Normalizer {
+        let mut n = Normalizer::new(sb, secs, &[]);
+        n.fixed = true;
+        n
+    }
+
     fn from_parts(
         mut paths: Vec<(String, &'static str)>,
         mut dates: Vec<String>,
@@ -71,6 +85,7 @@ impl Normalizer {
         paths.dedup();
         dates.dedup();
         Normalizer {
+            fixed: false,
             timestamp: Regex::new(
                 r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})",
             )
@@ -83,9 +98,14 @@ impl Normalizer {
     }
 
     pub(crate) fn apply(&self, s: &str) -> String {
-        let mut s = self.timestamp.replace_all(s, "{TIMESTAMP}").into_owned();
+        let (stamp, today) = if self.fixed {
+            (FIXED_TIMESTAMP, FIXED_DATE)
+        } else {
+            ("{TIMESTAMP}", "{TODAY}")
+        };
+        let mut s = self.timestamp.replace_all(s, stamp).into_owned();
         for d in &self.dates {
-            s = s.replace(d.as_str(), "{TODAY}");
+            s = s.replace(d.as_str(), today);
         }
         for (p, token) in &self.paths {
             s = s.replace(p.as_str(), token);
@@ -192,6 +212,19 @@ mod tests {
         assert_eq!(n.apply("[main 0123456] msg"), "[main {COMMIT}] msg");
         assert_eq!(n.apply(&format!("hash {hash}")), format!("hash {hash}"));
         assert_eq!(n.apply("deadbeef1"), "deadbeef1");
+    }
+
+    #[test]
+    fn fixed_mode_writes_past_values() {
+        let mut n = n(&["0123456789abcdef0123456789abcdef01234567"]);
+        n.fixed = true;
+        assert_eq!(
+            n.apply("at 2026-11-18T10:00:00.123Z on 2026-11-19 in /var/T/fx-root-abc/x"),
+            "at 2026-01-15T00:00:00.000Z on 2026-01-15 in {ROOT}/x"
+        );
+        assert_eq!(n.apply("not 2026-11-17"), "not 2026-11-17");
+        n.commits.clear();
+        assert_eq!(n.apply("0123456"), "0123456");
     }
 
     #[test]

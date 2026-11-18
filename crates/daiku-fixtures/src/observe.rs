@@ -69,7 +69,7 @@ pub(crate) fn entry_path(entry: &str) -> &str {
     rest.split(" -> ").next().unwrap_or(rest)
 }
 
-fn walk(
+pub(crate) fn walk(
     dir: &Path,
     prefix: &str,
     manifest: &mut Vec<String>,

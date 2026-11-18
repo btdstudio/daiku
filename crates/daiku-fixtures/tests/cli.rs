@@ -338,3 +338,77 @@ fn caller_environment_does_not_reach_the_binary() {
     assert!(env.lines().any(|l| l == "TZ=UTC"), "{env}");
     assert!(env.lines().any(|l| l == "LANG=C"), "{env}");
 }
+
+// ---- S-0002 T4: capture warns about run dates in starting files ----
+
+#[test]
+fn capture_warns_about_todays_date_and_still_captures() {
+    let dir = tempfile::tempdir().unwrap();
+    let cases = dir.path().join("cases");
+    let today = daiku_fixtures::civil(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64,
+    )
+    .0;
+    case(&cases, "dated", "args = [\"print\", \"x\"]\n");
+    write(
+        &cases.join("dated/before/notes.md"),
+        &format!("made {today}\n"),
+    );
+    write(
+        &cases.join("dated/config/daiku/s.json"),
+        &format!("\"{today}\""),
+    );
+    case(&cases, "past", "args = [\"print\", \"x\"]\n");
+    write(&cases.join("past/before/notes.md"), "made 2026-01-02\n");
+    let c = cases.to_str().unwrap();
+    let out = fixtures(&["capture", "--bin", stub(), "--cases", c], dir.path());
+    assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
+    let err = text(&out.stderr);
+    assert!(
+        err.contains(&format!(
+            "warning: dated: before/notes.md contains today's date {today}"
+        )),
+        "{err}"
+    );
+    assert!(err.contains("warning: dated: config/daiku/s.json"), "{err}");
+    assert!(!err.contains("past"), "{err}");
+    assert!(cases.join("dated/expect/stdout").is_file());
+}
+
+#[test]
+fn workspaces_command_builds_and_reports() {
+    let dir = tempfile::tempdir().unwrap();
+    let ws = dir.path().join("ws");
+    write(
+        &ws.join("w/recipe.toml"),
+        "steps = [[\"write\", \"a\", \"b\"]]\n",
+    );
+    let w = ws.to_str().unwrap();
+    let out = fixtures(
+        &["workspaces", "--bin", stub(), "--workspaces", w],
+        dir.path(),
+    );
+    assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
+    assert_eq!(text(&out.stdout), "built w\n1 built\n");
+    assert_eq!(std::fs::read(ws.join("w/tree/a")).unwrap(), b"b");
+
+    write(&ws.join("x/recipe.toml"), "steps = [[\"exit\", \"1\"]]\n");
+    let out = fixtures(
+        &["workspaces", "--bin", stub(), "--workspaces", w, "x"],
+        dir.path(),
+    );
+    assert_eq!(out.status.code(), Some(1));
+    for args in [
+        &["workspaces"][..],
+        &["workspaces", "--bin", "s", "--cases", "c"],
+    ] {
+        assert_eq!(
+            fixtures(args, dir.path()).status.code(),
+            Some(2),
+            "{args:?}"
+        );
+    }
+}

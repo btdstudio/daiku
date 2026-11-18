@@ -5,14 +5,15 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use daiku_fixtures::{
-    Case, Outcome, Summary, case_report, compare, load_cases, run_case, uncovered, usage_entries,
-    write_expect,
+    Case, Outcome, Summary, build_workspaces, case_report, compare, date_warnings, load_cases,
+    run_case, uncovered, usage_entries, write_expect,
 };
 
 const USAGE: &str = "usage:
   daiku-fixtures check    --bin PATH [--cases DIR] [CASE...]
   daiku-fixtures capture  --bin PATH [--cases DIR] [CASE...]
   daiku-fixtures coverage [--cases DIR] [--usage FILE]
+  daiku-fixtures workspaces --bin PATH [--workspaces DIR] [NAME...]
 ";
 
 struct Args {
@@ -20,12 +21,16 @@ struct Args {
     bin: Option<PathBuf>,
     cases: PathBuf,
     usage: PathBuf,
+    workspaces: PathBuf,
     names: Vec<String>,
 }
 
 fn parse(argv: &[String]) -> Result<Args, String> {
     let (command, rest) = argv.split_first().ok_or("missing command")?;
-    if !matches!(command.as_str(), "check" | "capture" | "coverage") {
+    if !matches!(
+        command.as_str(),
+        "check" | "capture" | "coverage" | "workspaces"
+    ) {
         return Err(format!("unknown command {command:?}"));
     }
     let mut args = Args {
@@ -33,6 +38,7 @@ fn parse(argv: &[String]) -> Result<Args, String> {
         bin: None,
         cases: PathBuf::from("fixtures/cases"),
         usage: PathBuf::from("fixtures/usage.txt"),
+        workspaces: PathBuf::from("fixtures/workspaces"),
         names: Vec::new(),
     };
     let mut it = rest.iter();
@@ -44,7 +50,8 @@ fn parse(argv: &[String]) -> Result<Args, String> {
         };
         match a.as_str() {
             "--bin" if args.command != "coverage" => args.bin = Some(value()?),
-            "--cases" => args.cases = value()?,
+            "--cases" if args.command != "workspaces" => args.cases = value()?,
+            "--workspaces" if args.command == "workspaces" => args.workspaces = value()?,
             "--usage" if args.command == "coverage" => args.usage = value()?,
             f if f.starts_with('-') => {
                 return Err(format!("unknown flag {f:?} for {}", args.command));
@@ -68,6 +75,22 @@ fn main() -> ExitCode {
             return ExitCode::from(2);
         }
     };
+    if args.command == "workspaces" {
+        let bin = args.bin.as_deref().unwrap_or(Path::new(""));
+        return match build_workspaces(bin, &args.workspaces, &args.names) {
+            Ok(built) => {
+                for name in &built {
+                    out(&format!("built {name}\n"));
+                }
+                out(&format!("{} built\n", built.len()));
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("daiku-fixtures: {e}");
+                ExitCode::FAILURE
+            }
+        };
+    }
     let cases = match load_cases(&args.cases, &args.names) {
         Ok(c) => c,
         Err(e) => {
@@ -125,6 +148,9 @@ fn capture(bin: &Path, cases: &[Case]) -> bool {
             out(&case_report(&case.name, &Outcome::Skip(os)));
             skipped += 1;
             continue;
+        }
+        for w in date_warnings(case) {
+            eprintln!("warning: {w}");
         }
         match run_case(bin, case).and_then(|obs| write_expect(case, &obs)) {
             Ok(()) => {

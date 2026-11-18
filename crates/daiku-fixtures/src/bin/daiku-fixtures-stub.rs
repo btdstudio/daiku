@@ -3,8 +3,9 @@
 //! Usage: `daiku-fixtures-stub STEP [ARG]... [; STEP [ARG]...]...`
 //!
 //! Steps run in order: `print TEXT`, `eprint TEXT`, `write PATH TEXT`, `mkdir PATH`,
-//! `now`, `today`, `pwd`, `env`, `commit SUBJECT` (prints the new commit id),
-//! `sleep MS`, `exit CODE`. With no `exit`, the stub exits 0.
+//! `cat PATH` (prints the file), `stamp PATH` (writes today's date and the time to
+//! the file), `now`, `today`, `pwd`, `env`, `commit SUBJECT` (prints the new commit
+//! id), `sleep MS`, `exit CODE`. With no `exit`, the stub exits 0.
 
 use std::process::{Command, ExitCode};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -59,6 +60,18 @@ fn run(step: &[String]) -> Result<Option<u8>, String> {
         "mkdir" => {
             want(1)?;
             std::fs::create_dir_all(&rest[0]).map_err(|e| format!("mkdir: {e}"))?;
+        }
+        "cat" => {
+            want(1)?;
+            let text = std::fs::read_to_string(&rest[0]).map_err(|e| format!("cat: {e}"))?;
+            print!("{text}");
+        }
+        "stamp" => {
+            want(1)?;
+            let (secs, millis) = now();
+            let (date, time) = civil(secs);
+            let text = format!("date {date}\nat {date}T{time}.{millis:03}Z\n");
+            std::fs::write(&rest[0], text).map_err(|e| format!("stamp: {e}"))?;
         }
         "now" => {
             want(0)?;

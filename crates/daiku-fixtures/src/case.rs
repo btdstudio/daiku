@@ -57,6 +57,13 @@ pub struct CaseSpec {
     /// Recorded differences from the Go CLI, as free text.
     #[serde(default)]
     pub deviations: String,
+    /// A shared starting workspace under `<cases>/../workspaces/`, copied in before
+    /// the case's own `before/` and `config/`.
+    #[serde(default)]
+    pub workspace: Option<String>,
+    /// When set, `PATH` holds only these tools, resolved from the caller's `PATH`.
+    #[serde(default)]
+    pub tools: Vec<String>,
 }
 
 /// A loaded case.
@@ -65,6 +72,8 @@ pub struct Case {
     pub name: String,
     pub dir: PathBuf,
     pub spec: CaseSpec,
+    /// The named workspace's folder, which holds `tree/` and maybe `config/`.
+    pub workspace_dir: Option<PathBuf>,
 }
 
 impl Case {
@@ -76,6 +85,24 @@ impl Case {
 
     pub fn expect_dir(&self) -> PathBuf {
         self.dir.join("expect")
+    }
+
+    /// Files for the run's global config folder (`XDG_CONFIG_HOME`).
+    pub fn config_dir(&self) -> PathBuf {
+        self.dir.join("config")
+    }
+
+    /// The starting folders in copy order, as (source, goes to config?, label):
+    /// the workspace's `tree/` and `config/`, then the case's `before/` and `config/`.
+    pub fn sources(&self) -> Vec<(PathBuf, bool, String)> {
+        let mut out = Vec::new();
+        if let (Some(w), Some(name)) = (&self.workspace_dir, &self.spec.workspace) {
+            out.push((w.join("tree"), false, format!("workspaces/{name}/tree")));
+            out.push((w.join("config"), true, format!("workspaces/{name}/config")));
+        }
+        out.push((self.before_dir(), false, "before".into()));
+        out.push((self.config_dir(), true, "config".into()));
+        out
     }
 
     /// The OS the case is skipped on here, if any.
@@ -96,14 +123,29 @@ impl Case {
         no_symlink(&file)?;
         let text = std::fs::read_to_string(&file).map_err(|e| Error::at(&file, e))?;
         let spec: CaseSpec = toml::from_str(&text).map_err(|e| Error::at(&file, e))?;
-        for sub in ["before", "expect"] {
-            let path = dir.join(sub);
-            if let Some(meta) = no_symlink(&path)?
-                && !meta.is_dir()
-            {
-                return Err(Error::at(&path, "not a folder"));
-            }
+        for sub in ["before", "expect", "config"] {
+            folder_or_none(&dir.join(sub))?;
         }
+        for tool in &spec.tools {
+            plain_name(tool).map_err(|e| Error::at(&file, format!("tools: {e}")))?;
+        }
+        let workspace_dir = match &spec.workspace {
+            None => None,
+            Some(name) => {
+                plain_name(name).map_err(|e| Error::at(&file, format!("workspace: {e}")))?;
+                let cases = dir.parent().unwrap_or(Path::new("."));
+                let wdir = cases.join("..").join("workspaces").join(name);
+                let tree = wdir.join("tree");
+                if no_symlink(&wdir)?.is_none() || folder_or_none(&tree)?.is_none() {
+                    return Err(Error::at(
+                        &file,
+                        format!("workspace {name:?} has no {}", tree.display()),
+                    ));
+                }
+                folder_or_none(&wdir.join("config"))?;
+                Some(wdir)
+            }
+        };
         let name = dir
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
@@ -112,6 +154,7 @@ impl Case {
             name,
             dir: dir.to_path_buf(),
             spec,
+            workspace_dir,
         })
     }
 }
@@ -156,4 +199,25 @@ pub(crate) fn no_symlink(path: &Path) -> Result<Option<std::fs::Metadata>, Error
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
         Err(e) => Err(Error::at(path, e)),
     }
+}
+
+/// The metadata of a folder that may be missing; an error if it's a symlink or a file.
+pub(crate) fn folder_or_none(path: &Path) -> Result<Option<std::fs::Metadata>, Error> {
+    match no_symlink(path)? {
+        Some(m) if !m.is_dir() => Err(Error::at(path, "not a folder")),
+        m => Ok(m),
+    }
+}
+
+/// A workspace or tool name: one plain path component.
+pub(crate) fn plain_name(name: &str) -> Result<(), String> {
+    if name.is_empty()
+        || name == "."
+        || name == ".."
+        || name.contains(['/', '\\', ':'])
+        || name.contains('\0')
+    {
+        return Err(format!("{name:?} must be a plain name"));
+    }
+    Ok(())
 }

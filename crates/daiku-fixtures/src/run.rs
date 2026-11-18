@@ -32,10 +32,12 @@ pub(crate) struct Sandbox {
     pub config: PathBuf,
     /// The same three as the OS gave them, before canonicalising.
     pub given: [PathBuf; 3],
+    /// With `tools`, the folder that is the whole `PATH` (D6).
+    tools_path: Option<PathBuf>,
 }
 
 impl Sandbox {
-    fn new() -> Result<Sandbox, Error> {
+    pub(crate) fn new() -> Result<Sandbox, Error> {
         let mk = |prefix: &str| {
             tempfile::Builder::new()
                 .prefix(prefix)
@@ -62,20 +64,48 @@ impl Sandbox {
             home,
             config,
             given,
+            tools_path: None,
         })
     }
 
+    /// Makes a folder of links to just these tools, found on the caller's `PATH`, and
+    /// makes it the run's whole `PATH`. It lives in the home folder, so it never shows
+    /// in the workspace tree.
+    #[cfg(unix)]
+    pub(crate) fn limit_tools(&mut self, tools: &[String]) -> Result<(), String> {
+        let bin = self.home.join(".fixture-bin");
+        std::fs::create_dir_all(&bin).map_err(|e| format!("{}: {e}", bin.display()))?;
+        let path = std::env::var_os("PATH").unwrap_or_default();
+        for tool in tools {
+            let found = std::env::split_paths(&path)
+                .map(|d| d.join(tool))
+                .find(|p| is_executable(p))
+                .ok_or_else(|| format!("tool {tool:?} isn't on PATH"))?;
+            std::os::unix::fs::symlink(&found, bin.join(tool))
+                .map_err(|e| format!("{}: {e}", bin.join(tool).display()))?;
+        }
+        self.tools_path = Some(bin);
+        Ok(())
+    }
+
+    #[cfg(not(unix))]
+    pub(crate) fn limit_tools(&mut self, _tools: &[String]) -> Result<(), String> {
+        Err("tools isn't supported on Windows".into())
+    }
+
     /// Replaces `{ROOT}`, `{HOME}` and `{CONFIG}` with this run's paths.
-    fn expand(&self, s: &str) -> String {
+    pub(crate) fn expand(&self, s: &str) -> String {
         s.replace("{ROOT}", &self.root.to_string_lossy())
             .replace("{HOME}", &self.home.to_string_lossy())
             .replace("{CONFIG}", &self.config.to_string_lossy())
     }
 
     /// The environment every process in the run gets (D7, D8), before the case's own.
-    fn base_env(&self, git: bool) -> Vec<(String, OsString)> {
+    pub(crate) fn base_env(&self, git: bool) -> Vec<(String, OsString)> {
         let mut env: Vec<(String, OsString)> = Vec::new();
-        if let Some(path) = std::env::var_os("PATH") {
+        if let Some(bin) = &self.tools_path {
+            env.push(("PATH".into(), bin.clone().into()));
+        } else if let Some(path) = std::env::var_os("PATH") {
             env.push(("PATH".into(), path));
         }
         env.push(("HOME".into(), self.home.clone().into()));
@@ -106,9 +136,15 @@ impl Sandbox {
     }
 }
 
+#[cfg(unix)]
+fn is_executable(p: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::metadata(p).is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+}
+
 /// `\\?\C:\x` becomes `C:\x`. Any other path, including a verbatim UNC path
 /// (`\\?\UNC\…`), is returned unchanged.
-fn strip_verbatim(p: PathBuf) -> PathBuf {
+pub(crate) fn strip_verbatim(p: PathBuf) -> PathBuf {
     if let Some(rest) = p.to_str().and_then(|s| s.strip_prefix(r"\\?\")) {
         let b = rest.as_bytes();
         if b.len() >= 3 && b[0].is_ascii_alphabetic() && b[1] == b':' && b[2] == b'\\' {
@@ -139,8 +175,12 @@ pub fn run_case_with_timeout(
 ) -> Result<Observation, Error> {
     let bin = std::path::absolute(bin).map_err(|e| Error::at(bin, e))?;
     let start_secs = normalize::unix_now();
-    let sb = Sandbox::new()?;
-    copy_before(&case.before_dir(), &sb.root)?;
+    let mut sb = Sandbox::new()?;
+    copy_sources(case, &sb)?;
+    if !case.spec.tools.is_empty() {
+        sb.limit_tools(&case.spec.tools)
+            .map_err(|e| Error::at(&case.dir, e))?;
+    }
     let env = sb.base_env(case.spec.git);
 
     let base = if case.spec.git {
@@ -165,19 +205,64 @@ pub fn run_case_with_timeout(
     Ok(obs.normalized(&norm))
 }
 
-/// Copies `before/` into the workspace. Folders holding the keep marker are created;
-/// the marker itself isn't copied (D5). A missing `before/` is an empty workspace.
-/// `before` itself may not be a symlink, and a symlink inside it must stay inside it.
+/// One warning per starting file (workspace `tree/` and `config/`, case `before/`
+/// and `config/`) that holds today's UTC date (D9), as `<case>: <file> contains
+/// today's date <date>`.
+pub fn date_warnings(case: &Case) -> Vec<String> {
+    let today = normalize::civil(normalize::unix_now()).0;
+    let mut out = Vec::new();
+    for (from, _, label) in case.sources() {
+        let mut manifest = Vec::new();
+        let mut files = std::collections::BTreeMap::new();
+        if !from.is_dir() || observe::walk(&from, "", &mut manifest, &mut files).is_err() {
+            continue;
+        }
+        for (rel, bytes) in files {
+            if String::from_utf8_lossy(&bytes).contains(&today) {
+                out.push(format!(
+                    "{}: {label}/{rel} contains today's date {today}",
+                    case.name
+                ));
+            }
+        }
+    }
+    out
+}
+
+/// Copies the case's starting folders into the sandbox (D1, D4): the workspace's
+/// `tree/` and `config/`, then the case's `before/` and `config/` on top. Folders
+/// holding the keep marker are created; the marker itself isn't copied. Missing
+/// folders are skipped. Tokens expand in every UTF-8 file (D5).
+pub(crate) fn copy_sources(case: &Case, sb: &Sandbox) -> Result<(), Error> {
+    for (from, config, label) in case.sources() {
+        let to = if config { &sb.config } else { &sb.root };
+        copy_tree(&from, to, &label, &|s| sb.expand(s))?;
+    }
+    Ok(())
+}
+
+/// Copies `from` into `to`, adding to or replacing what's there. `from` itself may
+/// not be a symlink, and a symlink inside it must stay inside it.
 ///
 /// Links are checked twice: by their text as they're copied (a clear, early error),
 /// then, once everything is copied, by resolving each copy. Only the second catches
 /// links that climb out through other links (`d -> .`, `e -> d/..`).
-fn copy_before(from: &Path, to: &Path) -> Result<(), Error> {
+pub(crate) fn copy_tree(
+    from: &Path,
+    to: &Path,
+    label: &str,
+    expand: &dyn Fn(&str) -> String,
+) -> Result<(), Error> {
     if no_symlink(from)?.is_none() {
         return Ok(());
     }
     let mut links = Vec::new();
-    copy_dir(from, to, 0, &mut links)?;
+    let mut c = Copier {
+        label,
+        expand,
+        links: &mut links,
+    };
+    c.dir(from, to, 0)?;
     for (src, dst) in links {
         let refuse = |why: String| {
             Err(Error::at(
@@ -187,56 +272,84 @@ fn copy_before(from: &Path, to: &Path) -> Result<(), Error> {
         };
         match std::fs::canonicalize(&dst).map(strip_verbatim) {
             Ok(real) if real.starts_with(to) => {}
-            Ok(_) => return refuse("resolves outside before/".into()),
+            Ok(_) => return refuse(format!("resolves outside {label}/")),
             Err(e) => return refuse(format!("can't be resolved ({e})")),
         }
     }
     Ok(())
 }
 
-/// Copies one folder; `depth` is how many folders below `before/` it is. Each link made
-/// is pushed onto `links` as (source, copy).
-fn copy_dir(
-    from: &Path,
-    to: &Path,
-    depth: usize,
-    links: &mut Vec<(PathBuf, PathBuf)>,
-) -> Result<(), Error> {
-    for entry in std::fs::read_dir(from).map_err(|e| Error::at(from, e))? {
-        let entry = entry.map_err(|e| Error::at(from, e))?;
-        let src = entry.path();
-        let name = entry.file_name();
-        if name == KEEP_MARKER {
-            continue;
-        }
-        let dst = to.join(&name);
-        let ft = entry.file_type().map_err(|e| Error::at(&src, e))?;
-        if ft.is_symlink() {
-            let target = std::fs::read_link(&src).map_err(|e| Error::at(&src, e))?;
-            if !link_stays_inside(&target, depth) {
-                return Err(Error::at(
-                    &src,
-                    format!(
-                        "symlink to {} leaves before/; a case may not link outside itself",
-                        target.display()
-                    ),
-                ));
+struct Copier<'a> {
+    label: &'a str,
+    expand: &'a dyn Fn(&str) -> String,
+    /// Each link made, as (source, copy).
+    links: &'a mut Vec<(PathBuf, PathBuf)>,
+}
+
+impl Copier<'_> {
+    /// Copies one folder; `depth` is how many folders below the source root it is.
+    fn dir(&mut self, from: &Path, to: &Path, depth: usize) -> Result<(), Error> {
+        for entry in std::fs::read_dir(from).map_err(|e| Error::at(from, e))? {
+            let entry = entry.map_err(|e| Error::at(from, e))?;
+            let src = entry.path();
+            let name = entry.file_name();
+            if name == KEEP_MARKER {
+                continue;
             }
-            symlink(&target, &dst, src.is_dir()).map_err(|e| Error::at(&dst, e))?;
-            links.push((src, dst));
-        } else if ft.is_dir() {
-            std::fs::create_dir(&dst).map_err(|e| Error::at(&dst, e))?;
-            copy_dir(&src, &dst, depth + 1, links)?;
-        } else {
-            std::fs::copy(&src, &dst).map_err(|e| Error::at(&src, e))?;
+            let dst = to.join(&name);
+            let ft = entry.file_type().map_err(|e| Error::at(&src, e))?;
+            let existing = std::fs::symlink_metadata(&dst).ok();
+            let clash = |what: &str| {
+                Err(Error::at(
+                    &src,
+                    format!("{} would replace a {what} with something else", self.label),
+                ))
+            };
+            if ft.is_symlink() {
+                if existing.is_some() {
+                    return clash("path");
+                }
+                let target = std::fs::read_link(&src).map_err(|e| Error::at(&src, e))?;
+                if !link_stays_inside(&target, depth) {
+                    return Err(Error::at(
+                        &src,
+                        format!(
+                            "symlink to {} leaves {}/; a case may not link outside itself",
+                            target.display(),
+                            self.label
+                        ),
+                    ));
+                }
+                symlink(&target, &dst, src.is_dir()).map_err(|e| Error::at(&dst, e))?;
+                self.links.push((src, dst));
+            } else if ft.is_dir() {
+                match existing {
+                    Some(m) if m.is_dir() && !m.file_type().is_symlink() => {}
+                    Some(_) => return clash("file"),
+                    None => std::fs::create_dir(&dst).map_err(|e| Error::at(&dst, e))?,
+                }
+                self.dir(&src, &dst, depth + 1)?;
+            } else {
+                if let Some(m) = existing
+                    && !m.is_file()
+                {
+                    return clash("folder");
+                }
+                let bytes = std::fs::read(&src).map_err(|e| Error::at(&src, e))?;
+                let bytes = match std::str::from_utf8(&bytes) {
+                    Ok(text) if text.contains('{') => (self.expand)(text).into_bytes(),
+                    _ => bytes,
+                };
+                std::fs::write(&dst, bytes).map_err(|e| Error::at(&dst, e))?;
+            }
         }
+        Ok(())
     }
-    Ok(())
 }
 
 /// Whether a link `depth` folders below `before/` with this target resolves inside
 /// `before/`, judged on the text alone: relative, and never climbing above it.
-fn link_stays_inside(target: &Path, depth: usize) -> bool {
+pub(crate) fn link_stays_inside(target: &Path, depth: usize) -> bool {
     use std::path::Component;
     let mut level = depth as isize;
     for c in target.components() {
@@ -256,12 +369,12 @@ fn link_stays_inside(target: &Path, depth: usize) -> bool {
 }
 
 #[cfg(unix)]
-fn symlink(target: &Path, link: &Path, _dir: bool) -> std::io::Result<()> {
+pub(crate) fn symlink(target: &Path, link: &Path, _dir: bool) -> std::io::Result<()> {
     std::os::unix::fs::symlink(target, link)
 }
 
 #[cfg(windows)]
-fn symlink(target: &Path, link: &Path, dir: bool) -> std::io::Result<()> {
+pub(crate) fn symlink(target: &Path, link: &Path, dir: bool) -> std::io::Result<()> {
     if dir {
         std::os::windows::fs::symlink_dir(target, link)
     } else {
@@ -294,7 +407,7 @@ pub(crate) fn git(
 }
 
 /// Initialises the workspace repo and commits `before/` as the base (D8).
-fn git_base(root: &Path, env: &[(String, OsString)]) -> Result<String, Error> {
+pub(crate) fn git_base(root: &Path, env: &[(String, OsString)]) -> Result<String, Error> {
     let run = |args: &[&str]| git(root, env, args).map_err(|e| Error::at(root, e));
     run(&["init", "-q", "-b", "main"])?;
     run(&["add", "-A"])?;
@@ -311,7 +424,7 @@ fn git_base(root: &Path, env: &[(String, OsString)]) -> Result<String, Error> {
 }
 
 /// Runs the command with a null stdin, capturing output, killed after `timeout` (D12).
-fn spawn(mut cmd: Command, timeout: Duration) -> Result<RawRun, String> {
+pub(crate) fn spawn(mut cmd: Command, timeout: Duration) -> Result<RawRun, String> {
     let mut child = cmd
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -377,6 +490,21 @@ mod tests {
         assert!(!inside("../../x", 1));
         assert!(!inside("/etc/passwd", 0));
         assert!(!inside("/etc/passwd", 3));
+    }
+
+    #[test]
+    fn copy_tree_expands_text_and_keeps_binary() {
+        let from = tempfile::tempdir().unwrap();
+        let to = tempfile::tempdir().unwrap();
+        std::fs::write(from.path().join("t.json"), r#"{"p": "{ROOT}/x"}"#).unwrap();
+        std::fs::write(from.path().join("b.bin"), [0xffu8, b'{', b'R']).unwrap();
+        std::fs::write(from.path().join("plain.txt"), "{ROOT").unwrap();
+        let expand = |s: &str| s.replace("{ROOT}", "/real");
+        copy_tree(from.path(), to.path(), "before", &expand).unwrap();
+        let read = |n: &str| std::fs::read(to.path().join(n)).unwrap();
+        assert_eq!(read("t.json"), br#"{"p": "/real/x"}"#);
+        assert_eq!(read("b.bin"), [0xffu8, b'{', b'R']);
+        assert_eq!(read("plain.txt"), b"{ROOT");
     }
 
     #[test]
