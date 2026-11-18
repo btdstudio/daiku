@@ -28,3 +28,29 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo build --workspace
       - run: cargo test --workspace
+
+  # Checks every golden fixture against the Go CLI they were captured from, built
+  # the same way as locally (scripts/build-go-daiku.sh). Linux and macOS only:
+  # Windows runs the runner's self-tests in `test` above.
+  fixtures:
+    name: fixtures (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.26.5
+          cache: false
+      - run: scripts/build-go-daiku.sh
+      - run: cargo build --release -p daiku-fixtures
+      - name: check the fixtures against Go
+        run: time target/release/daiku-fixtures check --bin target/go-daiku/daiku
+      - run: target/release/daiku-fixtures coverage
+      - name: usage.txt matches Go's help
+        run: diff fixtures/usage.txt <(target/go-daiku/daiku help)
