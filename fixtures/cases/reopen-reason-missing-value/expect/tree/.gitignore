@@ -1,6 +1,0 @@
-# The active change is local to each checkout; the rest of .daiku/ is shared
-.daiku/active
-.daiku/paths.json
-
-# OS noise
-.DS_Store

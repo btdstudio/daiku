@@ -281,7 +281,7 @@ fn capture_then_check_passes() {
         "exit",
         "stdout",
         "stderr",
-        "tree.txt",
+        "changes.txt",
         "tree/a/b.json",
         "tree/x.txt",
         "git-log",
@@ -392,15 +392,11 @@ fn extra_and_missing_tree_paths_are_named() {
         &c,
         &script(&[&["write", "keep.txt", "k"], &["write", "new.txt", "n"]]),
     );
-    let mut p = parts(&c);
-    p.sort();
-    assert_eq!(
-        p,
-        [
-            ("tree".to_string(), "extra: f new.txt".to_string()),
-            ("tree".to_string(), "missing: f gone.txt".to_string()),
-        ]
-    );
+    let p = parts(&c);
+    assert_eq!(p.len(), 1, "{p:?}");
+    assert_eq!(p[0].0, "changes");
+    assert!(p[0].1.contains("\n-+ f gone.txt\n"), "{}", p[0].1);
+    assert!(p[0].1.contains("\n++ f new.txt\n"), "{}", p[0].1);
 }
 
 #[test]

@@ -1,3 +1,0 @@
-d plan
-d plan/00_intake
-f plan/00_intake/1.md

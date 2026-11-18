@@ -1,0 +1,4 @@
+- f .daiku/active
+~ f LOG.md
+~ f STATE.json
+~ f plan/specs/1-auth-flow/README.md

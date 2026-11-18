@@ -498,6 +498,7 @@ fn stage_needs_a_git_case() {
 // ---- security finding 1: case data may not make git run commands ----
 
 /// A marker path outside every sandbox, and whether a command wrote it.
+#[cfg(unix)]
 fn marker() -> (tempfile::TempDir, std::path::PathBuf) {
     let d = tempfile::tempdir().unwrap();
     let m = d.path().join("ran");
@@ -601,4 +602,91 @@ fn git_ignores_global_config_from_home_and_config() {
     let obs = run(&fx.load("global"));
     assert!(!ran.exists(), "a filter from global config ran");
     assert!(obs.git_log.unwrap().contains("f.txt"));
+}
+
+// ---- D16: expect/ records only what the run changed ----
+
+#[test]
+fn expect_records_only_changes_and_stays_strict() {
+    let fx = Fx::new();
+    write(&fx.ws().join("w/tree/same.txt"), "same");
+    write(&fx.ws().join("w/tree/edit.txt"), "old");
+    write(&fx.ws().join("w/tree/kept/.fixture-keep"), "");
+    let toml = |steps: &[&[&str]]| script(steps) + "workspace = \"w\"\n";
+    // Change edit.txt, rewrite same.txt with the same bytes, add new/n.txt. Removals
+    // and changes of kind are covered by the unit tests in observe.rs.
+    fx.case(
+        "c",
+        &toml(&[
+            &["write", "edit.txt", "new"],
+            &["write", "same.txt", "same"],
+            &["write", "new/n.txt", "n"],
+        ]),
+    );
+    let c = fx.load("c");
+    let obs = run(&c);
+    assert_eq!(obs.changes, ["~ f edit.txt", "+ d new", "+ f new/n.txt"]);
+    daiku_fixtures::write_expect(&c, &obs).unwrap();
+    let stored = snapshot(&c.expect_dir().join("tree"));
+    assert_eq!(stored.keys().collect::<Vec<_>>(), ["edit.txt", "new/n.txt"]);
+    assert!(daiku_fixtures::compare(&c, &run(&c)).is_empty());
+
+    // Touching a file the expectation says is unchanged fails the case.
+    fx.case(
+        "c",
+        &toml(&[
+            &["write", "edit.txt", "new"],
+            &["write", "same.txt", "different"],
+            &["write", "new/n.txt", "n"],
+        ]),
+    );
+    let diffs = daiku_fixtures::compare(&c, &run(&fx.load("c")));
+    assert_eq!(diffs.len(), 1, "{diffs:?}");
+    assert_eq!(diffs[0].part, "changes");
+    assert!(
+        diffs[0].detail.contains("\n+~ f same.txt\n"),
+        "{}",
+        diffs[0].detail
+    );
+}
+
+// ---- stored names for git files ----
+
+#[test]
+fn git_files_are_stored_under_another_name() {
+    let fx = Fx::new();
+    // A raw .gitignore in fixture data is refused.
+    let d = fx.case("raw", "args = []\n");
+    write(&d.join("before/.gitignore"), "x\n");
+    let err = run_case(stub(), &fx.load("raw")).unwrap_err().to_string();
+    assert!(err.contains("as .gitignore.fixture"), "{err}");
+
+    // The stored name arrives under the real name, and a .gitignore the run writes
+    // is stored under the other name in expect/.
+    let d = fx.case(
+        "named",
+        &script(&[
+            &["cat", ".gitignore"],
+            &["write", "sub/.gitattributes", "a\n"],
+        ]),
+    );
+    write(&d.join("before/.gitignore.fixture"), "ignored\n");
+    let c = fx.load("named");
+    let obs = run(&c);
+    assert_eq!(obs.stdout, "ignored\n");
+    assert!(obs.manifest.contains(&"f .gitignore".to_string()));
+    assert_eq!(obs.changes, ["+ d sub", "+ f sub/.gitattributes"]);
+    daiku_fixtures::write_expect(&c, &obs).unwrap();
+    let stored = snapshot(&c.expect_dir().join("tree"));
+    assert_eq!(
+        stored.keys().collect::<Vec<_>>(),
+        ["sub/.gitattributes.fixture"]
+    );
+    assert!(daiku_fixtures::compare(&c, &run(&c)).is_empty());
+
+    // Workspaces store them the same way.
+    recipe(&fx, "g", "steps = [[\"write\", \".gitignore\", \"x\"]]\n");
+    build_workspaces(stub(), &fx.ws(), &[]).unwrap();
+    let tree = snapshot(&fx.ws().join("g/tree"));
+    assert_eq!(tree.keys().collect::<Vec<_>>(), [".gitignore.fixture"]);
 }

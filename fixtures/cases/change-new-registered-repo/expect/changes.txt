@@ -1,0 +1,5 @@
+~ f .daiku/active
+~ f LOG.md
+~ f STATE.json
++ f plan/00_intake/2.md
++ d plan/specs/2-api-work

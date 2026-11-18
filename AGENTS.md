@@ -48,9 +48,19 @@ config/     files for the run's global config folder (XDG_CONFIG_HOME), e.g.
             config/daiku/settings.json
 stage/      git cases only: files added after the base commit and staged
             (`git add -A`), so the binary starts with staged changes
-expect/     stdout, stderr, exit, tree.txt (d/f/l manifest), tree/ (file contents),
+expect/     stdout, stderr, exit, changes.txt, tree/ (the added and changed files),
             git-log (git cases only)
 ```
+
+`changes.txt` lists what the run did to the workspace, compared with its starting
+files: `+ f path` added, `- f path` removed, `~ f path` changed (also `d` folders and
+`l path -> target` links). Files the run didn't touch aren't stored, but they're still
+checked: a change the expectation doesn't list fails the case.
+
+Fixture data never holds a file named `.gitignore` or `.gitattributes`, because git
+would apply it to this repo (the daiku scaffold's `.gitignore` would hide
+`.daiku/active`). Store them as `.gitignore.fixture` and `.gitattributes.fixture`; the
+runner renames them on the way in and out, and refuses the real names.
 
 The starting files are copied in this order: the workspace's `tree/` and `config/`,
 then the case's `before/` and `config/`. A case file may replace a workspace file, and

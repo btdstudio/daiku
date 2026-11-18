@@ -242,16 +242,16 @@ fn suite_cases_give_their_intended_results() {
         ("pass", "ok"),
         ("skip-on", "skip"),
         ("stdout-diff", "FAIL stdout"),
-        ("tree-extra", "FAIL tree"),
-        ("tree-missing", "FAIL tree"),
+        ("tree-extra", "FAIL changes"),
+        ("tree-missing", "FAIL changes"),
         ("unordered-stdout", "ok"),
     ]
     .iter()
     .map(|(a, b)| (a.to_string(), b.to_string()))
     .collect();
     assert_eq!(results(&s), want, "{s}");
-    assert!(s.contains("    extra: f extra.txt\n"), "{s}");
-    assert!(s.contains("    missing: f gone.txt\n"), "{s}");
+    assert!(s.contains("    ++ f extra.txt\n"), "{s}");
+    assert!(s.contains("    -+ f gone.txt\n"), "{s}");
     assert!(s.contains("    -world!\n    +world\n"), "{s}");
     assert!(s.ends_with("6 passed, 4 failed, 1 skipped\n"), "{s}");
 }

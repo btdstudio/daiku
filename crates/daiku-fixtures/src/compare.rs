@@ -1,17 +1,16 @@
 //! Comparing an observation with `expect/` (R7), and writing `expect/` (D13).
 
-use std::collections::BTreeMap;
 use std::path::Path;
 
 use similar::TextDiff;
 
-use crate::observe::entry_path;
+use crate::stored::stored_path;
 use crate::{Case, Error, Observation};
 
 /// One part of a case that didn't match.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Difference {
-    /// `expect`, `exit`, `stdout`, `stderr`, `tree`, `tree/<path>` or `git-log`.
+    /// `expect`, `exit`, `stdout`, `stderr`, `changes`, `tree/<path>` or `git-log`.
     pub part: String,
     /// What differs: a line diff, or a short description.
     pub detail: String,
@@ -66,13 +65,13 @@ pub fn compare(case: &Case, obs: &Observation) -> Vec<Difference> {
             &mut out,
         );
     }
-    if let Some(b) = read("tree.txt", &mut out) {
+    if let Some(b) = read("changes.txt", &mut out) {
         let want: Vec<String> = String::from_utf8_lossy(&b)
             .lines()
             .filter(|l| !l.trim().is_empty())
             .map(str::to_string)
             .collect();
-        compare_tree(&dir, &want, obs, &mut out);
+        compare_changes(&dir, &want, obs, &mut out);
     }
     if case.spec.git
         && let Some(b) = read("git-log", &mut out)
@@ -88,33 +87,18 @@ pub fn compare(case: &Case, obs: &Observation) -> Vec<Difference> {
     out
 }
 
-fn compare_tree(dir: &Path, want: &[String], obs: &Observation, out: &mut Vec<Difference>) {
-    let by_path = |entries: &[String]| -> BTreeMap<String, String> {
-        entries
-            .iter()
-            .map(|e| (entry_path(e).to_string(), e.clone()))
-            .collect()
-    };
-    let want = by_path(want);
-    let got = by_path(&obs.manifest);
-    for (path, entry) in &want {
-        match got.get(path) {
-            None => out.push(diff("tree", format!("missing: {entry}"))),
-            Some(g) if g != entry => out.push(diff("tree", format!("expected {entry}, got {g}"))),
-            Some(_) => {}
-        }
-    }
-    for (path, entry) in &got {
-        if !want.contains_key(path) {
-            out.push(diff("tree", format!("extra: {entry}")));
-        }
-    }
-    for (path, entry) in &want {
-        if !entry.starts_with("f ") || got.get(path) != Some(entry) {
+fn compare_changes(dir: &Path, want: &[String], obs: &Observation, out: &mut Vec<Difference>) {
+    let lines = |v: &[String]| v.iter().map(|l| format!("{l}\n")).collect::<String>();
+    text_diff("changes", &lines(want), &lines(&obs.changes), out);
+    for entry in want {
+        let Some(path) = written_file(entry) else {
+            continue;
+        };
+        if !obs.changes.contains(entry) {
             continue;
         }
         let part = format!("tree/{path}");
-        let expected = match read_inside(dir, &format!("tree/{path}")) {
+        let expected = match read_inside(dir, &format!("tree/{}", stored_path(path))) {
             Ok(Some(b)) => b,
             Ok(None) => {
                 out.push(diff(part, format!("expect/tree/{path} is missing")));
@@ -128,6 +112,14 @@ fn compare_tree(dir: &Path, want: &[String], obs: &Observation, out: &mut Vec<Di
         let actual = obs.files.get(path).map(Vec::as_slice).unwrap_or_default();
         compare_file(&part, path, &expected, actual, out);
     }
+}
+
+/// The path of a file the run added or changed, from a change entry.
+fn written_file(entry: &str) -> Option<&str> {
+    let rest = entry
+        .strip_prefix("+ f ")
+        .or_else(|| entry.strip_prefix("~ f "))?;
+    Some(rest)
 }
 
 fn compare_file(part: &str, path: &str, want: &[u8], got: &[u8], out: &mut Vec<Difference>) {
@@ -213,10 +205,11 @@ pub fn write_expect(case: &Case, obs: &Observation) -> Result<(), Error> {
     put("exit", format!("{}\n", obs.exit).as_bytes())?;
     put("stdout", obs.stdout.as_bytes())?;
     put("stderr", obs.stderr.as_bytes())?;
-    let manifest: String = obs.manifest.iter().map(|e| format!("{e}\n")).collect();
-    put("tree.txt", manifest.as_bytes())?;
-    for (path, bytes) in &obs.files {
-        put(&format!("tree/{path}"), bytes)?;
+    let changes: String = obs.changes.iter().map(|e| format!("{e}\n")).collect();
+    put("changes.txt", changes.as_bytes())?;
+    for path in obs.changes.iter().filter_map(|e| written_file(e)) {
+        let bytes = obs.files.get(path).map(Vec::as_slice).unwrap_or_default();
+        put(&format!("tree/{}", stored_path(path)), bytes)?;
     }
     if case.spec.git {
         put("git-log", obs.git_log.as_deref().unwrap_or("").as_bytes())?;

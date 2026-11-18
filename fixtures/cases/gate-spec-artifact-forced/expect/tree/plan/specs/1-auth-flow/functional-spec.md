@@ -1,1 +1,0 @@
-# Functional spec — Auth flow

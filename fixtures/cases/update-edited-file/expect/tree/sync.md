@@ -1,3 +1,0 @@
-# Mine
-
-my own text

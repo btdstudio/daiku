@@ -242,7 +242,7 @@ fn store(from: &Path, to: &Path, norm: &Normalizer, always: bool) -> Result<(), 
     let mut parents: BTreeSet<PathBuf> = BTreeSet::new();
     for entry in &manifest {
         let rel = observe::entry_path(entry);
-        let path = to.join(rel);
+        let path = to.join(crate::stored::stored_path(rel));
         if let Some(p) = Path::new(rel).parent() {
             parents.insert(p.to_path_buf());
         }

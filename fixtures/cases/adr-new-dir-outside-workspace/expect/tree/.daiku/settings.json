@@ -1,9 +1,0 @@
-{
-  "adrDir": "../escape",
-  "baseSource": "",
-  "gates": "block",
-  "overview": "auto",
-  "sourceDir": "plan/00_intake",
-  "syncFile": "sync.md",
-  "vcs": "none"
-}

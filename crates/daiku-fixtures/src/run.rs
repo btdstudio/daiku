@@ -126,8 +126,8 @@ impl Sandbox {
             }
         }
         // Git reads no config but the sandbox repo's own: not the system's, and not a
-        // global one, which would otherwise come from {HOME} or {CONFIG}/git, both of
-        // which a case could fill. Config can name commands for git to run.
+        // global one from {HOME} or {CONFIG}/git, which the binary could write and a
+        // case could otherwise seed. Config can name commands for git to run.
         env.push(("GIT_CONFIG_NOSYSTEM".into(), "1".into()));
         env.push(("GIT_CONFIG_GLOBAL".into(), self.git_config.clone().into()));
         if git {
@@ -201,6 +201,7 @@ pub fn run_case_with_timeout(
         None
     };
 
+    let start = observe::snapshot(&sb.root).map_err(|e| Error::at(&case.dir, e))?;
     let mut cmd = Command::new(&bin);
     cmd.args(case.spec.args.iter().map(|a| sb.expand(a)))
         .current_dir(&sb.root)
@@ -211,7 +212,7 @@ pub fn run_case_with_timeout(
     let end_secs = normalize::unix_now();
 
     let commits_env = if case.spec.git { Some(&env[..]) } else { None };
-    let obs = observe::observe(&sb.root, raw, base.as_deref(), commits_env)
+    let obs = observe::observe(&sb.root, raw, &start, base.as_deref(), commits_env)
         .map_err(|e| Error::at(&case.dir, e))?;
     let norm = normalize::Normalizer::new(&sb, &[start_secs, end_secs], &obs.commits);
     Ok(obs.normalized(&norm))
@@ -310,6 +311,17 @@ impl Copier<'_> {
             if name == KEEP_MARKER {
                 continue;
             }
+            let name_str = name.to_string_lossy().into_owned();
+            if crate::stored::is_git_file(&name_str) {
+                return Err(Error::at(
+                    &src,
+                    format!(
+                        "store {name_str} as {name_str}{}; under its own name it would apply to this repo",
+                        crate::stored::STORED_SUFFIX
+                    ),
+                ));
+            }
+            let name = std::ffi::OsString::from(crate::stored::real_name(&name_str));
             if name.to_string_lossy().eq_ignore_ascii_case(".git") {
                 return Err(Error::at(
                     &src,

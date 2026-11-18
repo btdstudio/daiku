@@ -13,6 +13,7 @@ mod observe;
 mod recipe;
 mod report;
 mod run;
+mod stored;
 
 pub use case::{Case, CaseSpec, Os, load_cases};
 pub use compare::{Difference, compare, write_expect};
@@ -24,6 +25,7 @@ pub use observe::Observation;
 pub use recipe::{Recipe, RecipeFile, build_workspaces};
 pub use report::{Outcome, Summary, case_report};
 pub use run::{DEFAULT_TIMEOUT, KEEP_MARKER, date_warnings, run_case, run_case_with_timeout};
+pub use stored::STORED_SUFFIX;
 
 use std::fmt;
 use std::path::{Path, PathBuf};
