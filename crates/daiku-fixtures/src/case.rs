@@ -92,6 +92,12 @@ impl Case {
         self.dir.join("config")
     }
 
+    /// Files added to the run's repo and staged (`git add`) after the base commit,
+    /// for git cases.
+    pub fn stage_dir(&self) -> PathBuf {
+        self.dir.join("stage")
+    }
+
     /// The starting folders in copy order, as (source, goes to config?, label):
     /// the workspace's `tree/` and `config/`, then the case's `before/` and `config/`.
     pub fn sources(&self) -> Vec<(PathBuf, bool, String)> {
@@ -123,8 +129,14 @@ impl Case {
         no_symlink(&file)?;
         let text = std::fs::read_to_string(&file).map_err(|e| Error::at(&file, e))?;
         let spec: CaseSpec = toml::from_str(&text).map_err(|e| Error::at(&file, e))?;
-        for sub in ["before", "expect", "config"] {
+        for sub in ["before", "expect", "config", "stage"] {
             folder_or_none(&dir.join(sub))?;
+        }
+        if !spec.git && dir.join("stage").exists() {
+            return Err(Error::at(
+                &dir.join("stage"),
+                "stage/ needs git = true: it's staged after the base commit",
+            ));
         }
         for tool in &spec.tools {
             plain_name(tool).map_err(|e| Error::at(&file, format!("tools: {e}")))?;

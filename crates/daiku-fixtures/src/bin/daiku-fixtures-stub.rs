@@ -5,7 +5,7 @@
 //! Steps run in order: `print TEXT`, `eprint TEXT`, `write PATH TEXT`, `mkdir PATH`,
 //! `cat PATH` (prints the file), `stamp PATH` (writes today's date and the time to
 //! the file), `now`, `today`, `pwd`, `env`, `commit SUBJECT` (prints the new commit
-//! id), `sleep MS`, `exit CODE`. With no `exit`, the stub exits 0.
+//! id), `staged` (prints the staged paths), `sleep MS`, `exit CODE`. With no `exit`, the stub exits 0.
 
 use std::process::{Command, ExitCode};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -95,6 +95,10 @@ fn run(step: &[String]) -> Result<Option<u8>, String> {
             for (k, v) in vars {
                 println!("{k}={v}");
             }
+        }
+        "staged" => {
+            want(0)?;
+            print!("{}", git(&["diff", "--cached", "--name-only"])?);
         }
         "commit" => {
             want(1)?;

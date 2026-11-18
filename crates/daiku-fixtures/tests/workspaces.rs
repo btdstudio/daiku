@@ -464,3 +464,26 @@ fn git_recipes_drop_the_repo() {
     let tree = snapshot(&fx.ws().join("g/tree"));
     assert_eq!(tree.keys().collect::<Vec<_>>(), ["f.txt"]);
 }
+
+// ---- stage/: staged changes for git cases ----
+
+#[test]
+fn stage_files_are_staged_after_the_base_commit() {
+    let fx = Fx::new();
+    let d = fx.case("staged", "args = [\"staged\"]\ngit = true\n");
+    write(&d.join("before/kept.txt"), "base");
+    write(&d.join("stage/kept.txt"), "changed in {ROOT}");
+    write(&d.join("stage/new/added.txt"), "new");
+    let obs = run(&fx.load("staged"));
+    assert_eq!(obs.stdout, "kept.txt\nnew/added.txt\n");
+    assert_eq!(obs.files["kept.txt"], b"changed in {ROOT}");
+    assert_eq!(obs.git_log.as_deref(), Some(""), "stage/ makes no commit");
+}
+
+#[test]
+fn stage_needs_a_git_case() {
+    let fx = Fx::new();
+    let d = fx.case("no-git", "args = []\n");
+    write(&d.join("stage/a.txt"), "a");
+    assert!(fx.load_err("no-git").contains("needs git = true"));
+}

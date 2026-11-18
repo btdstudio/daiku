@@ -1,0 +1,3 @@
+args = ["commit", "-q", "-m", "Add sign in"]
+workspace = "build-implement"
+git = true

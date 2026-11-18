@@ -453,7 +453,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: daiku writes nothing; git does the commit |
 | corrupt | `commit-corrupt-state` |
-| other | `commit-nothing-staged` |
+| other | `commit-nothing-staged`, `commit-staged`, `commit-staged-two-paragraphs` |
 
 ## daiku pr
 

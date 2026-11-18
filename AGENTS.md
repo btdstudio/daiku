@@ -46,6 +46,8 @@ before/     the starting workspace, or files added to or replacing the shared on
             an empty `.fixture-keep` keeps an empty folder
 config/     files for the run's global config folder (XDG_CONFIG_HOME), e.g.
             config/daiku/settings.json
+stage/      git cases only: files added after the base commit and staged
+            (`git add -A`), so the binary starts with staged changes
 expect/     stdout, stderr, exit, tree.txt (d/f/l manifest), tree/ (file contents),
             git-log (git cases only)
 ```
@@ -56,7 +58,7 @@ a link in `before/` may replace a workspace file, but nothing may replace a fold
 `{ROOT}`, `{HOME}` and `{CONFIG}` expand in every UTF-8 starting file, which is how
 `.daiku/paths.json` names the sandbox.
 
-The case folder, `case.toml`, `before`, `config` and `expect`, and a workspace's
+The case folder, `case.toml`, `before`, `config`, `stage` and `expect`, and a workspace's
 folder and `tree`, may not be symlinks; nothing under `expect/` may be one; and a
 symlink inside a starting folder must be relative, resolve to something that exists,
 and stay inside that folder (also when followed through other links). The runner

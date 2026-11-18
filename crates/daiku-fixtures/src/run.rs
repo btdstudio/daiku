@@ -184,7 +184,9 @@ pub fn run_case_with_timeout(
     let env = sb.base_env(case.spec.git);
 
     let base = if case.spec.git {
-        Some(git_base(&sb.root, &env)?)
+        let base = git_base(&sb.root, &env)?;
+        stage(case, &sb, &env)?;
+        Some(base)
     } else {
         None
     };
@@ -211,7 +213,9 @@ pub fn run_case_with_timeout(
 pub fn date_warnings(case: &Case) -> Vec<String> {
     let today = normalize::civil(normalize::unix_now()).0;
     let mut out = Vec::new();
-    for (from, _, label) in case.sources() {
+    let mut sources = case.sources();
+    sources.push((case.stage_dir(), false, "stage".into()));
+    for (from, _, label) in sources {
         let mut manifest = Vec::new();
         let mut files = std::collections::BTreeMap::new();
         if !from.is_dir() || observe::walk(&from, "", &mut manifest, &mut files).is_err() {
@@ -410,6 +414,18 @@ pub(crate) fn git(
         ));
     }
     Ok(String::from_utf8_lossy(&out.stdout).into_owned())
+}
+
+/// Copies the case's `stage/` into the workspace after the base commit and stages
+/// everything, so the binary starts with staged but uncommitted changes.
+fn stage(case: &Case, sb: &Sandbox, env: &[(String, OsString)]) -> Result<(), Error> {
+    let dir = case.stage_dir();
+    if no_symlink(&dir)?.is_none() {
+        return Ok(());
+    }
+    copy_tree(&dir, &sb.root, "stage", &|s| sb.expand(s))?;
+    git(&sb.root, env, &["add", "-A"]).map_err(|e| Error::at(&sb.root, e))?;
+    Ok(())
 }
 
 /// Initialises the workspace repo and commits `before/` as the base (D8).
