@@ -1,0 +1,4 @@
+usage: daiku tickets mark-published <id> --external <tool>=<item-id> [--force]
+
+record a PM tool's id and freeze the ticket
+  --force    allow it outside the publish phase

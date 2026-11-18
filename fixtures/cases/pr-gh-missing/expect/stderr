@@ -1,0 +1,2 @@
+warning: branch main doesn't include S-0002 — `daiku status` shows the suggested name
+exec: "gh": executable file not found in $PATH

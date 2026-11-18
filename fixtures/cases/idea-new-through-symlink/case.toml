@@ -1,0 +1,3 @@
+args = ["idea", "new", "Bulk import"]
+workspace = "ideas"
+skip_on = ["windows"]

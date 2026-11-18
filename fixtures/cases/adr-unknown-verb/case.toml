@@ -1,0 +1,2 @@
+args = ["adr", "bogus"]
+workspace = "init"

@@ -1,0 +1,2 @@
+args = ["tickets", "new", "story"]
+workspace = "plan-spec-ready"

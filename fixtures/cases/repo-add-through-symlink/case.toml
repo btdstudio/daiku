@@ -1,0 +1,3 @@
+args = ["repo", "add", "web", "https://example.invalid/web.git"]
+workspace = "build-implement"
+skip_on = ["windows"]

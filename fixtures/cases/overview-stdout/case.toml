@@ -1,0 +1,2 @@
+args = ["overview", "--stdout"]
+workspace = "plan-architecture-approved"

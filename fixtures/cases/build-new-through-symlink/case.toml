@@ -1,0 +1,3 @@
+args = ["build", "new", "S-0002"]
+workspace = "plan-published"
+skip_on = ["windows"]

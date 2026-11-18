@@ -1,0 +1,2 @@
+args = ["change", "bogus"]
+workspace = "init"

@@ -1,0 +1,2 @@
+args = ["overview", "--check"]
+workspace = "plan-published"

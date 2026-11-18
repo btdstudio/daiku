@@ -1,0 +1,3 @@
+args = ["reopen", "spec", "--reason", "x"]
+workspace = "plan-architecture-approved"
+skip_on = ["windows"]

@@ -1,0 +1,2 @@
+args = ["tickets", "new", "feature", "Login page", "--parent", "E-0001"]
+workspace = "plan-architecture-approved"

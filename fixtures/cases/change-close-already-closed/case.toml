@@ -1,0 +1,2 @@
+args = ["change", "close", "1-auth-flow", "--reason", "again"]
+workspace = "plan-closed-change"

@@ -1,0 +1,2 @@
+args = ["build", "new", "E-0001"]
+workspace = "plan-published"

@@ -1,0 +1,2 @@
+args = ["gate", "spec", "draft", "--force"]
+workspace = "plan-intake-draft"

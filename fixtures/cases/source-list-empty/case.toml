@@ -1,0 +1,2 @@
+args = ["source", "list"]
+workspace = "init"

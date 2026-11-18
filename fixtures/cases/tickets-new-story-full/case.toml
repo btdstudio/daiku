@@ -1,0 +1,2 @@
+args = ["tickets", "new", "story", "Sign out", "--parent", "E-0001", "--repo", "api", "--depends", "S-0002", "--requirements", "R1"]
+workspace = "plan-architecture-approved"

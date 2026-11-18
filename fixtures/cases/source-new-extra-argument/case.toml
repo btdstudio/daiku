@@ -1,0 +1,2 @@
+args = ["source", "new", "--title", "x", "stray"]
+workspace = "plan-intake-draft"

@@ -1,0 +1,2 @@
+args = ["tickets", "unfreeze", "S-0002"]
+workspace = "plan-published"

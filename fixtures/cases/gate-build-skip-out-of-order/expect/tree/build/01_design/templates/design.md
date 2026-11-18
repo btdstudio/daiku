@@ -1,0 +1,58 @@
+# Design — <short name>
+
+- **Status:** draft | await-approval | approved
+- **Date:** <ISO date>
+- **Designing for:** `build/<repo>/changes/<ticket-id>/requirements.md`
+
+## Overview
+
+<Three to five sentences: the shape of the solution and why it's the right one.>
+
+## Context
+
+<Current codebase state relevant to this change; cite `file:line` where useful.>
+
+## Design decisions
+
+- D1. <decision> — <rationale> (<alternatives rejected in brief>)
+- D2. ...
+
+## Architecture / components
+
+<Components, responsibilities, and how they connect. The implementer's map.>
+
+## Data flow / behavior
+
+<Step-by-step behavior for the main flows, aligned to the acceptance criteria.>
+
+## Diagrams
+
+<Optional: one sequence diagram of the main flow. Rename the participants and
+messages to fit, or delete this section if a diagram wouldn't add anything.>
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI
+    participant Store
+    User->>CLI: command
+    CLI->>Store: read or write
+    Store-->>CLI: result
+    CLI-->>User: output
+```
+
+## Interfaces
+
+<Module boundaries, function/CLI/API shapes, config, env vars.>
+
+## Out of scope (deferred)
+
+- <what the design deliberately leaves out>
+
+## Open items / risks
+
+- <assumptions, endpoints to confirm, risks with their impact>
+
+## Notes
+
+<references, constraints, implementation hints.>

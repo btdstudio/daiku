@@ -1,0 +1,9 @@
+{
+  "adrDir": "plan/04_architecture/adr",
+  "baseSource": "",
+  "gates": "block",
+  "overview": "auto",
+  "sourceDir": "../escape",
+  "syncFile": "sync.md",
+  "vcs": "none"
+}

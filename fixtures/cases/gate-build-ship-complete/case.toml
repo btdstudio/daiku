@@ -1,0 +1,2 @@
+args = ["gate", "ship", "complete"]
+workspace = "build-ship"

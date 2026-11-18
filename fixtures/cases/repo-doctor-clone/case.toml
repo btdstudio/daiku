@@ -1,0 +1,3 @@
+args = ["repo", "doctor", "--clone", "--into", "{HOME}/clones"]
+workspace = "init"
+git = true

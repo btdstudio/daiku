@@ -1,0 +1,2 @@
+args = ["idea", "reopen", "3", "--reason", "back in scope"]
+workspace = "ideas"

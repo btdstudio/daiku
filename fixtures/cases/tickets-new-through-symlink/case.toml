@@ -1,0 +1,3 @@
+args = ["tickets", "new", "epic", "Accounts"]
+workspace = "plan-spec-ready"
+skip_on = ["windows"]

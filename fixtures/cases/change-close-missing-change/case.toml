@@ -1,0 +1,2 @@
+args = ["change", "close", "--reason", "done"]
+workspace = "plan-intake-draft"

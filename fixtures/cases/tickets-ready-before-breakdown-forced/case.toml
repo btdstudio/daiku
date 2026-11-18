@@ -1,0 +1,2 @@
+args = ["tickets", "ready", "--all", "--force"]
+workspace = "plan-architecture-approved"

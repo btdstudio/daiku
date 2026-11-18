@@ -1,0 +1,2 @@
+args = ["tickets", "mark-published", "S-0002", "--bogus"]
+workspace = "plan-breakdown-approved"

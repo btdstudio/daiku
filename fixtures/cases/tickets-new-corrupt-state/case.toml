@@ -1,0 +1,2 @@
+args = ["tickets", "new", "task", "Fix typo"]
+workspace = "plan-spec-ready"

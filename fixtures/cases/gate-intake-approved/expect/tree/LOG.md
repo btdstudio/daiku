@@ -1,0 +1,4 @@
+- {TIMESTAMP} 1-auth-flow: created
+- {TIMESTAMP} 1-auth-flow: explore → skipped (no repo in the intake)
+- {TIMESTAMP} 1-auth-flow: synthesis → skipped (fewer than two repos in scope)
+- {TIMESTAMP} 1-auth-flow: intake → approved

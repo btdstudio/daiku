@@ -1,0 +1,3 @@
+args = ["status"]
+workspace = "git-plan-intake-draft"
+git = true

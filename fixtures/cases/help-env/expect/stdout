@@ -1,0 +1,3 @@
+usage: daiku env
+
+print harness flags for the active change's repos

@@ -1,0 +1,2 @@
+args = ["source", "show", "1"]
+workspace = "adrs"

@@ -1,0 +1,3 @@
+usage: daiku change close <change> --reason <r>
+
+close a change

@@ -1,0 +1,2 @@
+args = ["gate", "intake", "approved"]
+workspace = "plan-closed-change"

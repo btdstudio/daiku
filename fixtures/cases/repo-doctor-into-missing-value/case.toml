@@ -1,0 +1,2 @@
+args = ["repo", "doctor", "--clone", "--into"]
+workspace = "init"

@@ -1,0 +1,2 @@
+args = ["repo", "add", "web", "git@example.invalid:org/web.git"]
+workspace = "init"

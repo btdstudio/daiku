@@ -1,0 +1,2 @@
+args = ["init", "sub", "--no-git"]
+skip_on = ["windows"]

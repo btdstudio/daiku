@@ -1,0 +1,3 @@
+usage: daiku commit [git commit args]
+
+commit what's staged in the active build's repo

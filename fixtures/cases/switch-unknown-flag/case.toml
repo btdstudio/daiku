@@ -1,0 +1,2 @@
+args = ["switch", "--bogus"]
+workspace = "plan-closed-change"

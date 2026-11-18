@@ -1,0 +1,1 @@
+usage: daiku idea promote <id> --title <t> [--repo <name|path>]... [--rev <r>]

@@ -1,0 +1,2 @@
+args = ["tickets", "bogus"]
+workspace = "plan-spec-ready"

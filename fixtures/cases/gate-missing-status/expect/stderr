@@ -1,0 +1,1 @@
+usage: daiku gate <phase> <status> [--reason <r>] [--force]

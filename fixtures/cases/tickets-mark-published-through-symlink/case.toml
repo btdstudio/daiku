@@ -1,0 +1,3 @@
+args = ["tickets", "mark-published", "E-0001", "--external", "github=org/api#11"]
+workspace = "plan-publish-in-progress"
+skip_on = ["windows"]

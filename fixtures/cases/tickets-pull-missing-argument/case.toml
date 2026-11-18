@@ -1,0 +1,2 @@
+args = ["tickets", "pull"]
+workspace = "init"

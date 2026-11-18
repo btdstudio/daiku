@@ -1,0 +1,1 @@
+usage: daiku tickets mark-published <id> --external <tool>=<item-id> [--force]

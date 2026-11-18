@@ -1,0 +1,3 @@
+usage: daiku idea drop <id> --reason <r>
+
+drop an open idea, with a reason (the folder stays)

@@ -1,0 +1,2 @@
+args = ["adr", "new", "--title", "Cache sessions", "--file", "notes/adr.md"]
+workspace = "init"

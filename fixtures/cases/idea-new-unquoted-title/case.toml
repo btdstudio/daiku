@@ -1,0 +1,2 @@
+args = ["idea", "new", "Bulk", "import"]
+workspace = "ideas"

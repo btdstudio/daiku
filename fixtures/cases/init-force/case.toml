@@ -1,0 +1,2 @@
+args = ["init", "--no-git", "--force"]
+workspace = "init"

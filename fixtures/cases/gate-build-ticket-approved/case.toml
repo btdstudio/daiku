@@ -1,0 +1,2 @@
+args = ["gate", "ticket", "approved"]
+workspace = "build-ticket-draft"

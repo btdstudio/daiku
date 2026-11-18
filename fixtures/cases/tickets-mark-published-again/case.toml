@@ -1,0 +1,2 @@
+args = ["tickets", "mark-published", "S-0002", "--external", "github=org/api#99"]
+workspace = "plan-published"

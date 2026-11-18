@@ -1,0 +1,2 @@
+args = ["source", "new", "--title", "API code", "--repo", "{ROOT}/api", "--rev", "abc123"]
+workspace = "plan-intake-draft"

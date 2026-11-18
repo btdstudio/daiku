@@ -1,0 +1,2 @@
+- {TIMESTAMP} 1-sync-rewrite: created
+- {TIMESTAMP} 1-sync-rewrite: synthesis → skipped (fewer than two repos in scope)

@@ -1,0 +1,9 @@
+{
+  "adrDir": "plan/04_architecture/adr",
+  "baseSource": "",
+  "gates": "prompt",
+  "overview": "auto",
+  "sourceDir": "plan/00_intake",
+  "syncFile": "sync.md",
+  "vcs": "none"
+}

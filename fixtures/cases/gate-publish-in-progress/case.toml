@@ -1,0 +1,2 @@
+args = ["gate", "publish", "in-progress"]
+workspace = "plan-breakdown-approved"

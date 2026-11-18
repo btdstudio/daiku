@@ -1,0 +1,3 @@
+args = ["change", "close", "1-auth-flow", "--reason", "done"]
+workspace = "git-plan-intake-draft"
+git = true

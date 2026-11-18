@@ -1,0 +1,2 @@
+args = ["adr", "list", "x"]
+workspace = "adrs"

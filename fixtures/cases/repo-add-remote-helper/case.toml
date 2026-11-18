@@ -1,0 +1,2 @@
+args = ["repo", "add", "web", "ext::sh -c touch% /tmp/pwned"]
+workspace = "init"

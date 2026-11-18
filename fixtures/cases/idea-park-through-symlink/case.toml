@@ -1,0 +1,3 @@
+args = ["idea", "park", "1", "--reason", "x"]
+workspace = "ideas"
+skip_on = ["windows"]

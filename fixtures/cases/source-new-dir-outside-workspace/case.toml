@@ -1,0 +1,2 @@
+args = ["source", "new", "--title", "x"]
+workspace = "init"

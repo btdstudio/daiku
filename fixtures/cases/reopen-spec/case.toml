@@ -1,0 +1,2 @@
+args = ["reopen", "spec", "--reason", "new requirement"]
+workspace = "plan-architecture-approved"

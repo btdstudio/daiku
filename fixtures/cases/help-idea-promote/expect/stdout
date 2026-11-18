@@ -1,0 +1,3 @@
+usage: daiku idea promote <id> --title <t> [--repo <name|path>]... [--rev <r>]
+
+start a change from an idea

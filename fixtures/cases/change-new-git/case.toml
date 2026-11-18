@@ -1,0 +1,3 @@
+args = ["change", "new", "Auth flow"]
+workspace = "git-init"
+git = true

@@ -1,0 +1,2 @@
+args = ["change", "close", "S-0002", "--reason", "dropped"]
+workspace = "build-implement"

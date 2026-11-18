@@ -1,0 +1,2 @@
+args = ["tickets", "mark-published", "E-0001", "--external", "github=x"]
+workspace = "plan-publish-in-progress"

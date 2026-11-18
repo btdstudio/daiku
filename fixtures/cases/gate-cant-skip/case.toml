@@ -1,0 +1,2 @@
+args = ["gate", "spec", "skipped", "--reason", "x"]
+workspace = "plan-spec-ready"

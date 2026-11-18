@@ -1,0 +1,3 @@
+args = ["gate", "spec", "approved"]
+workspace = "git-plan-spec-ready"
+git = true

@@ -1,0 +1,2 @@
+args = ["tickets", "mark-published", "S-0002", "--external", "org/api#12"]
+workspace = "plan-breakdown-approved"

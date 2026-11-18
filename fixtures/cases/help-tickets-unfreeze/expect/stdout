@@ -1,0 +1,3 @@
+usage: daiku tickets unfreeze <id> --reason <r>
+
+clear a ticket's freeze

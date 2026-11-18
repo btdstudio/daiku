@@ -1,0 +1,2 @@
+args = ["gate", "architecture", "approved"]
+workspace = "plan-spec-ready"

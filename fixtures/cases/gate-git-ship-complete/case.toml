@@ -1,0 +1,3 @@
+args = ["gate", "ship", "complete"]
+workspace = "git-build-ship"
+git = true

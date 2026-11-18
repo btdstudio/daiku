@@ -1,0 +1,2 @@
+args = ["reopen", "--reason", "x"]
+workspace = "plan-spec-ready"

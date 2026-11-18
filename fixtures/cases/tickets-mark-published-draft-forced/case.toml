@@ -1,0 +1,2 @@
+args = ["tickets", "mark-published", "S-0002", "--external", "github=org/api#12", "--force"]
+workspace = "plan-architecture-approved"

@@ -1,0 +1,8 @@
+{
+  "repos": {
+    "self": {
+      "remote": "{ROOT}",
+      "defaultBranch": "main"
+    }
+  }
+}

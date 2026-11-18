@@ -1,0 +1,2 @@
+args = ["adr", "new", "--title", "Cache sessions", "--deciders", "team", "--context", "Slow logins.", "--decision", "Redis.", "--consequences", "Another service."]
+workspace = "adrs"

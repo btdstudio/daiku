@@ -1,0 +1,3 @@
+usage: daiku source new --title <t> [--repo <path>] [--rev <r>] [--body <b>]
+
+add an intake source to plan/00_intake/

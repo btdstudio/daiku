@@ -1,0 +1,2 @@
+args = ["idea", "drop", "3", "--reason", "again"]
+workspace = "ideas"

@@ -1,0 +1,2 @@
+args = ["gate", "bogus", "approved", "--force"]
+workspace = "plan-intake-draft"

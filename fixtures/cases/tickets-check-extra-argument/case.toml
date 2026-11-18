@@ -1,0 +1,2 @@
+args = ["tickets", "check", "x"]
+workspace = "plan-published"

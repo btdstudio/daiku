@@ -1,0 +1,2 @@
+args = ["gate", "implement", "in-progress", "--force"]
+workspace = "build-two-in-repo"

@@ -1,0 +1,2 @@
+args = ["repo", "doctor", "--bogus"]
+workspace = "init"

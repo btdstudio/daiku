@@ -1,0 +1,3 @@
+args = ["change", "new", "Auth flow"]
+workspace = "init"
+skip_on = ["windows"]

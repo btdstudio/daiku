@@ -1,0 +1,48 @@
+# Sync instructions
+
+**Not configured yet.** Replace this file with instructions for your PM tool. Start
+from a file in `sync-examples/`. `daiku update` won't overwrite your edits.
+
+Whatever the tool, this file must define three verbs:
+
+## push
+
+For each ticket, in `daiku tickets order` sequence, using `<tool>` as this PM tool's
+name in `external`:
+
+| The ticket | Do |
+|---|---|
+| `status: draft` | Skip it. It hasn't been readied for publishing. |
+| Its parent (if it has one), a `depends_on` ticket or its `supersedes` target has no `external.<tool>` | Don't create or update it. Report it as **blocked**, naming that ticket. |
+| No `external.<tool>` | Create the item, then run `daiku tickets mark-published <id> --external <tool>=<item-id>`. |
+| Has the id, and no `published_hash` (unfrozen) | Update the item, then run `mark-published` with the same id to re-freeze. |
+| Has the id and a `published_hash` (frozen) | Skip it. |
+
+The rows are checked in order, so a blocked ticket is never created.
+
+If `mark-published` refuses, stop the run. Report what it printed, and the id or
+link of any item you just created for that ticket, so a human can record or remove
+it. Don't retry with `--force`.
+
+Re-running push is always safe, because finished tickets are skipped.
+
+## fetch
+
+Read the live item by its external id. The build room's ticket phase and drift
+review use this. If the fetch fails, use the ticket file as it is, and say so in
+the requirements.
+
+To build an item that has no ticket yet, fetch it, write a draft ticket file with
+exactly one `external` entry (`<tool>: <item-id>`) and the item's title, type,
+repo and body, then run `daiku tickets pull <draft>`. It becomes
+`build/tickets/X-<pm-id>.md`, where the PM id is the text after the item id's last
+`#` (or the whole id when it has none): `org/app#1234` is `X-1234`, and `PROJ-123`
+is `X-PROJ-123`. Pulling the same item again replaces that ticket. Two repos'
+issue `#7` would both be `X-7`, so pull from one PM project per workspace.
+
+## link
+
+Create the relations, each of which needs the other item's id: parent/child
+(only for a ticket that has a parent; a flat breakdown has none), predecessor
+(`depends_on`), and `supersedes`. A superseded item is also linked to its
+replacement or closed.

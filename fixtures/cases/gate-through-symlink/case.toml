@@ -1,0 +1,3 @@
+args = ["gate", "intake", "approved"]
+workspace = "plan-intake-draft"
+skip_on = ["windows"]

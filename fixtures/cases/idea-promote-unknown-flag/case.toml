@@ -1,0 +1,2 @@
+args = ["idea", "promote", "1", "--title", "x", "--bogus"]
+workspace = "ideas"

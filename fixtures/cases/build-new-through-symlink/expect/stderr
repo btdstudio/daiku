@@ -1,0 +1,1 @@
+daiku: build/ is a symlink, which could lead outside the workspace — replace it with a folder

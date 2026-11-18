@@ -1,0 +1,3 @@
+args = ["tickets", "pull", "pulled.md"]
+workspace = "init"
+skip_on = ["windows"]

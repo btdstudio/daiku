@@ -1,0 +1,2 @@
+args = ["idea", "new"]
+workspace = "ideas"

@@ -1,0 +1,3 @@
+usage: daiku idea reopen <id> --reason <r>
+
+reopen a parked or dropped idea, with a reason

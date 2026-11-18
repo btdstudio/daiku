@@ -1,0 +1,4 @@
+d plan
+d plan/04_architecture
+d plan/04_architecture/adr
+f plan/04_architecture/adr/0001-x.md

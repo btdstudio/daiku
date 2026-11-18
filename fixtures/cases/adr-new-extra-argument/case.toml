@@ -1,0 +1,2 @@
+args = ["adr", "new", "--title", "x", "stray"]
+workspace = "init"
