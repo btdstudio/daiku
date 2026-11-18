@@ -138,6 +138,10 @@ impl Case {
                 "stage/ needs git = true: it's staged after the base commit",
             ));
         }
+        for key in spec.env.keys() {
+            reserved_env(key).map_err(|e| Error::at(&file, e))?;
+        }
+        no_git_config(&dir.join("config"))?;
         for tool in &spec.tools {
             plain_name(tool).map_err(|e| Error::at(&file, format!("tools: {e}")))?;
         }
@@ -155,6 +159,7 @@ impl Case {
                     ));
                 }
                 folder_or_none(&wdir.join("config"))?;
+                no_git_config(&wdir.join("config"))?;
                 Some(wdir)
             }
         };
@@ -230,6 +235,54 @@ pub(crate) fn plain_name(name: &str) -> Result<(), String> {
         || name.contains('\0')
     {
         return Err(format!("{name:?} must be a plain name"));
+    }
+    Ok(())
+}
+
+/// Refuses a case `env` key that could redirect a process: the variables the runner
+/// sets, and git's, the dynamic loader's and macOS's loader variables.
+pub(crate) fn reserved_env(key: &str) -> Result<(), String> {
+    const FIXED: [&str; 8] = [
+        "PATH",
+        "HOME",
+        "XDG_CONFIG_HOME",
+        "USERPROFILE",
+        "SYSTEMROOT",
+        "TZ",
+        "LANG",
+        "LC_ALL",
+    ];
+    let upper = key.to_ascii_uppercase();
+    let prefixed = ["GIT_", "LD_", "DYLD_", "XDG_"]
+        .iter()
+        .any(|p| upper.starts_with(p));
+    if FIXED.contains(&upper.as_str()) || prefixed || key.is_empty() || key.contains('=') {
+        return Err(format!(
+            "env: {key:?} can't be set by a case (the runner sets it, or it could redirect git or the loader)"
+        ));
+    }
+    Ok(())
+}
+
+/// Refuses a `git` folder (any case) in a config folder: it would be git's global
+/// config, which can name commands for git to run. `config/` is for daiku's own
+/// settings.
+pub(crate) fn no_git_config(config: &Path) -> Result<(), Error> {
+    let Ok(entries) = std::fs::read_dir(config) else {
+        return Ok(());
+    };
+    for entry in entries {
+        let entry = entry.map_err(|e| Error::at(config, e))?;
+        if entry
+            .file_name()
+            .to_string_lossy()
+            .eq_ignore_ascii_case("git")
+        {
+            return Err(Error::at(
+                &entry.path(),
+                "config/ may not hold git's config; it's for daiku's settings",
+            ));
+        }
     }
     Ok(())
 }

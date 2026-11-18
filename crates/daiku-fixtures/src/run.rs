@@ -34,6 +34,8 @@ pub(crate) struct Sandbox {
     pub given: [PathBuf; 3],
     /// With `tools`, the folder that is the whole `PATH` (D6).
     tools_path: Option<PathBuf>,
+    /// An empty file that is git's global config for every process in the run.
+    git_config: PathBuf,
 }
 
 impl Sandbox {
@@ -53,6 +55,9 @@ impl Sandbox {
                 .map_err(|e| Error::at(d.path(), e))
         };
         let (root, home, config) = (canon(&dirs[0])?, canon(&dirs[1])?, canon(&dirs[2])?);
+        // Outside the workspace and the config folder, so a case can't fill it.
+        let git_config = dirs[1].path().join(".fixture-gitconfig");
+        std::fs::write(&git_config, "").map_err(|e| Error::at(&git_config, e))?;
         let given = [
             dirs[0].path().to_path_buf(),
             dirs[1].path().to_path_buf(),
@@ -65,6 +70,7 @@ impl Sandbox {
             config,
             given,
             tools_path: None,
+            git_config,
         })
     }
 
@@ -119,6 +125,11 @@ impl Sandbox {
                 env.push(("SystemRoot".into(), root));
             }
         }
+        // Git reads no config but the sandbox repo's own: not the system's, and not a
+        // global one, which would otherwise come from {HOME} or {CONFIG}/git, both of
+        // which a case could fill. Config can name commands for git to run.
+        env.push(("GIT_CONFIG_NOSYSTEM".into(), "1".into()));
+        env.push(("GIT_CONFIG_GLOBAL".into(), self.git_config.clone().into()));
         if git {
             for (k, v) in [
                 ("GIT_AUTHOR_NAME", GIT_NAME),
@@ -127,7 +138,6 @@ impl Sandbox {
                 ("GIT_COMMITTER_NAME", GIT_NAME),
                 ("GIT_COMMITTER_EMAIL", GIT_EMAIL),
                 ("GIT_COMMITTER_DATE", GIT_DATE),
-                ("GIT_CONFIG_NOSYSTEM", "1"),
             ] {
                 env.push((k.into(), v.into()));
             }
@@ -299,6 +309,12 @@ impl Copier<'_> {
             let name = entry.file_name();
             if name == KEEP_MARKER {
                 continue;
+            }
+            if name.to_string_lossy().eq_ignore_ascii_case(".git") {
+                return Err(Error::at(
+                    &src,
+                    "a starting file may not be named .git: it could point git elsewhere",
+                ));
             }
             let dst = to.join(&name);
             let ft = entry.file_type().map_err(|e| Error::at(&src, e))?;

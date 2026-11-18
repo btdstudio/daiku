@@ -9,7 +9,7 @@ use std::process::Command;
 
 use serde::Deserialize;
 
-use crate::case::{no_symlink, plain_name};
+use crate::case::{no_git_config, no_symlink, plain_name};
 use crate::normalize::{Normalizer, unix_now};
 use crate::run::{DEFAULT_TIMEOUT, KEEP_MARKER, Sandbox, copy_tree, git_base, spawn};
 use crate::{Error, observe};
@@ -54,6 +54,17 @@ fn load_recipe(dir: &Path, name: &str) -> Result<Recipe, Error> {
     }
     for f in &recipe.files {
         relative_path(&f.path).map_err(|e| Error::at(&file, e))?;
+        let mut parts = f.path.split('/');
+        let first = parts.next().unwrap_or_default();
+        let second = parts.next().unwrap_or_default();
+        if (first == "config" && second.eq_ignore_ascii_case("git"))
+            || f.path.split('/').any(|p| p.eq_ignore_ascii_case(".git"))
+        {
+            return Err(Error::at(
+                &file,
+                format!("files: {:?} would be git's config or repo", f.path),
+            ));
+        }
     }
     Ok(recipe)
 }
@@ -172,6 +183,7 @@ fn build_one(bin: &Path, dir: &Path, name: &str, recipe: &Recipe) -> Result<(), 
         let pdir = dir.join(from);
         let label = format!("workspaces/{from}");
         copy_tree(&pdir.join("tree"), &sb.root, &label, &|s| sb.expand(s))?;
+        no_git_config(&pdir.join("config"))?;
         copy_tree(&pdir.join("config"), &sb.config, &label, &|s| sb.expand(s))?;
     }
     let env = sb.base_env(recipe.git);

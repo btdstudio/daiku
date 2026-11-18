@@ -18,7 +18,14 @@ fn stub() -> &'static Path {
 fn quote(items: &[&str]) -> String {
     let q: Vec<String> = items
         .iter()
-        .map(|s| format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\"")))
+        .map(|s| {
+            let e = s
+                .replace('\\', "\\\\")
+                .replace('"', "\\\"")
+                .replace('\n', "\\n")
+                .replace('\t', "\\t");
+            format!("\"{e}\"")
+        })
         .collect();
     format!("[{}]", q.join(", "))
 }
@@ -486,4 +493,112 @@ fn stage_needs_a_git_case() {
     let d = fx.case("no-git", "args = []\n");
     write(&d.join("stage/a.txt"), "a");
     assert!(fx.load_err("no-git").contains("needs git = true"));
+}
+
+// ---- security finding 1: case data may not make git run commands ----
+
+/// A marker path outside every sandbox, and whether a command wrote it.
+fn marker() -> (tempfile::TempDir, std::path::PathBuf) {
+    let d = tempfile::tempdir().unwrap();
+    let m = d.path().join("ran");
+    (d, m)
+}
+
+#[test]
+fn config_may_not_hold_git_config() {
+    let fx = Fx::new();
+    for (name, folder) in [("lower", "git"), ("upper", "Git")] {
+        let d = fx.case(name, "args = []\ngit = true\n");
+        write(&d.join("config").join(folder).join("config"), "[core]\n");
+        let err = fx.load_err(name);
+        assert!(err.contains("may not hold git's config"), "{name}: {err}");
+    }
+    write(&fx.ws().join("w/tree/a.txt"), "a");
+    write(&fx.ws().join("w/config/git/config"), "[core]\n");
+    fx.case("ws", "args = []\nworkspace = \"w\"\n");
+    assert!(fx.load_err("ws").contains("may not hold git's config"));
+}
+
+#[test]
+fn recipes_may_not_write_git_config_or_a_repo() {
+    for path in [
+        "config/git/config",
+        "config/GIT/attributes",
+        ".git",
+        "sub/.GIT",
+    ] {
+        let fx = Fx::new();
+        recipe(
+            &fx,
+            "r",
+            &format!("[[files]]\npath = \"{path}\"\ntext = \"x\"\n"),
+        );
+        let err = build_workspaces(stub(), &fx.ws(), &[])
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("git's config or repo"), "{path}: {err}");
+    }
+}
+
+#[test]
+fn starting_files_may_not_be_named_dot_git() {
+    let fx = Fx::new();
+    for (name, path) in [("top", "before/.git"), ("nested", "before/sub/.GIT")] {
+        let d = fx.case(name, "args = []\n");
+        write(&d.join(path), "gitdir: /elsewhere\n");
+        let err = run_case(stub(), &fx.load(name)).unwrap_err().to_string();
+        assert!(err.contains("named .git"), "{name}: {err}");
+    }
+}
+
+#[test]
+fn env_may_not_redirect_processes() {
+    let fx = Fx::new();
+    for key in [
+        "PATH",
+        "Path",
+        "HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME",
+        "GIT_CONFIG_COUNT",
+        "git_dir",
+        "LD_PRELOAD",
+        "DYLD_INSERT_LIBRARIES",
+        "TZ",
+    ] {
+        fx.case(key, &format!("args = []\nenv = {{ {key} = \"x\" }}\n"));
+        let err = fx.load_err(key);
+        assert!(err.contains("can't be set by a case"), "{key}: {err}");
+    }
+    fx.case("ok", "args = []\nenv = { DAIKU_X = \"{ROOT}\" }\n");
+    fx.load("ok");
+}
+
+/// The global and system git config are empty for every process in a run, so a
+/// global config file the binary (or anything) writes into {HOME} or {CONFIG} is
+/// ignored by the runner's own git too.
+#[cfg(unix)]
+#[test]
+fn git_ignores_global_config_from_home_and_config() {
+    let (_d, ran) = marker();
+    let cfg = format!(
+        "[filter \"x\"]\n\tclean = sh -c 'echo ran > {}'; cat\n",
+        ran.display()
+    );
+    let fx = Fx::new();
+    // The stub writes the would-be global configs, then commits through git with a
+    // .gitattributes that asks for the filter.
+    fx.case(
+        "global",
+        &(script(&[
+            &["write", "{HOME}/.gitconfig", &cfg],
+            &["write", "{CONFIG}/git/config", &cfg],
+            &["write", ".gitattributes", "* filter=x\n"],
+            &["write", "f.txt", "hi\n"],
+            &["commit", "add"],
+        ]) + "git = true\n"),
+    );
+    let obs = run(&fx.load("global"));
+    assert!(!ran.exists(), "a filter from global config ran");
+    assert!(obs.git_log.unwrap().contains("f.txt"));
 }

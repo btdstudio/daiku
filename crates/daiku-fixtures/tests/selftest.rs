@@ -118,6 +118,8 @@ fn environment_is_sealed() {
         "TZ",
         "LANG",
         "LC_ALL",
+        "GIT_CONFIG_NOSYSTEM",
+        "GIT_CONFIG_GLOBAL",
         "EXTRA",
     ];
     if cfg!(windows) {

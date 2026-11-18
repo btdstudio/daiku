@@ -65,13 +65,21 @@ and stay inside that folder (also when followed through other links). The runner
 refuses anything else, so a committed case can't pull files from outside the repo
 into a run or into `expect/`.
 
+Case data may not reach git's configuration, which can name commands for git to run:
+every process in a run gets an empty global git config (`GIT_CONFIG_GLOBAL`) and
+`GIT_CONFIG_NOSYSTEM=1`; a `config/` folder may not contain `git/`; no starting file
+may be named `.git`; and a case's `env` may not set `PATH`, `HOME`, `TZ`, `LANG`,
+`LC_ALL`, `USERPROFILE`, `SystemRoot`, or anything starting with `XDG_`, `GIT_`, `LD_`
+or `DYLD_`.
+
 A case that writes through a symlink, or uses `tools`, carries `skip_on = ["windows"]`.
 `daiku pr` cases that get as far as running `gh` use `tools = ["git"]`, so `gh` is
 never found and nothing reaches the network.
 
 Each run gets fresh temp folders for the workspace (the cwd), `HOME` and
 `XDG_CONFIG_HOME`; `TZ=UTC`, `LANG=C`, `LC_ALL=C`; and no other variable from your
-environment except `PATH` (plus `USERPROFILE` and `SystemRoot` on Windows). Git cases
+environment except `PATH` (plus `USERPROFILE` and `SystemRoot` on Windows); git
+reads no global or system config. Git cases
 start from a commit of `before/` with a fixed author and date; `git-log` lists only the
 commits the binary made.
 
