@@ -229,6 +229,32 @@ fn symlinks_may_not_escape_config_or_the_workspace() {
         .to_string();
     assert!(err.contains("leaves workspaces/w/tree/"), "{err}");
 
+    // A link in before/ may replace a workspace file, but not a folder.
+    write(&fx.ws().join("r/tree/STATE.json"), "{}");
+    write(&fx.ws().join("r/tree/real/STATE.json"), "{\"real\": true}");
+    std::fs::create_dir_all(fx.ws().join("r/tree/dir")).unwrap();
+    let d = fx.case(
+        "link-over-file",
+        "args = [\"cat\", \"STATE.json\"]\nworkspace = \"r\"\n",
+    );
+    std::fs::create_dir_all(d.join("before")).unwrap();
+    std::os::unix::fs::symlink("real/STATE.json", d.join("before/STATE.json")).unwrap();
+    let obs = run(&fx.load("link-over-file"));
+    assert_eq!(obs.stdout, "{\"real\": true}");
+    assert!(
+        obs.manifest
+            .contains(&"l STATE.json -> real/STATE.json".to_string())
+    );
+    let d = fx.case("link-over-dir", "args = []\nworkspace = \"r\"\n");
+    std::os::unix::fs::symlink("real", d.join("before/dir")).unwrap_or_else(|_| {
+        std::fs::create_dir_all(d.join("before")).unwrap();
+        std::os::unix::fs::symlink("real", d.join("before/dir")).unwrap()
+    });
+    let err = run_case(stub(), &fx.load("link-over-dir"))
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("replace a folder"), "{err}");
+
     // A link from before/ to a file the workspace provides stays inside.
     write(&fx.ws().join("v/tree/target.txt"), "t");
     let d = fx.case(
@@ -248,7 +274,8 @@ fn tools_limit_path_to_one_folder() {
     let fx = Fx::new();
     fx.case(
         "tools",
-        &(script(&[&["env"], &["write", "f.txt", "x"], &["commit", "second"]]) + "git = true\ntools = [\"git\"]\n"),
+        &(script(&[&["env"], &["write", "f.txt", "x"], &["commit", "second"]])
+            + "git = true\ntools = [\"git\"]\n"),
     );
     let obs = run(&fx.load("tools"));
     let path = obs

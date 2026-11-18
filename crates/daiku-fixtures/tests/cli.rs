@@ -189,16 +189,12 @@ fn coverage_lists_uncovered_entries() {
 }
 
 #[test]
-fn coverage_of_the_checked_in_usage_with_no_cases() {
+fn checked_in_cases_cover_every_usage_entry() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let out = fixtures(&["coverage"], &root);
-    assert_eq!(out.status.code(), Some(1));
     let s = text(&out.stdout);
-    assert!(s.contains("uncovered: init\n") && s.contains("uncovered: tickets mark-published\n"));
-    assert!(
-        s.trim_end().ends_with(" covered") && s.contains("\n0 of "),
-        "{s}"
-    );
+    assert_eq!(out.status.code(), Some(0), "{s}");
+    assert_eq!(s, "43 of 43 covered\n");
 }
 
 // ---- T10: the self-test case suite ----
@@ -411,4 +407,76 @@ fn workspaces_command_builds_and_reports() {
             "{args:?}"
         );
     }
+}
+
+// ---- S-0002 T15: the error-path checklist names every case, and only cases ----
+
+/// Backticked names in the checklist's table rows.
+fn checklist_names(text: &str) -> Vec<String> {
+    let mut names = Vec::new();
+    for line in text.lines().filter(|l| l.starts_with('|')) {
+        let parts: Vec<&str> = line.split('`').collect();
+        names.extend(parts.iter().skip(1).step_by(2).map(|s| s.to_string()));
+    }
+    names
+}
+
+/// Problems between a checklist and a set of case folders: names that aren't
+/// cases, cases that aren't named, and names given twice.
+fn checklist_problems(text: &str, cases: &[String]) -> Vec<String> {
+    let names = checklist_names(text);
+    let mut problems = Vec::new();
+    let mut seen = std::collections::BTreeSet::new();
+    for n in &names {
+        if !cases.contains(n) {
+            problems.push(format!("named but not a case: {n}"));
+        }
+        if !seen.insert(n.clone()) {
+            problems.push(format!("named twice: {n}"));
+        }
+    }
+    for c in cases {
+        if !seen.contains(c) {
+            problems.push(format!("case not named: {c}"));
+        }
+    }
+    problems
+}
+
+fn repo_fixtures() -> std::path::PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures")
+}
+
+#[test]
+fn error_paths_name_every_case() {
+    let dir = repo_fixtures();
+    let text = std::fs::read_to_string(dir.join("ERROR-PATHS.md")).unwrap();
+    let mut cases: Vec<String> = std::fs::read_dir(dir.join("cases"))
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .filter(|p| p.join("case.toml").is_file())
+        .map(|p| p.file_name().unwrap().to_string_lossy().into_owned())
+        .collect();
+    cases.sort();
+    let problems = checklist_problems(&text, &cases);
+    assert!(
+        problems.is_empty(),
+        "fixtures/ERROR-PATHS.md:\n{}",
+        problems.join("\n")
+    );
+}
+
+#[test]
+fn checklist_check_catches_renames_and_gaps() {
+    let text = "| args | `a`, `b` |\n| other | n/a: why |\nprose `not-a-row`\n";
+    let cases = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+    assert!(checklist_problems(text, &cases(&["a", "b"])).is_empty());
+    assert_eq!(
+        checklist_problems(text, &cases(&["a", "c"])),
+        ["named but not a case: b", "case not named: c"]
+    );
+    assert_eq!(
+        checklist_problems("| x | `a`, `a` |", &cases(&["a"])),
+        ["named twice: a"]
+    );
 }

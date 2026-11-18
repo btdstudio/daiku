@@ -306,8 +306,14 @@ impl Copier<'_> {
                 ))
             };
             if ft.is_symlink() {
-                if existing.is_some() {
-                    return clash("path");
+                // A link may replace a file (so a case can make a workspace file a
+                // link), but not a folder or another link.
+                match &existing {
+                    Some(m) if m.is_file() => {
+                        std::fs::remove_file(&dst).map_err(|e| Error::at(&dst, e))?
+                    }
+                    Some(_) => return clash("folder"),
+                    None => {}
                 }
                 let target = std::fs::read_link(&src).map_err(|e| Error::at(&src, e))?;
                 if !link_stays_inside(&target, depth) {
