@@ -1,0 +1,79 @@
+7b7d	{"schema":0,"changes":null}
+6e756c6c	{"schema":0,"changes":null}
+5b5d	error: json: cannot unmarshal array into Go value of type state.stateFile
+227822	error: json: cannot unmarshal string into Go value of type state.stateFile
+31	error: json: cannot unmarshal number into Go value of type state.stateFile
+74727565	error: json: cannot unmarshal bool into Go value of type state.stateFile
+7b22736368656d61223a20317d	{"schema":1,"changes":null}
+7b22736368656d61223a202231227d	error: json: cannot unmarshal string into Go struct field stateFile.schema of type int
+7b22736368656d61223a20312e357d	error: json: cannot unmarshal number 1.5 into Go struct field stateFile.schema of type int
+7b22736368656d61223a203165337d	error: json: cannot unmarshal number 1e3 into Go struct field stateFile.schema of type int
+7b22736368656d61223a202d317d	{"schema":-1,"changes":null}
+7b22736368656d61223a2031653430307d	error: json: cannot unmarshal number 1e400 into Go struct field stateFile.schema of type int
+7b22736368656d61223a2039393939393939393939393939393939393939397d	error: json: cannot unmarshal number 99999999999999999999 into Go struct field stateFile.schema of type int
+7b22736368656d61223a206e756c6c7d	{"schema":0,"changes":null}
+7b22736368656d61223a20747275657d	error: json: cannot unmarshal bool into Go struct field stateFile.schema of type int
+7b22736368656d61223a205b315d7d	error: json: cannot unmarshal array into Go struct field stateFile.schema of type int
+7b22736368656d61223a207b7d7d	error: json: cannot unmarshal object into Go struct field stateFile.schema of type int
+7b22534348454d41223a20317d	{"schema":1,"changes":null}
+7b22536368656d61223a20327d	{"schema":2,"changes":null}
+7b22736368656d61223a20312c2022736368656d61223a20337d	{"schema":3,"changes":null}
+7b226368616e676573223a206e756c6c7d	{"schema":0,"changes":null}
+7b226368616e676573223a205b5d7d	error: json: cannot unmarshal array into Go struct field stateFile.changes of type map[string]*state.Change
+7b226368616e676573223a202278227d	error: json: cannot unmarshal string into Go struct field stateFile.changes of type map[string]*state.Change
+7b226368616e676573223a20317d	error: json: cannot unmarshal number into Go struct field stateFile.changes of type map[string]*state.Change
+7b226368616e676573223a207b7d7d	{"schema":0,"changes":{}}
+7b226368616e676573223a207b2261223a206e756c6c7d7d	{"schema":0,"changes":{"a":null}}
+7b226368616e676573223a207b2261223a20317d7d	error: json: cannot unmarshal number into Go struct field stateFile.changes of type state.Change
+7b226368616e676573223a207b2261223a202278227d7d	error: json: cannot unmarshal string into Go struct field stateFile.changes of type state.Change
+7b226368616e676573223a207b2261223a205b5d7d7d	error: json: cannot unmarshal array into Go struct field stateFile.changes of type state.Change
+7b226368616e676573223a207b2261223a207b7d7d7d	{"schema":0,"changes":{"a":{"loop":"","phase":"","status":"","gates":null,"sources":null,"updatedAt":""}}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a20317d7d7d	error: json: cannot unmarshal number into Go struct field Change.changes.loop of type string
+7b226368616e676573223a207b2261223a207b226c6f6f70223a206e756c6c7d7d7d	{"schema":0,"changes":{"a":{"loop":"","phase":"","status":"","gates":null,"sources":null,"updatedAt":""}}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c20226761746573223a205b5d7d7d7d	error: json: cannot unmarshal array into Go struct field Change.changes.gates of type map[string]string
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c20226761746573223a207b2278223a20317d7d7d7d	error: json: cannot unmarshal number into Go struct field Change.changes.gates of type string
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c20226761746573223a207b2278223a206e756c6c7d7d7d7d	{"schema":0,"changes":{"a":{"loop":"plan","phase":"","status":"","gates":{"x":""},"sources":null,"updatedAt":""}}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c20226761746573223a202278227d7d7d	error: json: cannot unmarshal string into Go struct field Change.changes.gates of type map[string]string
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c2022736f7572636573223a202278227d7d7d	error: json: cannot unmarshal string into Go struct field Change.changes.sources of type []string
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c2022736f7572636573223a205b315d7d7d7d	error: json: cannot unmarshal number into Go struct field Change.changes.sources of type string
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c2022736f7572636573223a205b6e756c6c2c202273225d7d7d7d	{"schema":0,"changes":{"a":{"loop":"plan","phase":"","status":"","gates":null,"sources":["","s"],"updatedAt":""}}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c20227265706f73223a207b7d7d7d7d	error: json: cannot unmarshal object into Go struct field Change.changes.repos of type []string
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c2022726561736f6e73223a207b2278223a20327d7d7d7d	error: json: cannot unmarshal number into Go struct field Change.changes.reasons of type string
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c2022757064617465644174223a20357d7d7d	error: json: cannot unmarshal number into Go struct field Change.changes.updatedAt of type string
+7b226368616e676573223a207b2261223a207b224c4f4f50223a2022706c616e222c20225068617365223a2022696e74616b65222c20224741544553223a207b22696e74616b65223a20226472616674227d2c2022557064617465644154223a202274227d7d7d	{"schema":0,"changes":{"a":{"loop":"plan","phase":"intake","status":"","gates":{"intake":"draft"},"sources":null,"updatedAt":"t"}}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c20226578747261223a205b312c207b2262223a20327d5d2c20226e616d65223a20227a227d7d7d	{"schema":0,"changes":{"a":{"loop":"plan","phase":"","status":"","gates":null,"sources":null,"updatedAt":""}}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c20227068617365223a20312c2022737461747573223a20327d7d7d	error: json: cannot unmarshal number into Go struct field Change.changes.phase of type string
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e227d2c202262223a207b226c6f6f70223a20337d7d7d	error: json: cannot unmarshal number into Go struct field Change.changes.loop of type string
+7b22736368656d61223a202278222c20226368616e676573223a207b2261223a207b226c6f6f70223a20337d7d7d	error: json: cannot unmarshal string into Go struct field stateFile.schema of type int
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c20226761746573223a207b2261223a20312c202262223a202278222c202263223a20327d7d7d7d	error: json: cannot unmarshal number into Go struct field Change.changes.gates of type string
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c2022736f7572636573223a205b312c202278222c20325d7d7d7d	error: json: cannot unmarshal number into Go struct field Change.changes.sources of type string
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c20226c6f6f70223a20226275696c64227d7d7d	{"schema":0,"changes":{"a":{"loop":"build","phase":"","status":"","gates":null,"sources":null,"updatedAt":""}}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c20226761746573223a207b2278223a202261222c202278223a202262227d7d7d7d	{"schema":0,"changes":{"a":{"loop":"plan","phase":"","status":"","gates":{"x":"b"},"sources":null,"updatedAt":""}}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e227d2c202261223a207b226c6f6f70223a20226275696c64227d7d7d	{"schema":0,"changes":{"a":{"loop":"build","phase":"","status":"","gates":null,"sources":null,"updatedAt":""}}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c20226761746573223a207b2278223a202261227d2c20226761746573223a207b2279223a202262227d7d7d7d	{"schema":0,"changes":{"a":{"loop":"plan","phase":"","status":"","gates":{"x":"a","y":"b"},"sources":null,"updatedAt":""}}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c2022736f7572636573223a205b2261225d2c2022736f7572636573223a206e756c6c7d7d7d	{"schema":0,"changes":{"a":{"loop":"plan","phase":"","status":"","gates":null,"sources":null,"updatedAt":""}}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c20226761746573223a207b2278223a202261227d2c20226761746573223a206e756c6c7d7d7d	{"schema":0,"changes":{"a":{"loop":"plan","phase":"","status":"","gates":null,"sources":null,"updatedAt":""}}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c2022736f7572636573223a205b312e355d7d7d7d	error: json: cannot unmarshal number into Go struct field Change.changes.sources of type string
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c20226761746573223a207b2278223a207b7d7d7d7d7d	error: json: cannot unmarshal object into Go struct field Change.changes.gates of type string
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c20226761746573223a207b2278223a205b315d7d7d7d7d	error: json: cannot unmarshal array into Go struct field Change.changes.gates of type string
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c20226761746573223a207b2278223a20747275657d7d7d7d	error: json: cannot unmarshal bool into Go struct field Change.changes.gates of type string
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c20226c6f6f70223a20317d7d7d	error: json: cannot unmarshal number into Go struct field Change.changes.loop of type string
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c2022c5bf7461747573223a202278222c20224b223a20317d7d7d	{"schema":0,"changes":{"a":{"loop":"plan","phase":"","status":"x","gates":null,"sources":null,"updatedAt":""}}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022c3a9f09f98805c7530303030227d7d7d	{"schema":0,"changes":{"a":{"loop":"é😀\u0000","phase":"","status":"","gates":null,"sources":null,"updatedAt":""}}}
+7b226368616e676573223a207b22c3a9223a207b226c6f6f70223a2022706c616e227d7d7d	{"schema":0,"changes":{"é":{"loop":"plan","phase":"","status":"","gates":null,"sources":null,"updatedAt":""}}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c20227068617365223a202278227d7d2c20226578747261223a2031653430307d	{"schema":0,"changes":{"a":{"loop":"plan","phase":"x","status":"","gates":null,"sources":null,"updatedAt":""}}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c2022736f7572636573223a205b2261222c202262225d2c2022736f7572636573223a205b6e756c6c5d7d7d7d	{"schema":0,"changes":{"a":{"loop":"plan","phase":"","status":"","gates":null,"sources":["a"],"updatedAt":""}}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c2022736f7572636573223a205b2261222c202262225d2c2022736f7572636573223a205b2278225d2c2022736f7572636573223a205b6e756c6c2c206e756c6c5d7d7d7d	{"schema":0,"changes":{"a":{"loop":"plan","phase":"","status":"","gates":null,"sources":["x","b"],"updatedAt":""}}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c2022736f7572636573223a205b2261225d2c2022736f7572636573223a205b5d7d7d7d	{"schema":0,"changes":{"a":{"loop":"plan","phase":"","status":"","gates":null,"sources":[],"updatedAt":""}}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c20226c6f6f70223a206e756c6c7d7d7d	{"schema":0,"changes":{"a":{"loop":"plan","phase":"","status":"","gates":null,"sources":null,"updatedAt":""}}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e227d7d2c20226368616e676573223a207b2262223a207b226c6f6f70223a20226275696c64227d7d7d	{"schema":0,"changes":{"a":{"loop":"plan","phase":"","status":"","gates":null,"sources":null,"updatedAt":""},"b":{"loop":"build","phase":"","status":"","gates":null,"sources":null,"updatedAt":""}}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e227d2c202261223a206e756c6c7d7d	{"schema":0,"changes":{"a":null}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c20226761746573223a207b2278223a202261227d7d7d2c20226368616e676573223a207b2261223a207b227068617365223a202270227d7d7d	{"schema":0,"changes":{"a":{"loop":"","phase":"p","status":"","gates":null,"sources":null,"updatedAt":""}}}
+7b22736368656d61223a20312c2022736368656d61223a206e756c6c7d	{"schema":1,"changes":null}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a202270ff6c616e5c75643830305c75646330305c75646330305c756438303078e28261227d7d7d	{"schema":0,"changes":{"a":{"loop":"p�lan𐀀��x��a","phase":"","status":"","gates":null,"sources":null,"updatedAt":""}}}
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c20227068617365223a20225c753030227d7d7d	error: invalid character '"' in \u hexadecimal character escape
+7b226368616e676573223a207b2261223a207b226c6f6f70223a2022706c616e222c2022737461747573223a20225c625c665c6e5c725c745c2f5c5c5c22227d7d7d	{"schema":0,"changes":{"a":{"loop":"plan","phase":"","status":"\b\f\n\r\t/\\\"","gates":null,"sources":null,"updatedAt":""}}}
+7b22736368656d61223a20393232333337323033363835343737353830377d	{"schema":9223372036854775807,"changes":null}
+7b22736368656d61223a202d393232333337323033363835343737353830387d	{"schema":-9223372036854775808,"changes":null}
+7b22736368656d61223a202d307d	{"schema":0,"changes":null}
+7b22736368656d61223a20302e307d	error: json: cannot unmarshal number 0.0 into Go struct field stateFile.schema of type int

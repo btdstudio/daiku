@@ -15,8 +15,13 @@ pub mod json;
 pub mod markdown;
 pub mod outcome;
 pub mod placeholder;
+pub mod repos;
 pub mod scaffold;
 pub mod settings;
+pub mod state;
+#[cfg(test)]
+pub(crate) mod testutil;
+pub mod ticket;
 pub mod workspace;
 pub mod write;
 
