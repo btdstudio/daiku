@@ -223,6 +223,20 @@ pub enum Error {
     #[error("{text}")]
     PathError { text: String },
 
+    /// A plan overview that couldn't be built or written.
+    #[error("daiku: {rel}: {detail}")]
+    Overview { rel: String, detail: String },
+
+    /// A gate refused under `gates: block`: every violation, then how to override.
+    #[error("{}", gate_refused(.violations))]
+    GateRefused { violations: Vec<String> },
+
+    #[error("daiku: {} isn't registered — run `daiku repo add` for each repo in a multi-repo change", gofmt::quote(.name))]
+    RepoNotRegistered { name: String },
+
+    #[error("daiku: {name} isn't a plan change in this workspace{}", if *.build { " (it's a build — bare daiku status lists it)" } else { "" })]
+    NotAPlan { name: String, build: bool },
+
     /// A file operation failed, worded as Go's `*os.PathError` (`open x: no such
     /// file or directory`).
     #[error("{op} {path}: {}", gofmt::io_error_text(.source))]
@@ -231,4 +245,15 @@ pub enum Error {
         path: String,
         source: std::io::Error,
     },
+}
+
+/// Go's `gatePolicyAll` refusal: the violations joined by newlines, and the
+/// override hint on its own line when there's more than one line.
+fn gate_refused(violations: &[String]) -> String {
+    let msg = violations.join("\n");
+    if msg.contains('\n') {
+        format!("{msg}\n(pass --force to override)")
+    } else {
+        format!("{msg} (pass --force to override)")
+    }
 }

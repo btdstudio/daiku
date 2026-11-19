@@ -57,6 +57,11 @@ fn run(args: &[String]) -> u8 {
         "init" => init(&args[1..], &mut stdout, &mut stderr),
         "update" => update(&mut stdout, &mut stderr),
         "check" => check(&mut stdout, &mut stderr),
+        "change" => change(&args[1..], &mut stdout, &mut stderr),
+        "gate" => gate(&args[1..], &mut stdout, &mut stderr),
+        "reopen" => reopen(&args[1..], &mut stdout, &mut stderr),
+        "switch" => switch(&args[1..], &mut stdout, &mut stderr),
+        "status" => status(&args[1..], &mut stdout, &mut stderr),
         c if KNOWN.contains(&c) => {
             let _ = writeln!(stderr, "daiku: {c} isn't implemented yet");
             1
@@ -204,6 +209,285 @@ fn check(stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
     }
     let _ = writeln!(stdout, "scaffold is clean");
     0
+}
+
+/// Go's `parseTransition`: positional arguments, `--reason <r>` and `--force`.
+/// An unknown flag is an error.
+fn parse_transition(args: &[String]) -> Option<(Vec<&str>, String, bool)> {
+    let (mut pos, mut reason, mut force) = (Vec::new(), String::new(), false);
+    let mut i = 0;
+    while i < args.len() {
+        let a = args[i].as_str();
+        if a == "--force" {
+            force = true;
+        } else if a == "--reason" && i + 1 < args.len() {
+            i += 1;
+            reason = args[i].clone();
+        } else if a.starts_with('-') {
+            return None;
+        } else {
+            pos.push(a);
+        }
+        i += 1;
+    }
+    Some((pos, reason, force))
+}
+
+/// Prints a transition's result: `<change>: <phase> = <status>`.
+fn transition(c: &daiku_core::state::Change, stdout: &mut impl Write) {
+    let _ = writeln!(stdout, "{}: {} = {}", c.name, c.phase, c.status);
+}
+
+/// Go's `runGate`.
+fn gate(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
+    let Some((pos, reason, force)) = parse_transition(args).filter(|(p, _, _)| p.len() == 2) else {
+        let _ = writeln!(stderr, "{}", usage::usage_line(&["gate"]));
+        return 1;
+    };
+    finish(
+        workspace().gate(pos[0], pos[1], &reason, force),
+        stderr,
+        |c| transition(c, stdout),
+    )
+}
+
+/// Go's `runReopen`.
+fn reopen(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
+    let Some((pos, reason, force)) = parse_transition(args).filter(|(p, _, _)| p.len() == 1) else {
+        let _ = writeln!(stderr, "{}", usage::usage_line(&["reopen"]));
+        return 1;
+    };
+    finish(workspace().reopen(pos[0], &reason, force), stderr, |c| {
+        transition(c, stdout)
+    })
+}
+
+/// Go's `runChange`: `new` or `close`.
+fn change(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
+    match args.first().map(String::as_str) {
+        Some("close") => return change_close(&args[1..], stdout, stderr),
+        Some("new") => {}
+        _ => {
+            let _ = write!(stderr, "{}", usage::usage_text(&["change"]));
+            return 1;
+        }
+    }
+    let mut opts = daiku_core::changes::ChangeNewOptions {
+        version: VERSION.to_string(),
+        ..Default::default()
+    };
+    let args = &args[1..];
+    let mut i = 0;
+    while i < args.len() {
+        let a = args[i].as_str();
+        let value = args.get(i + 1);
+        match (a, value) {
+            ("--repo", Some(v)) => {
+                opts.repos.push(v.clone());
+                i += 1;
+            }
+            ("--rev", Some(v)) => {
+                opts.rev = v.clone();
+                i += 1;
+            }
+            ("--body", Some(v)) => {
+                opts.body = v.clone();
+                i += 1;
+            }
+            _ if a.starts_with('-') => {
+                let _ = writeln!(
+                    stderr,
+                    "daiku change new: unknown flag {}",
+                    daiku_core::gofmt::quote(a)
+                );
+                return 1;
+            }
+            _ if !opts.title.is_empty() => {
+                let _ = writeln!(
+                    stderr,
+                    "daiku change new: unexpected argument {} (quote a multi-word title)",
+                    daiku_core::gofmt::quote(a)
+                );
+                return 1;
+            }
+            _ => opts.title = a.to_string(),
+        }
+        i += 1;
+    }
+    if opts.title.is_empty() {
+        let _ = writeln!(stderr, "{}", usage::usage_line(&["change", "new"]));
+        return 1;
+    }
+    let res = workspace().change_new(&opts);
+    if res.room_created {
+        let _ = writeln!(stdout, "created room plan/");
+    }
+    finish(res.result, stderr, |n| {
+        let _ = writeln!(
+            stdout,
+            "created change {} (source #{})",
+            n.change.name, n.source_id
+        );
+        for phase in ["explore", "synthesis"] {
+            if n.change.gate(phase) == "skipped" {
+                let _ = writeln!(stdout, "{phase} skipped");
+            }
+        }
+    })
+}
+
+/// Go's `runChangeClose`.
+fn change_close(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
+    let Some((pos, reason, _)) = parse_transition(args).filter(|(p, _, _)| p.len() == 1) else {
+        let _ = writeln!(stderr, "{}", usage::usage_line(&["change", "close"]));
+        return 1;
+    };
+    finish(workspace().change_close(pos[0], &reason), stderr, |c| {
+        let _ = writeln!(stdout, "{}: closed", c.name);
+    })
+}
+
+/// Go's `runSwitch`.
+fn switch(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
+    let all = args.first().is_some_and(|a| a == "--all");
+    let args = if all { &args[1..] } else { args };
+    let Some(name) = args.first() else {
+        return finish(workspace().known_changes(), stderr, |changes| {
+            if changes.is_empty() {
+                let _ = writeln!(
+                    stdout,
+                    "no changes yet — run `daiku change new <title>` first"
+                );
+                return;
+            }
+            let show_loop = changes.iter().any(|c| c.loop_ == "build");
+            for c in changes {
+                if c.status == "closed" && !all {
+                    continue;
+                }
+                if show_loop {
+                    let _ = writeln!(stdout, "{}  {}  {} {}", c.name, c.loop_, c.phase, c.status);
+                } else {
+                    let _ = writeln!(stdout, "{}  {} {}", c.name, c.phase, c.status);
+                }
+            }
+        });
+    };
+    finish(workspace().switch(name), stderr, |c| {
+        let _ = writeln!(stdout, "switched to {}", c.name);
+    })
+}
+
+/// Go's `runStatus` and, with a plan's name, `runInitiative`.
+fn status(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
+    match args {
+        [plan] if !plan.starts_with('-') => {
+            return finish(workspace().status_plan(plan), stderr, |p| {
+                let _ = writeln!(
+                    stdout,
+                    "{}  {} {}",
+                    p.plan.name, p.plan.phase, p.plan.status
+                );
+                if p.rows.is_empty() {
+                    let _ = writeln!(stdout, "  no tickets yet");
+                }
+                for r in &p.rows {
+                    let repo = if r.repo.is_empty() { "-" } else { &r.repo };
+                    let _ = writeln!(stdout, "  {}  {repo}  {}", r.id, r.build());
+                }
+            });
+        }
+        [] => {}
+        _ => {
+            let _ = writeln!(stderr, "{}", usage::usage_line(&["status"]));
+            return 1;
+        }
+    }
+    finish(workspace().status(), stderr, |s| {
+        let mut out = String::new();
+        let active_name = s
+            .active
+            .as_ref()
+            .map(|a| a.change.name.clone())
+            .unwrap_or_default();
+        match &s.active {
+            None => out.push_str("no active change\n"),
+            Some(a) => {
+                let c = &a.change;
+                out.push_str(&format!("change:   {}\nroom:     {}\n", c.name, c.loop_));
+                if !c.repos.is_empty() {
+                    out.push_str(&format!("repo:     {}\n", c.repos.join(", ")));
+                }
+                out.push_str(&format!("phase:    {}\nstatus:   {}\n", c.phase, c.status));
+                let gates: Vec<String> = a
+                    .phases
+                    .iter()
+                    .map(|p| format!("{p}={}", c.gate(p)))
+                    .collect();
+                out.push_str(&format!("gates:    {}\n", gates.join(" ")));
+                out.push_str(&format!("initiative: {}\n", a.initiative));
+                if !a.code.is_empty() {
+                    let code: Vec<String> = a
+                        .code
+                        .iter()
+                        .map(|(n, p)| format!("{n}={}", p.as_deref().unwrap_or("(not set)")))
+                        .collect();
+                    out.push_str(&format!("code:     {}\n", code.join(" ")));
+                }
+                if let Some((id, title, branch)) = &a.ticket {
+                    out.push_str(&format!("ticket:   {id} {title}\nbranch:   {branch}\n"));
+                }
+            }
+        }
+        out.push_str(&format!("vcs:      {}\n\n", s.vcs));
+        let mark = |name: &str| if name == active_name { "* " } else { "  " };
+        if s.no_changes {
+            out.push_str("no changes yet\n");
+        } else {
+            if !s.plans.is_empty() {
+                out.push_str("plans:\n");
+                for c in &s.plans {
+                    out.push_str(&format!(
+                        "{}{}  {} {}\n",
+                        mark(&c.name),
+                        c.name,
+                        c.phase,
+                        c.status
+                    ));
+                }
+            }
+            if !s.builds.is_empty() {
+                if !s.plans.is_empty() {
+                    out.push('\n');
+                }
+                out.push_str("builds:\n");
+                for r in &s.builds {
+                    match &r.holder {
+                        Some(h) => out.push_str(&format!("  {}  held by {h}\n", r.repo)),
+                        None => out.push_str(&format!("  {}  free\n", r.repo)),
+                    }
+                    for c in &r.builds {
+                        let done = if c.phase == "ship" && c.status == "complete" {
+                            " (done)"
+                        } else {
+                            ""
+                        };
+                        out.push_str(&format!(
+                            "  {}{}  {} {}{done}\n",
+                            mark(&c.name),
+                            c.name,
+                            c.phase,
+                            c.status
+                        ));
+                    }
+                }
+            }
+            if s.plans.is_empty() && s.builds.is_empty() {
+                out.push_str("no open changes\n");
+            }
+        }
+        let _ = stdout.write_all(out.as_bytes());
+    })
 }
 
 #[cfg(test)]

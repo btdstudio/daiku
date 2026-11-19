@@ -790,6 +790,7 @@ fn a_gate_commits_the_change_folders_and_nothing_else() {
             "LOG.md",
             "STATE.json",
             "plan/01_research/1-x/notes.md",
+            "plan/specs/1-x/README.md",
             "plan/specs/1-x/functional-spec.md"
         ]
     );
@@ -868,7 +869,8 @@ fn exit(code: i32) -> Output {
 }
 
 /// AC2: under git, with a test clock and a scripted runner, a gate logs the
-/// clock's time and makes Go's git calls for exactly its paths, in Go's order.
+/// clock's time and makes Go's git calls for exactly its paths (STATE.json,
+/// LOG.md, the change's folder and the regenerated README), in Go's order.
 #[test]
 fn ac2_a_gate_makes_gos_git_calls() {
     let t = Temp::new();
@@ -879,9 +881,9 @@ fn ac2_a_gate_makes_gos_git_calls() {
         "STATE.json",
         r#"{"schema":1,"changes":{"1-x":{"loop":"plan","phase":"intake","status":"draft","gates":{"intake":"draft"},"sources":[],"updatedAt":"x"}}}"#,
     );
-    // rev-parse and add succeed; STATE.json and LOG.md have staged changes, the
-    // folder doesn't; commit succeeds.
-    for code in [0, 0, 1, 1, 0, 0] {
+    // rev-parse and add succeed; STATE.json, LOG.md and the regenerated README
+    // have staged changes, the folder (as its own path) doesn't; commit succeeds.
+    for code in [0, 0, 1, 1, 0, 1, 0] {
         process.reply(exit(code));
     }
     let s = Store::at(t.path(), &env).unwrap();
@@ -902,10 +904,24 @@ fn ac2_a_gate_makes_gos_git_calls() {
         .collect();
     let want: Vec<Vec<&str>> = vec![
         vec!["rev-parse", "--is-inside-work-tree"],
-        vec!["add", "--", "STATE.json", "LOG.md", "plan/specs/1-x"],
+        vec![
+            "add",
+            "--",
+            "STATE.json",
+            "LOG.md",
+            "plan/specs/1-x",
+            "plan/specs/1-x/README.md",
+        ],
         vec!["diff", "--cached", "--quiet", "--", "STATE.json"],
         vec!["diff", "--cached", "--quiet", "--", "LOG.md"],
         vec!["diff", "--cached", "--quiet", "--", "plan/specs/1-x"],
+        vec![
+            "diff",
+            "--cached",
+            "--quiet",
+            "--",
+            "plan/specs/1-x/README.md",
+        ],
         vec![
             "commit",
             "--quiet",
@@ -915,6 +931,7 @@ fn ac2_a_gate_makes_gos_git_calls() {
             "--",
             "STATE.json",
             "LOG.md",
+            "plan/specs/1-x/README.md",
         ],
     ];
     assert_eq!(calls, want);
