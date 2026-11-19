@@ -1,3 +1,5 @@
 # Fixture bytes are compared exactly; never convert line endings.
 fixtures/** -text
 crates/daiku-fixtures/tests/cases/** -text
+# The embedded scaffold must keep its bytes (manifest hashes, AC4).
+crates/daiku-core/scaffold/** -text
