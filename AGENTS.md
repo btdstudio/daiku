@@ -30,9 +30,17 @@ The Rust rewrite of the daiku CLI. Read this before changing code.
 - **Error text lives in `Error`'s `Display`.** The CLI prints `{err}` and adds
   nothing, so a new message is a new variant, worded as Go words it. Use
   `daiku_core::gofmt` for Go's quoting (`%q`) and paths (`path.Join`, `IsLocal`),
-  and `daiku_core::gojson::parse` to read JSON with Go's error wording.
+  and `daiku_core::gojson::parse` to read JSON with Go's error wording. To decode
+  a file Go reads into a struct (`STATE.json`, `REPOS.json`), use
+  `gojson::decode`'s helpers, which keep `json.Unmarshal`'s rules and type
+  errors, and pin the wording with a probe like `scripts/state-messages.go`.
 - **Ports follow the Go code** at `5aa7a78` function by function, with Go's tests
   translated alongside.
+- **Transitions go through `state::Store`**, which saves `STATE.json`, appends
+  `LOG.md`, refreshes the plan overview, and commits through `Env.process` in a
+  git workspace (never under `vcs: none`). Rules that decide whether a transition
+  may happen (order, artifacts, the repo lock, the `gates` policy) live in
+  `changes.rs`, not the CLI.
 - **Dependency allowlist (ADR-0005).** Core may depend on `serde`, `serde_json`,
   `thiserror`, `sha2`, `regex`, `jiff`, `include_dir` and `schemars` only. The CLI adds
   no runtime dependency beyond core; argument parsing is a port of Go's parsers, not
