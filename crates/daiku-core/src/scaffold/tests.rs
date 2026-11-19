@@ -419,7 +419,7 @@ fn update_refuses_a_non_workspace_and_a_corrupt_manifest() {
         w.update("dev").unwrap_err().to_string(),
         format!(
             "daiku update: {} is not a daiku workspace (run `daiku init`)",
-            t.0.display()
+            crate::gofmt::to_slash(&t.0.to_string_lossy())
         )
     );
     w.init(&opts(true, false)).unwrap();
@@ -530,7 +530,7 @@ fn ensure_room_outside_a_workspace_and_with_a_missing_manifest() {
         w.ensure_room("plan", "dev").unwrap_err().to_string(),
         format!(
             "daiku: {} is not a daiku workspace (run `daiku init`)",
-            t.0.display()
+            crate::gofmt::to_slash(&t.0.to_string_lossy())
         )
     );
     w.init(&opts(true, false)).unwrap();
