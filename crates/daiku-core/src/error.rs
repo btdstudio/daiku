@@ -44,6 +44,47 @@ pub enum Error {
     #[error("{message}")]
     Frontmatter { message: String },
 
+    /// `update` (prefix `daiku update`) or room creation (prefix `daiku`) outside a
+    /// workspace.
+    #[error("{prefix}: {dir} is not a daiku workspace (run `daiku init`)")]
+    NotAWorkspace { prefix: &'static str, dir: String },
+
+    /// The manifest couldn't be read; `detail` is Go's error text.
+    #[error("{prefix}: {detail}")]
+    Manifest {
+        prefix: &'static str,
+        detail: String,
+    },
+
+    /// `init` couldn't read existing settings to record `vcs: none`.
+    #[error("daiku init: cannot parse settings {file}: {detail}")]
+    InitSettingsParse { file: String, detail: String },
+
+    #[error("daiku init: settings must be a JSON object: {file}")]
+    InitSettingsNotObject { file: String },
+
+    #[error(
+        "daiku: {room}/ is a symlink, which could lead outside the workspace — replace it with a folder"
+    )]
+    RoomSymlink { room: String },
+
+    #[error("daiku: unknown room {}", gofmt::quote(.room))]
+    UnknownRoom { room: String },
+
+    /// A zumen or tomo workspace.
+    #[error(
+        "daiku: this is a {tool} workspace (found .{tool}/) — use {tool}, or start a new daiku workspace"
+    )]
+    LegacyWorkspace { tool: &'static str },
+
+    /// A git command failed: Go's `git <args>: <err>: <combined output>`.
+    #[error("git {args}: {err}: {output}")]
+    Git {
+        args: String,
+        err: String,
+        output: String,
+    },
+
     /// A file operation failed, worded as Go's `*os.PathError` (`open x: no such
     /// file or directory`).
     #[error("{op} {path}: {}", gofmt::io_error_text(.source))]

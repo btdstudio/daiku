@@ -15,6 +15,7 @@ pub mod json;
 pub mod markdown;
 pub mod outcome;
 pub mod placeholder;
+pub mod scaffold;
 pub mod settings;
 pub mod workspace;
 pub mod write;

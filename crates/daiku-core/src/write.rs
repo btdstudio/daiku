@@ -101,7 +101,7 @@ fn has_prefix(p: &str) -> bool {
 /// Go's `ThroughSymlink`: the first component of `rel` under `root` that is a
 /// symlink, as root joined with the parts so far (slash form), or `None`. It stops
 /// at the first component that doesn't exist.
-fn through_symlink(root: &Path, rel: &str) -> Option<String> {
+pub fn through_symlink(root: &Path, rel: &str) -> Option<String> {
     let mut cur = root.to_path_buf();
     let mut shown = gofmt::to_slash(&root.to_string_lossy());
     for part in gofmt::clean(rel).split('/') {
