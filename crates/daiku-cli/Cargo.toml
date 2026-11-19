@@ -10,3 +10,6 @@ repository.workspace = true
 [[bin]]
 name = "daiku"
 path = "src/main.rs"
+
+[dependencies]
+daiku-core = { path = "../daiku-core" }
