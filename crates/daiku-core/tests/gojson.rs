@@ -61,3 +61,35 @@ fn what_go_accepts_serde_json_parses() {
     let v = gojson::parse(b"{\"a\":\"\xff\"}").unwrap();
     assert_eq!(v["a"], "\u{fffd}");
 }
+
+#[test]
+fn first_value_len_finds_the_end_in_one_pass() {
+    for (input, want) in [
+        (&b"{} x"[..], Some(2)),
+        (b"  {\"a\": [1, {}]}  }", Some(16)),
+        (b"12 x", Some(2)),
+        (b"12", Some(2)),
+        (b"\"s\" x", Some(3)),
+        (b"true}", Some(4)),
+        (b"[1]", Some(3)),
+        (b"{", None),
+        (b"{ x", None),
+        (b"", None),
+    ] {
+        assert_eq!(
+            gojson::first_value_len(input),
+            want,
+            "{:?}",
+            String::from_utf8_lossy(input)
+        );
+    }
+    // Linear: a megabyte string with trailing data is measured at once.
+    let big = format!("{{\"pad\": \"{}\"}} x", "x".repeat(1 << 20));
+    let start = std::time::Instant::now();
+    assert_eq!(gojson::first_value_len(big.as_bytes()), Some(big.len() - 2));
+    assert!(
+        start.elapsed() < std::time::Duration::from_secs(2),
+        "{:?}",
+        start.elapsed()
+    );
+}

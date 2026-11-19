@@ -89,25 +89,59 @@ struct Scanner {
     end_top: bool,
     parse_state: Vec<Parse>,
     err: Option<String>,
+    /// The offset of the byte being scanned.
+    pos: usize,
+    /// Where the top-level value ended (the offset just past it), once known.
+    end_at: Option<usize>,
+}
+
+impl Scanner {
+    fn new() -> Scanner {
+        Scanner {
+            step: State::BeginValue,
+            end_top: false,
+            parse_state: Vec::new(),
+            err: None,
+            pos: 0,
+            end_at: None,
+        }
+    }
 }
 
 /// Go's `checkValid`: `Ok` for valid JSON, or Go's `SyntaxError` message.
 pub fn check(data: &[u8]) -> Result<(), String> {
-    let mut s = Scanner {
-        step: State::BeginValue,
-        end_top: false,
-        parse_state: Vec::new(),
-        err: None,
-    };
-    for &c in data {
+    let mut s = Scanner::new();
+    for (i, &c) in data.iter().enumerate() {
+        s.pos = i;
         if s.run(c) == Scan::Error {
             return Err(s.err.unwrap_or_default());
         }
     }
+    s.pos = data.len();
     if s.eof() == Scan::Error {
         return Err(s.err.unwrap_or_default());
     }
     Ok(())
+}
+
+/// The length of the first JSON value in `data`, leading space included, as Go's
+/// `json.Decoder` reads it; `None` when the scanner fails before the value ends or
+/// the data ends inside it. One pass over the bytes.
+pub fn first_value_len(data: &[u8]) -> Option<usize> {
+    let mut s = Scanner::new();
+    for (i, &c) in data.iter().enumerate() {
+        s.pos = i;
+        let result = s.run(c);
+        if s.end_at.is_some() {
+            return s.end_at;
+        }
+        if result == Scan::Error {
+            return None;
+        }
+    }
+    s.pos = data.len();
+    s.eof();
+    s.end_at
 }
 
 fn is_space(c: u8) -> bool {
@@ -155,6 +189,8 @@ impl Scanner {
         if self.parse_state.is_empty() {
             self.step = State::EndTop;
             self.end_top = true;
+            // The closing bracket is the value's last byte.
+            self.end_at.get_or_insert(self.pos + 1);
         } else {
             self.step = State::EndValue;
         }
@@ -318,6 +354,8 @@ impl Scanner {
         let Some(&ps) = self.parse_state.last() else {
             self.step = State::EndTop;
             self.end_top = true;
+            // A scalar ends just before the byte that shows it has ended.
+            self.end_at.get_or_insert(self.pos);
             return self.end_top_step(c);
         };
         if is_space(c) {

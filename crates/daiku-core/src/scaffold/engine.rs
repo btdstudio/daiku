@@ -213,10 +213,8 @@ impl Engine<'_> {
     }
 
     pub fn write_manifest(&self, m: &Manifest) -> Result<(), Error> {
-        let data = json::to_pretty(m).map_err(|e| Error::Manifest {
-            prefix: "daiku",
-            detail: e.to_string(),
-        })?;
+        let data = json::to_pretty(m)
+            .expect("a manifest (strings and a map of strings) always serializes");
         write::write_file(self.root, &self.manifest_path(), &data)
     }
 
@@ -335,10 +333,7 @@ impl Engine<'_> {
             }
         };
         m.insert("vcs".into(), "none".into());
-        let data = json::to_pretty(&m).map_err(|e| Error::Manifest {
-            prefix: "daiku",
-            detail: e.to_string(),
-        })?;
+        let data = json::to_pretty(&m).expect("parsed JSON values always serialize");
         self.write(rel, &data)?;
         Ok(created.then(|| rel.to_string()))
     }
@@ -520,7 +515,7 @@ fn decode_first(data: &[u8]) -> Result<serde_json::Value, String> {
         Err(e) if e.ends_with("after top-level value") => {
             // A first value, then more: Decode takes the first; More() reports the
             // rest unless the next byte closes something.
-            let end = first_value_end(data);
+            let end = gojson::first_value_len(data).unwrap_or(data.len());
             let rest = data[end..].iter().find(|b| !b.is_ascii_whitespace());
             if matches!(rest, Some(b'}') | Some(b']')) {
                 gojson::parse(&data[..end])
@@ -530,13 +525,6 @@ fn decode_first(data: &[u8]) -> Result<serde_json::Value, String> {
         }
         Err(e) => Err(e),
     }
-}
-
-/// The offset just past the first JSON value in `data`.
-fn first_value_end(data: &[u8]) -> usize {
-    (1..=data.len())
-        .find(|&n| gojson::check(&data[..n]).is_ok() && !data[..n].ends_with(b" "))
-        .unwrap_or(data.len())
 }
 
 /// Runs git in `dir` through `Env`, as Go's `runGit`.
