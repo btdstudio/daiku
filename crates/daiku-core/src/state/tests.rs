@@ -953,3 +953,33 @@ fn ac3_vcs_none_runs_no_process() {
     assert!(process.calls.borrow().is_empty());
     assert!(s.take_warnings().is_empty());
 }
+
+/// Review finding 1: joining onto the CLI's root `.` adds nothing, as Go's
+/// `filepath.Join` does, so messages read `STATE.json`, not `./STATE.json`.
+#[test]
+fn paths_from_the_dot_root_have_no_prefix() {
+    use super::store::{at, read_file};
+    use std::path::{Path, PathBuf};
+    assert_eq!(
+        at(Path::new("."), "STATE.json"),
+        PathBuf::from("STATE.json")
+    );
+    assert_eq!(
+        at(Path::new("."), "./plan/specs/1-x"),
+        PathBuf::from("plan").join("specs").join("1-x")
+    );
+    assert_eq!(at(Path::new("."), ""), PathBuf::from("."));
+    assert_eq!(
+        at(Path::new("/w"), "a/b"),
+        Path::new("/w").join("a").join("b")
+    );
+    // A message built from the joined path, here a read of a folder.
+    let t = Temp::new();
+    std::fs::create_dir(t.p("STATE.json")).unwrap();
+    let err = read_file(&at(t.path(), "STATE.json")).unwrap_err();
+    let shown = crate::gofmt::to_slash(&t.p("STATE.json").to_string_lossy());
+    assert!(
+        err.starts_with(&format!("read {shown}: ")) || err.starts_with(&format!("open {shown}: ")),
+        "{err}"
+    );
+}

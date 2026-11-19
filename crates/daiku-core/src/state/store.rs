@@ -77,10 +77,24 @@ pub fn shown(root: &Path, rel: &str) -> String {
 }
 
 /// `rel` (slash-separated) joined to `root`.
+///
+/// As with Go's `filepath.Join`, a root of `.` adds nothing, so paths in messages
+/// read `STATE.json`, not `./STATE.json`.
 pub fn at(root: &Path, rel: &str) -> PathBuf {
-    rel.split('/')
-        .filter(|p| !p.is_empty())
-        .fold(root.to_path_buf(), |p, part| p.join(part))
+    let start = if root == Path::new(".") {
+        PathBuf::new()
+    } else {
+        root.to_path_buf()
+    };
+    let p = rel
+        .split('/')
+        .filter(|p| !p.is_empty() && *p != ".")
+        .fold(start, |p, part| p.join(part));
+    if p.as_os_str().is_empty() {
+        root.to_path_buf()
+    } else {
+        p
+    }
 }
 
 fn max_id(max: u64, name: &str) -> u64 {
@@ -498,11 +512,7 @@ impl<'a> Store<'a> {
             return Err(Error::WontCreate { rel, link });
         }
         let dir = at(self.root, &rel);
-        std::fs::create_dir_all(&dir).map_err(|source| Error::Io {
-            op: "mkdir",
-            path: gofmt::to_slash(&dir.to_string_lossy()),
-            source,
-        })?;
+        write::mkdir_all(&dir)?;
         let mut paths = Vec::new();
         if !self.local() {
             write::write_file(self.root, &dir.join(".gitkeep"), b"")?;

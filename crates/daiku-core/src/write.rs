@@ -27,11 +27,36 @@ pub fn check_path(root: &Path, path: &Path) -> Result<(), Error> {
 /// Go's `MkdirAll` under `root`, after [`check_path`].
 pub fn create_dir_all(root: &Path, path: &Path) -> Result<(), Error> {
     check_path(root, path)?;
-    std::fs::create_dir_all(path).map_err(|source| Error::Io {
+    mkdir_all(path)
+}
+
+/// A port of Go's `os.MkdirAll`, so failures name what Go names: an existing
+/// non-folder anywhere on the path is `mkdir <that path>: not a directory`, found
+/// by checking the parents first; otherwise the failing `mkdir`'s own error.
+/// Paths print slash-separated and cleaned, as Go's joined paths are. It does no
+/// workspace check; [`create_dir_all`] is the guarded form.
+pub fn mkdir_all(path: &Path) -> Result<(), Error> {
+    let fail = |p: &Path, source: std::io::Error| Error::Io {
         op: "mkdir",
-        path: gofmt::to_slash(&path.to_string_lossy()),
+        path: gofmt::clean(&gofmt::to_slash(&p.to_string_lossy())),
         source,
-    })
+    };
+    match std::fs::metadata(path) {
+        Ok(m) if m.is_dir() => return Ok(()),
+        Ok(_) => {
+            let source = std::io::Error::new(std::io::ErrorKind::NotADirectory, "not a directory");
+            return Err(fail(path, source));
+        }
+        Err(_) => {}
+    }
+    if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
+        mkdir_all(parent)?;
+    }
+    match std::fs::create_dir(path) {
+        Ok(()) => Ok(()),
+        Err(_) if std::fs::symlink_metadata(path).is_ok_and(|m| m.is_dir()) => Ok(()),
+        Err(source) => Err(fail(path, source)),
+    }
 }
 
 /// Go's `WriteFile` under `root`: checks and creates the file's folder, checks the
@@ -284,5 +309,33 @@ mod tests {
         let err = write_file(&root, &root.join("../escape-dir/x"), b"x").unwrap_err();
         assert!(err.to_string().contains("outside"));
         assert!(!root.join("../escape-dir").exists());
+    }
+
+    // Go's os.MkdirAll: a file on the path is "not a directory" at that path, the
+    // nearest one to the root first.
+    #[test]
+    fn mkdir_all_names_what_go_names() {
+        let (_d, root) = temp();
+        std::fs::write(root.join("file"), "x").unwrap();
+        let shown = |rel: &str| gofmt::clean(&gofmt::to_slash(&root.join(rel).to_string_lossy()));
+        for (target, at) in [
+            ("file", "file"),
+            ("file/sub", "file"),
+            ("file/sub/deeper", "file"),
+        ] {
+            let err = mkdir_all(&root.join(target)).unwrap_err().to_string();
+            assert_eq!(
+                err,
+                format!("mkdir {}: not a directory", shown(at)),
+                "{target}"
+            );
+        }
+        mkdir_all(&root.join("new/a/b")).unwrap();
+        mkdir_all(&root.join("new/a/b")).unwrap();
+        assert!(root.join("new/a/b").is_dir());
+        let err = create_dir_all(&root, &root.join("file/x"))
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, format!("mkdir {}: not a directory", shown("file")));
     }
 }

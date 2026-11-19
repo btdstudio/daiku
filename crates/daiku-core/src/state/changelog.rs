@@ -56,11 +56,7 @@ fn civil(days: i64) -> (i64, u32, u32) {
 pub fn append(root: &Path, path: &Path, at: SystemTime, line: &str) -> Result<(), Error> {
     write::check_path(root, path)?;
     if let Some(dir) = path.parent().filter(|d| !d.as_os_str().is_empty()) {
-        std::fs::create_dir_all(dir).map_err(|source| Error::Io {
-            op: "mkdir",
-            path: gofmt::to_slash(&dir.to_string_lossy()),
-            source,
-        })?;
+        write::mkdir_all(dir)?;
     }
     let mut f = std::fs::OpenOptions::new()
         .append(true)

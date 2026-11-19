@@ -229,8 +229,7 @@ impl Engine<'_> {
         }
         let dest = self.path(rel);
         if let Some(parent) = dest.parent() {
-            std::fs::create_dir_all(parent)
-                .map_err(io("mkdir", gofmt::to_slash(&parent.to_string_lossy())))?;
+            crate::write::mkdir_all(parent)?;
         }
         std::fs::write(&dest, data).map_err(io("open", shown(self.root, rel)))
     }
@@ -244,7 +243,7 @@ impl Engine<'_> {
             for (rel, _) in walk_tree(t, prefix, false) {
                 if let Some(dir) = rel.strip_suffix("/.gitkeep") {
                     let p = self.path(dir);
-                    std::fs::create_dir_all(&p).map_err(io("mkdir", shown(self.root, dir)))?;
+                    crate::write::mkdir_all(&p)?;
                 }
             }
         }
@@ -270,8 +269,7 @@ impl Engine<'_> {
                 source,
             });
         }
-        std::fs::create_dir_all(self.root)
-            .map_err(io("mkdir", gofmt::to_slash(&self.root.to_string_lossy())))?;
+        crate::write::mkdir_all(self.root)?;
         let mut git_init = false;
         if !no_git && !self.local() && std::fs::metadata(self.root.join(".git")).is_err() {
             run_git(self.root, &["init"], env)?;
@@ -439,7 +437,7 @@ impl Engine<'_> {
                 });
             }
         };
-        std::fs::create_dir_all(self.path(room)).map_err(io("mkdir", shown(self.root, room)))?;
+        crate::write::mkdir_all(&self.path(room))?;
         let mut written = Vec::new();
         for (rel, data) in walk_tree(room, room, self.local()) {
             self.write(&rel, data)?;
