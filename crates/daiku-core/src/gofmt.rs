@@ -226,16 +226,7 @@ pub fn value_v(v: &serde_json::Value) -> String {
         Value::Null => "<nil>".into(),
         Value::Bool(b) => b.to_string(),
         Value::Number(n) => match n.as_f64() {
-            Some(f) if f.fract() == 0.0 && f.abs() < 1e21 => format!("{f:.0}"),
-            Some(f) if f.abs() >= 1e21 || (f != 0.0 && f.abs() < 1e-4) => {
-                let s = format!("{f:e}");
-                match s.split_once('e') {
-                    Some((m, e)) if !e.starts_with('-') => format!("{m}e+{e:0>2}"),
-                    Some((m, e)) => format!("{m}e-{:0>2}", &e[1..]),
-                    None => s,
-                }
-            }
-            Some(f) => f.to_string(),
+            Some(f) => float_v(f),
             None => n.to_string(),
         },
         Value::String(s) => s.clone(),
@@ -250,6 +241,30 @@ pub fn value_v(v: &serde_json::Value) -> String {
             format!("map[{}]", parts.join(" "))
         }
     }
+}
+
+/// A `float64` as Go's `%v` prints it: `%g` with the shortest digits, which uses
+/// exponent form (`1e+06`, `1.5e-05`) when the decimal exponent is below -4 or at
+/// least 6 (strconv's precision 6 for the shortest form), and plain digits otherwise.
+pub fn float_v(f: f64) -> String {
+    if f.is_infinite() {
+        return if f > 0.0 {
+            "+Inf".into()
+        } else {
+            "-Inf".into()
+        };
+    }
+    if f.is_nan() {
+        return "NaN".into();
+    }
+    let e = format!("{f:e}");
+    let (mantissa, exp) = e.split_once('e').unwrap_or((&e, "0"));
+    let exp: i32 = exp.parse().unwrap_or(0);
+    if f != 0.0 && !(-4..6).contains(&exp) {
+        let sign = if exp < 0 { '-' } else { '+' };
+        return format!("{mantissa}e{sign}{:02}", exp.abs());
+    }
+    f.to_string()
 }
 
 /// An I/O error's text as Go's `syscall.Errno` words it, for the common cases; other
@@ -392,6 +407,27 @@ mod tests {
         assert_eq!(v("3"), "3");
         assert_eq!(v("1.5"), "1.5");
         assert_eq!(v("1e21"), "1e+21");
+        // Checked against Go's `daiku settings` output (code review finding 1).
+        for (n, go) in [
+            ("123456789", "1.23456789e+08"),
+            ("1000000", "1e+06"),
+            ("1e6", "1e+06"),
+            ("1e20", "1e+20"),
+            ("-2.5e7", "-2.5e+07"),
+            ("100000", "100000"),
+            ("999999", "999999"),
+            ("12345.678", "12345.678"),
+            ("0.1", "0.1"),
+            ("1e-5", "1e-05"),
+            ("0.00001234", "1.234e-05"),
+            ("1.5e300", "1.5e+300"),
+            ("0.0001", "0.0001"),
+            ("0", "0"),
+            ("-0", "-0"),
+            ("18446744073709551615", "1.8446744073709552e+19"),
+        ] {
+            assert_eq!(v(n), go, "{n}");
+        }
         assert_eq!(v("null"), "<nil>");
         assert_eq!(v(r#"[1,"a"]"#), "[1 a]");
         assert_eq!(v(r#"{"b":1,"a":true}"#), "map[a:true b:1]");

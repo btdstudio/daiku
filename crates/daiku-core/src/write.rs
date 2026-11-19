@@ -105,8 +105,11 @@ fn through_symlink(root: &Path, rel: &str) -> Option<String> {
     let mut cur = root.to_path_buf();
     let mut shown = gofmt::to_slash(&root.to_string_lossy());
     for part in gofmt::clean(rel).split('/') {
-        cur.push(part);
-        shown = gofmt::join(&[shown.as_str(), part]);
+        // Go's filepath.Join(cur, ".") is cur itself, so for `.` the root is checked.
+        if part != "." {
+            cur.push(part);
+            shown = gofmt::join(&[shown.as_str(), part]);
+        }
         match std::fs::symlink_metadata(&cur) {
             Err(_) => return None,
             Ok(m) if m.file_type().is_symlink() => return Some(shown),
@@ -202,6 +205,28 @@ mod tests {
                 "{err}"
             );
         }
+    }
+
+    /// A root that is itself a symlink is refused for writes at the root, as Go
+    /// refuses them (code review finding 4).
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_root_is_refused_at_the_root() {
+        let (_d, real) = temp();
+        let (_l, holder) = temp();
+        let root = holder.join("ws");
+        std::os::unix::fs::symlink(&real, &root).unwrap();
+        let err = write_file(&root, &root.join("STATE.json"), b"{}")
+            .unwrap_err()
+            .to_string();
+        assert_eq!(
+            err,
+            format!(
+                "daiku: won't write .: {} is a symlink, which could lead outside the workspace",
+                root.display()
+            )
+        );
+        assert!(!real.join("STATE.json").exists());
     }
 
     // workspace_test.go, TestWriteHelpers.

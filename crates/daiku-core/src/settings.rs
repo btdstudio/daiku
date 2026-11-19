@@ -50,17 +50,23 @@ pub fn global_path(dirs: &Dirs) -> String {
     let base = match &dirs.xdg_config_home {
         Some(x) if !x.is_empty() => x.to_string_lossy().into_owned(),
         _ => match &dirs.home {
-            Some(h) => format!(
-                "{}/.config",
-                h.to_string_lossy().trim_end_matches(['/', '\\'])
-            ),
+            Some(h) => format!("{}/.config", h.to_string_lossy()),
             None => String::new(),
         },
     };
     if base.is_empty() {
         return "daiku/settings.json".into();
     }
-    format!("{}/daiku/settings.json", base.trim_end_matches(['/', '\\']))
+    // Cleaned as Go's filepath.Join cleans it; on Windows a `//server` (UNC) prefix
+    // is kept, as Go's Windows Clean keeps the volume.
+    let slashed = gofmt::to_slash(&base);
+    let cleaned = match slashed.strip_prefix("//") {
+        Some(rest) if cfg!(windows) && !rest.starts_with('/') => {
+            format!("//{}", gofmt::clean(rest).trim_start_matches('/'))
+        }
+        _ => gofmt::clean(&slashed),
+    };
+    format!("{}/daiku/settings.json", cleaned.trim_end_matches('/'))
 }
 
 /// The project settings file for the workspace at `root`, as Go prints it
@@ -375,6 +381,28 @@ mod tests {
             "/xdg/daiku/settings.json"
         );
         assert_eq!(global_path(&Dirs::default()), "daiku/settings.json");
+        // Cleaned as Go's filepath.Join cleans it (code review finding 2).
+        assert_eq!(
+            global_path(&home("/h", Some("/s/r/../c2"))),
+            "/s/c2/daiku/settings.json"
+        );
+        assert_eq!(
+            global_path(&home("/h", Some("/a//b/./c/"))),
+            "/a/b/c/daiku/settings.json"
+        );
+        assert_eq!(
+            global_path(&home("/h", Some("rel/../x"))),
+            "x/daiku/settings.json"
+        );
+        assert_eq!(
+            global_path(&home("/h/", None)),
+            "/h/.config/daiku/settings.json"
+        );
+        assert_eq!(
+            global_path(&home("/", None)),
+            "/.config/daiku/settings.json"
+        );
+        assert_eq!(global_path(&home("/h", Some("/"))), "/daiku/settings.json");
         assert_eq!(project_path(Path::new(".")), ".daiku/settings.json");
     }
 

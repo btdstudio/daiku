@@ -28,9 +28,16 @@ fn messages_match_go() {
         "the table should cover Go's scanner states"
     );
     for (input, want) in table {
-        let got = match gojson::check(&input) {
-            Ok(()) => "ok".to_string(),
-            Err(e) => e,
+        // Through parse, so Go's decode errors count too. Nesting beyond serde_json's
+        // limit of 128 is checked by the scanner alone.
+        let deep = input.starts_with(&[b'['; 129]);
+        let got = match (deep, gojson::check(&input)) {
+            (true, Ok(())) => "ok".to_string(),
+            (true, Err(e)) => e,
+            (false, _) => match gojson::parse(&input) {
+                Ok(_) => "ok".to_string(),
+                Err(e) => e,
+            },
         };
         assert_eq!(got, want, "input {:?}", String::from_utf8_lossy(&input));
     }

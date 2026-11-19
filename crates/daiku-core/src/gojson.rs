@@ -395,15 +395,53 @@ fn quote_char(c: u8) -> String {
     }
 }
 
-/// Parses JSON as Go's `json.Unmarshal` into `any` would accept it: Go's syntax
-/// check first, then serde_json. Go replaces invalid UTF-8 in strings with U+FFFD
-/// rather than failing, so such input is parsed from a lossy copy.
+/// Parses JSON as Go's `json.Unmarshal` into `any` does: Go's syntax check first,
+/// then Go's decode error for the first number beyond `float64`, then serde_json.
+/// Go replaces invalid UTF-8 in strings with U+FFFD rather than failing, so such
+/// input is parsed from a lossy copy.
 pub fn parse(data: &[u8]) -> Result<serde_json::Value, String> {
     check(data)?;
+    if let Some(literal) = first_overflow(data) {
+        return Err(format!(
+            "json: cannot unmarshal number {literal} into Go value of type float64"
+        ));
+    }
     match serde_json::from_slice(data) {
         Ok(v) => Ok(v),
         Err(_) => {
             serde_json::from_str(&String::from_utf8_lossy(data)).map_err(|e| format!("json: {e}"))
         }
     }
+}
+
+/// The first number literal outside strings that overflows a `float64` (as Go's
+/// `strconv.ParseFloat` reports `ErrRange` for it). Underflow rounds to zero
+/// without an error, as in Go. `data` has passed [`check`].
+fn first_overflow(data: &[u8]) -> Option<String> {
+    let mut i = 0;
+    while i < data.len() {
+        match data[i] {
+            b'"' => {
+                i += 1;
+                while i < data.len() && data[i] != b'"' {
+                    i += if data[i] == b'\\' { 2 } else { 1 };
+                }
+                i += 1;
+            }
+            b'-' | b'0'..=b'9' => {
+                let start = i;
+                while i < data.len()
+                    && matches!(data[i], b'-' | b'+' | b'.' | b'e' | b'E' | b'0'..=b'9')
+                {
+                    i += 1;
+                }
+                let literal = std::str::from_utf8(&data[start..i]).unwrap_or_default();
+                if literal.parse::<f64>().is_ok_and(f64::is_infinite) {
+                    return Some(literal.to_string());
+                }
+            }
+            _ => i += 1,
+        }
+    }
+    None
 }
