@@ -39,6 +39,21 @@ The Rust rewrite of the daiku CLI. Read this before changing code.
   clap. Adding a runtime dependency to core or the CLI needs an ADR.
 - `daiku-fixtures` may use test-only crates; nothing it uses reaches a released binary.
 
+## The scaffold
+
+`crates/daiku-core/scaffold/` is the workspace scaffold `daiku init` writes, embedded
+in the binary with `include_dir`. It came from Go daiku at `5aa7a78` byte for byte,
+and its manifest hashes must keep matching Go's golden manifest
+(`crates/daiku-core/tests/data/golden-manifest.json`) until the scaffold is
+deliberately changed.
+
+- `.gitattributes` marks it `-text`, so no checkout changes its line endings.
+- Its own `root/.gitignore` and `root/.gitattributes` only apply under
+  `scaffold/root/`, which holds none of the files they name; they hide nothing in
+  this repo.
+- Changing a scaffold file changes its manifest hash: update the golden manifest and
+  say why in the change.
+
 ## Fixture cases
 
 A case is a folder in `fixtures/cases/<name>/` holding `case.toml`: the inputs you

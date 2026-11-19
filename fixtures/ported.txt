@@ -129,3 +129,21 @@ version
 version-extra-argument
 version-flag
 version-help-flag
+
+# S-0004: init, update, check
+check
+check-extra-argument
+init-dir-argument
+init-existing
+init-force
+init-fresh
+init-git
+init-through-symlink
+init-two-dirs
+init-unknown-flag
+update-corrupt-manifest
+update-edited-file
+update-extra-argument
+update-outside-workspace
+update-through-symlink
+update-unchanged

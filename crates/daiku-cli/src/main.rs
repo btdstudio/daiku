@@ -7,6 +7,7 @@ mod usage;
 use std::io::Write;
 use std::process::ExitCode;
 
+use daiku_core::scaffold::InitOptions;
 use daiku_core::{Error, Outcome, Workspace};
 
 /// Every command Go dispatches. Those without a handler here aren't ported yet.
@@ -53,6 +54,9 @@ fn run(args: &[String]) -> u8 {
             0
         }
         "settings" => settings(&mut stdout, &mut stderr),
+        "init" => init(&args[1..], &mut stdout, &mut stderr),
+        "update" => update(&mut stdout, &mut stderr),
+        "check" => check(&mut stdout, &mut stderr),
         c if KNOWN.contains(&c) => {
             let _ = writeln!(stderr, "daiku: {c} isn't implemented yet");
             1
@@ -109,6 +113,97 @@ fn settings(stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
             e.base_source, e.gates, e.source_dir, e.adr_dir, e.sync_file, e.overview
         );
     })
+}
+
+/// The version written into manifests, as `daiku version` prints it.
+const VERSION: &str = env!("DAIKU_VERSION");
+
+/// Go's `runInit`.
+fn init(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
+    let (mut dir, mut no_git, mut force) = (".".to_string(), false, false);
+    for a in args {
+        match a.as_str() {
+            "--no-git" => no_git = true,
+            "--force" => force = true,
+            f if f.starts_with('-') => {
+                let _ = writeln!(stderr, "daiku init: unknown flag {f}");
+                return 1;
+            }
+            d => dir = d.to_string(),
+        }
+    }
+    let env = env::real();
+    let vcs = match daiku_core::scaffold::init_vcs(no_git, &env.dirs) {
+        Ok(v) => v,
+        Err(err) => {
+            let _ = writeln!(stderr, "{}", report(&err));
+            return 1;
+        }
+    };
+    let opts = InitOptions {
+        no_git,
+        force,
+        vcs,
+        version: VERSION.to_string(),
+    };
+    finish(Workspace::open(&dir, env).init(&opts), stderr, |rep| {
+        for rel in &rep.written {
+            let _ = writeln!(stdout, "wrote {rel}");
+        }
+        for (rel, reason) in &rep.not_merged {
+            let _ = writeln!(stdout, "skipped (edited) {rel}: can't merge: {reason}");
+        }
+        if rep.git_init {
+            let _ = writeln!(stdout, "git init");
+        }
+        let _ = writeln!(stdout, "scaffolded daiku workspace in {dir}");
+    })
+}
+
+/// Go's `runUpdate`. Extra arguments are ignored, as in Go.
+fn update(stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
+    finish(workspace().update(VERSION), stderr, |rep| {
+        for rel in &rep.updated {
+            let _ = writeln!(stdout, "updated {rel}");
+        }
+        for rel in &rep.merged {
+            let _ = writeln!(
+                stdout,
+                "merged {rel} (daiku's ## sections updated; your sections and the text under the title kept)"
+            );
+        }
+        for rel in &rep.skipped {
+            match rep.not_merged.iter().find(|(r, _)| r == rel) {
+                Some((_, reason)) => {
+                    let _ = writeln!(stdout, "skipped (edited) {rel}: can't merge: {reason}");
+                }
+                None => {
+                    let _ = writeln!(stdout, "skipped (edited) {rel}");
+                }
+            }
+        }
+        let _ = writeln!(
+            stdout,
+            "update complete ({} updated, {} skipped, {} unchanged, {} merged)",
+            rep.updated.len(),
+            rep.skipped.len(),
+            rep.unchanged.len(),
+            rep.merged.len()
+        );
+    })
+}
+
+/// Go's `runCheck`. Arguments are ignored, as in Go.
+fn check(stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
+    let problems = daiku_core::scaffold::check();
+    for p in &problems {
+        let _ = writeln!(stderr, "{p}");
+    }
+    if !problems.is_empty() {
+        return 1;
+    }
+    let _ = writeln!(stdout, "scaffold is clean");
+    0
 }
 
 #[cfg(test)]
