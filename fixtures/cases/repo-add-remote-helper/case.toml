@@ -1,2 +1,6 @@
 args = ["repo", "add", "web", "ext::sh -c touch% /tmp/pwned"]
 workspace = "init"
+
+[expect]
+exit = 1
+stderr = "daiku: remote helpers aren't allowed: \"ext::sh -c touch% /tmp/pwned\"\n"

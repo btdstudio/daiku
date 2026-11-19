@@ -1,2 +1,6 @@
 args = ["tickets", "order"]
 workspace = "plan-architecture-approved"
+
+[expect]
+exit = 1
+stderr = "daiku: dependency cycle among S-0003, S-0004\n"

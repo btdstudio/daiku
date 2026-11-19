@@ -1,2 +1,6 @@
 args = ["tickets", "ready", "S-0099"]
 workspace = "plan-breakdown-approved"
+
+[expect]
+exit = 1
+stdout = "✗ S-0099: no such ticket\n"

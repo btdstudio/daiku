@@ -1,1 +1,10 @@
 args = ["status"]
+
+[expect]
+exit = 0
+stdout = '''
+no active change
+vcs:      git
+
+no changes yet
+'''

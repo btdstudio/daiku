@@ -1,2 +1,6 @@
 args = ["adr", "show", "1"]
 workspace = "adrs"
+
+[expect]
+exit = 0
+stdout = "no heading\n"

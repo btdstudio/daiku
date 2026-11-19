@@ -1,2 +1,6 @@
 args = ["repo", "doctor"]
 workspace = "init"
+
+[expect]
+exit = 0
+stdout = "0 repos ok\n"

@@ -1,2 +1,42 @@
 args = ["build", "new", "N-0001"]
 workspace = "plan-published"
+
+[expect]
+exit = 0
+stdout = '''
+created room build/
+created build N-0001 for api (build/tickets/N-0001.md)
+'''
+changes = [
+  "~ f .daiku/active",
+  "~ f .daiku/manifest.json",
+  "~ f AGENTS.md",
+  "~ f LOG.md",
+  "~ f STATE.json",
+  "+ d build/01_design",
+  "+ f build/01_design/context.md",
+  "+ d build/01_design/personas",
+  "+ f build/01_design/personas/analyst.md",
+  "+ f build/01_design/personas/architect.md",
+  "+ d build/01_design/templates",
+  "+ f build/01_design/templates/design.md",
+  "+ f build/01_design/templates/requirements.md",
+  "+ d build/02_implementation",
+  "+ f build/02_implementation/context.md",
+  "+ d build/02_implementation/personas",
+  "+ f build/02_implementation/personas/coder.md",
+  "+ d build/03_testing",
+  "+ f build/03_testing/context.md",
+  "+ d build/03_testing/personas",
+  "+ f build/03_testing/personas/qa.md",
+  "+ d build/03_testing/reports",
+  "+ d build/04_refactoring",
+  "+ f build/04_refactoring/context.md",
+  "+ d build/04_refactoring/personas",
+  "+ f build/04_refactoring/personas/reviewer.md",
+  "+ f build/04_refactoring/personas/security.md",
+  "+ d build/04_refactoring/reviews",
+  "+ d build/api",
+  "+ d build/api/changes",
+  "+ d build/api/changes/N-0001",
+]

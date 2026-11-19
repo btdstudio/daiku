@@ -21,7 +21,7 @@ pub struct Observation {
     /// What the run changed in the workspace, compared with its starting files:
     /// `+ <entry>` added, `- <entry>` removed, `~ <entry>` a file whose content or a
     /// link whose target changed. Sorted by path; a removal comes before an addition
-    /// at the same path. This, not the whole tree, is what `expect/` records.
+    /// at the same path. This, not the whole tree, is what `[expect]` records.
     pub changes: Vec<String>,
     /// For git cases: `git log --reverse --name-status --format=%s` after the base.
     pub git_log: Option<String>,

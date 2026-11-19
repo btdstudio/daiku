@@ -1,2 +1,19 @@
 args = ["tickets", "bogus"]
 workspace = "plan-spec-ready"
+
+[expect]
+exit = 1
+stderr = '''
+usage:
+  daiku tickets new <type> <title> [--parent <id>] [--repo <name>] [--depends <id,id>] [--requirements <id,id>] [--inbox]
+                                           create a ticket in the active plan change, or with --inbox (or no open plan change) an N- task in build/tickets/
+  daiku tickets pull <file>                record a ticket fetched from a PM tool as X-<pm-id> in build/tickets/
+  daiku tickets check                      validate every ticket
+  daiku tickets status                     list tickets by draft, ready, published and drifted
+  daiku tickets order                      list tickets in publish order
+  daiku tickets ready <id>... | --all [--force]
+                                           ready draft tickets once breakdown is approved
+  daiku tickets mark-published <id> --external <tool>=<item-id> [--force]
+                                           record a PM tool's id and freeze the ticket
+  daiku tickets unfreeze <id> --reason <r> clear a ticket's freeze
+'''

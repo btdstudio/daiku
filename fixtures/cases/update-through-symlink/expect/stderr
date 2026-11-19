@@ -1,1 +1,0 @@
-daiku: won't write .daiku/manifest.json: .daiku/manifest.json is a symlink, which could lead outside the workspace

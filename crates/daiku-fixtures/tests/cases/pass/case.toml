@@ -1,1 +1,13 @@
 args = ["print", "hello", ";", "eprint", "note", ";", "write", "out.txt", "written"]
+
+[expect]
+exit = 0
+stdout = '''
+hello
+'''
+stderr = '''
+note
+'''
+changes = [
+  "+ f out.txt",
+]

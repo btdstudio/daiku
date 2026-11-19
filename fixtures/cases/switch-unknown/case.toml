@@ -1,2 +1,6 @@
 args = ["switch", "9-nope"]
 workspace = "plan-intake-draft"
+
+[expect]
+exit = 1
+stderr = "daiku: unknown change \"9-nope\"\n"

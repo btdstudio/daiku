@@ -1,2 +1,13 @@
 args = ["tickets", "status"]
 workspace = "plan-published"
+
+[expect]
+exit = 0
+stdout = '''
+draft      0  
+ready      0  
+published  1  S-0002
+unfrozen   0  
+drifted    0  
+'''
+stderr = "✗ plan/specs/1-auth-flow/tickets/E-0001.md: frontmatter: line 2: unterminated list\n"

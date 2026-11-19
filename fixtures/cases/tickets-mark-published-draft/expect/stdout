@@ -1,3 +1,0 @@
-✗ 1-auth-flow: daiku: mark-published requires publish in-progress for 1-auth-flow (it's "unset") (pass --force to override)
-✗ S-0002: is a draft — run `daiku tickets ready S-0002` first
-✗ S-0002: parent E-0001 has no github id; publish it first

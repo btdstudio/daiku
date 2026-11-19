@@ -1,6 +1,0 @@
-daiku: S-0002: created
-
-M	LOG.md
-M	STATE.json
-A	build/api/changes/S-0002/.gitkeep
-M	plan/specs/1-auth-flow/README.md

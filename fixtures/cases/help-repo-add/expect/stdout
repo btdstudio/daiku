@@ -1,7 +1,0 @@
-usage:
-  daiku repo add <name> <remote> [--path <p>] [--branch <b>]
-                                          register a repo
-  daiku repo list                          list repos and their local paths
-  daiku repo path <name> <path>            set a repo's local path
-  daiku repo doctor [--clone] [--into <dir>]
-                                          check repos; --clone fetches missing ones

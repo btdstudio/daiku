@@ -1,3 +1,12 @@
 args = ["commit", "-q", "-m", "Add sign in"]
 workspace = "build-implement"
 git = true
+
+[expect]
+exit = 0
+git_log = '''
+Add sign in
+
+M	README.md
+A	src/signin.txt
+'''

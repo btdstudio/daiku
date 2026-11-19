@@ -1,2 +1,6 @@
 args = ["switch"]
 workspace = "plan-closed-change"
+
+[expect]
+exit = 0
+stdout = "2-billing  intake draft\n"

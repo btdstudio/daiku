@@ -1,2 +1,12 @@
 args = ["tickets", "pull", "pulled.md"]
 workspace = "init"
+
+[expect]
+exit = 0
+stdout = "pulled X-1234 build/tickets/X-1234.md\n"
+changes = [
+  "~ f LOG.md",
+  "+ d build",
+  "+ d build/tickets",
+  "+ f build/tickets/X-1234.md",
+]

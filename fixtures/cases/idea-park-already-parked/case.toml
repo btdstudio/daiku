@@ -1,2 +1,6 @@
 args = ["idea", "park", "2", "--reason", "again"]
 workspace = "ideas"
+
+[expect]
+exit = 1
+stderr = "daiku: idea 2 is parked: only an open idea can be parked\n"

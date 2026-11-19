@@ -1,3 +1,7 @@
 args = ["tickets", "ready", "E-0001"]
 workspace = "plan-breakdown-approved"
 skip_on = ["windows"]
+
+[expect]
+exit = 1
+stderr = "daiku: won't write plan/specs/1-auth-flow/tickets/E-0001.md: plan/specs/1-auth-flow/tickets/E-0001.md is a symlink, which could lead outside the workspace\n"

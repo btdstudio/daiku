@@ -1,2 +1,6 @@
 args = ["adr", "show"]
 workspace = "adrs"
+
+[expect]
+exit = 1
+stderr = "usage: daiku adr show <number>\n"

@@ -1,2 +1,6 @@
 args = ["build", "new", "S-0002", "--bogus"]
 workspace = "plan-published"
+
+[expect]
+exit = 1
+stderr = "usage: daiku build new <ticket-id>\n"

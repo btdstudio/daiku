@@ -1,2 +1,9 @@
 args = ["status", "1-auth-flow"]
 workspace = "build-implement"
+
+[expect]
+exit = 0
+stdout = '''
+1-auth-flow  publish complete
+  S-0002  api  implement in-progress
+'''

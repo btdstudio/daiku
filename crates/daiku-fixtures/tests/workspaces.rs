@@ -627,20 +627,23 @@ fn expect_records_only_changes_and_stays_strict() {
     let obs = run(&c);
     assert_eq!(obs.changes, ["~ f edit.txt", "+ d new", "+ f new/n.txt"]);
     daiku_fixtures::write_expect(&c, &obs).unwrap();
-    let stored = snapshot(&c.expect_dir().join("tree"));
+    let c = fx.load("c");
+    let stored = snapshot(&c.expect_dir());
     assert_eq!(stored.keys().collect::<Vec<_>>(), ["edit.txt", "new/n.txt"]);
     assert!(daiku_fixtures::compare(&c, &run(&c)).is_empty());
 
-    // Touching a file the expectation says is unchanged fails the case.
-    fx.case(
-        "c",
-        &toml(&[
-            &["write", "edit.txt", "new"],
-            &["write", "same.txt", "different"],
-            &["write", "new/n.txt", "n"],
-        ]),
-    );
-    let diffs = daiku_fixtures::compare(&c, &run(&fx.load("c")));
+    // Touching a file the expectation says is unchanged fails the case: keep the
+    // captured [expect], change only the args.
+    let file = c.dir.join("case.toml");
+    let text = std::fs::read_to_string(&file).unwrap();
+    let args = script(&[
+        &["write", "edit.txt", "new"],
+        &["write", "same.txt", "different"],
+        &["write", "new/n.txt", "n"],
+    ]);
+    let first = text.lines().next().unwrap().to_string();
+    std::fs::write(&file, text.replacen(&first, args.trim_end(), 1)).unwrap();
+    let diffs = daiku_fixtures::compare(&fx.load("c"), &run(&fx.load("c")));
     assert_eq!(diffs.len(), 1, "{diffs:?}");
     assert_eq!(diffs[0].part, "changes");
     assert!(
@@ -677,7 +680,8 @@ fn git_files_are_stored_under_another_name() {
     assert!(obs.manifest.contains(&"f .gitignore".to_string()));
     assert_eq!(obs.changes, ["+ d sub", "+ f sub/.gitattributes"]);
     daiku_fixtures::write_expect(&c, &obs).unwrap();
-    let stored = snapshot(&c.expect_dir().join("tree"));
+    let c = fx.load("named");
+    let stored = snapshot(&c.expect_dir());
     assert_eq!(
         stored.keys().collect::<Vec<_>>(),
         ["sub/.gitattributes.fixture"]

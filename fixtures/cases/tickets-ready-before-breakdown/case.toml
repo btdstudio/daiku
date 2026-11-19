@@ -1,2 +1,6 @@
 args = ["tickets", "ready", "--all"]
 workspace = "plan-architecture-approved"
+
+[expect]
+exit = 1
+stdout = "✗ 1-auth-flow: daiku: tickets ready requires breakdown approved for 1-auth-flow (it's \"unset\") (pass --force to override)\n"

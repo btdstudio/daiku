@@ -1,3 +1,7 @@
 args = ["gate", "intake", "approved"]
 workspace = "plan-intake-draft"
 skip_on = ["windows"]
+
+[expect]
+exit = 1
+stderr = "daiku: won't write STATE.json: STATE.json is a symlink, which could lead outside the workspace\n"

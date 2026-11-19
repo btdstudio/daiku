@@ -1,4 +1,0 @@
-daiku: publish complete: 2 artifact problem(s):
-  plan/specs/1-auth-flow/tickets/E-0001.md: E-0001: ready but not frozen (no published_hash)
-  plan/specs/1-auth-flow/tickets/S-0002.md: S-0002: ready but not frozen (no published_hash)
-(pass --force to override)

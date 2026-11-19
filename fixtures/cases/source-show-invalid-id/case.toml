@@ -1,2 +1,6 @@
 args = ["source", "show", "two"]
 workspace = "adrs"
+
+[expect]
+exit = 1
+stderr = "invalid id: two\n"

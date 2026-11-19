@@ -1,1 +1,0 @@
-usage: daiku change new <title> [--repo <name|path>]... [--rev <r>] [--body <b>]

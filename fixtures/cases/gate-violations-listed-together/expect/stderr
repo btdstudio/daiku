@@ -1,4 +1,0 @@
-daiku: architecture requires intake to be approved (currently "draft")
-daiku: architecture approved: 1 artifact problem(s):
-  plan/specs/1-auth-flow/architecture.md: doesn't exist
-(pass --force to override)

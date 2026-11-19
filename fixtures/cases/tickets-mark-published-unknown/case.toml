@@ -1,2 +1,6 @@
 args = ["tickets", "mark-published", "S-0099", "--external", "github=x"]
 workspace = "plan-breakdown-approved"
+
+[expect]
+exit = 1
+stderr = "daiku: no ticket S-0099\n"

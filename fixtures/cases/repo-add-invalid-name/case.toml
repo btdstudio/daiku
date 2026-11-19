@@ -1,2 +1,6 @@
 args = ["repo", "add", "Web App", "https://example.invalid/web.git"]
 workspace = "init"
+
+[expect]
+exit = 1
+stderr = "daiku: invalid repo name \"Web App\" (use lowercase letters, digits, '.', '_' and '-')\n"

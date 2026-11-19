@@ -1,1 +1,9 @@
 args = ["tickets", "ready", "--help"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku tickets ready <id>... | --all [--force]
+
+ready draft tickets once breakdown is approved
+'''

@@ -1,2 +1,17 @@
 args = ["change", "new", "Billing"]
 workspace = "plan-intake-draft"
+
+[expect]
+exit = 0
+stdout = '''
+created change 2-billing (source #2)
+explore skipped
+synthesis skipped
+'''
+changes = [
+  "~ f .daiku/active",
+  "~ f LOG.md",
+  "~ f STATE.json",
+  "+ f plan/00_intake/2.md",
+  "+ d plan/specs/2-billing",
+]

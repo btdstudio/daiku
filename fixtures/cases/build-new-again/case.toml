@@ -1,2 +1,6 @@
 args = ["build", "new", "S-0002"]
 workspace = "build-ticket-draft"
+
+[expect]
+exit = 1
+stderr = "daiku: S-0002 is already a change — run `daiku switch S-0002`\n"

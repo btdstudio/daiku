@@ -1,3 +1,0 @@
-~ f plan/specs/1-auth-flow/README.md
-+ d plan/specs/1-auth-flow/tickets
-+ f plan/specs/1-auth-flow/tickets/E-0001.md

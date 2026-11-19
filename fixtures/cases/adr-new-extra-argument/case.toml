@@ -1,2 +1,6 @@
 args = ["adr", "new", "--title", "x", "stray"]
 workspace = "init"
+
+[expect]
+exit = 1
+stderr = "daiku adr new: unexpected argument \"stray\" (use --title <t>; see daiku adr new --help)\n"

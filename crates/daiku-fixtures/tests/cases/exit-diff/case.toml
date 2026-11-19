@@ -1,1 +1,7 @@
 args = ["print", "x", ";", "exit", "3"]
+
+[expect]
+exit = 0
+stdout = '''
+x
+'''

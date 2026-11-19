@@ -1,2 +1,6 @@
 args = ["references", "check"]
 workspace = "init"
+
+[expect]
+exit = 0
+stdout = "1 of 1 file(s) indexed, 0 warning(s)\n"

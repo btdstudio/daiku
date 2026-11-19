@@ -1,5 +1,0 @@
-usage: daiku init [dir] [--no-git] [--force]
-
-scaffold the planning ICM structure
-  --no-git   a local workspace (vcs: none)
-  --force    overwrite files that already exist

@@ -1,2 +1,6 @@
 args = ["tickets", "pull", "pulled.md"]
 workspace = "init"
+
+[expect]
+exit = 1
+stderr = "daiku: a pulled ticket needs exactly one external id, the draft has 0\n"

@@ -1,2 +1,10 @@
 args = ["tickets", "unfreeze", "S-0002", "--reason", "scope change"]
 workspace = "plan-published"
+
+[expect]
+exit = 0
+stdout = "S-0002: unfrozen\n"
+changes = [
+  "~ f LOG.md",
+  "~ f plan/specs/1-auth-flow/tickets/S-0002.md",
+]

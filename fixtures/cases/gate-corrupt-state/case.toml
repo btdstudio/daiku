@@ -1,2 +1,6 @@
 args = ["gate", "intake", "approved"]
 workspace = "plan-intake-draft"
+
+[expect]
+exit = 1
+stderr = "daiku: cannot parse STATE.json: invalid character 'n' looking for beginning of object key string\n"

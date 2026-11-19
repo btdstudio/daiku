@@ -1,1 +1,9 @@
 args = ["help", "tickets", "check"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku tickets check
+
+validate every ticket
+'''

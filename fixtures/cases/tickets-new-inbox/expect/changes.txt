@@ -1,3 +1,0 @@
-+ d build
-+ d build/tickets
-+ f build/tickets/N-0001.md

@@ -1,1 +1,5 @@
 args = ["adr", "show", "1"]
+
+[expect]
+exit = 1
+stderr = "daiku: adr 0001 not found\n"

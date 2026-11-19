@@ -1,2 +1,0 @@
-api  https://example.invalid/api.git  main  {ROOT}
-web  https://example.invalid/web.git  main  (no local path)

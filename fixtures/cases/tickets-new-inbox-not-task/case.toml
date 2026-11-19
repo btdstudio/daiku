@@ -1,2 +1,6 @@
 args = ["tickets", "new", "story", "Fix typo", "--inbox"]
 workspace = "plan-spec-ready"
+
+[expect]
+exit = 1
+stderr = "daiku: an inbox ticket is a task, not a story\n"

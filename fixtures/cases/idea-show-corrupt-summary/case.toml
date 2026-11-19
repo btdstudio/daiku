@@ -1,2 +1,10 @@
 args = ["idea", "show", "1"]
 workspace = "ideas"
+
+[expect]
+exit = 0
+stdout = '''
+---
+id: [
+---
+'''

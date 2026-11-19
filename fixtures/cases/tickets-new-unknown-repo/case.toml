@@ -1,2 +1,6 @@
 args = ["tickets", "new", "story", "Sign out", "--repo", "nope"]
 workspace = "plan-architecture-approved"
+
+[expect]
+exit = 1
+stderr = "daiku: repo \"nope\" isn't registered — run `daiku repo add`\n"

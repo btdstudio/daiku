@@ -1,2 +1,13 @@
 args = ["adr", "bogus"]
 workspace = "init"
+
+[expect]
+exit = 1
+stderr = '''
+daiku adr: unknown verb "bogus"
+usage:
+  daiku adr new --title <t> [--deciders <d>] [--context <c>] [--decision <d>] [--consequences <c>] [--file <path>]
+                                           create an ADR in plan/04_architecture/adr/
+  daiku adr list                           list ADRs (the default verb)
+  daiku adr show <number>                  show an ADR
+'''

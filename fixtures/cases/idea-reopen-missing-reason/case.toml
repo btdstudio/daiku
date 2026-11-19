@@ -1,2 +1,6 @@
 args = ["idea", "reopen", "2", "--reason", " "]
 workspace = "ideas"
+
+[expect]
+exit = 1
+stderr = "usage: daiku idea reopen <id> --reason <r>\n"

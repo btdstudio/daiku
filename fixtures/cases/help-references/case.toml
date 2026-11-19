@@ -1,1 +1,8 @@
 args = ["help", "references"]
+
+[expect]
+exit = 0
+stdout = '''
+usage:
+  daiku references check                   warn about unindexed references and bad index entries
+'''

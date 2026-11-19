@@ -1,2 +1,6 @@
 args = ["gate", "design", "approved"]
 workspace = "build-ticket-draft"
+
+[expect]
+exit = 1
+stderr = "daiku: design requires ticket to be approved (currently \"draft\") (pass --force to override)\n"

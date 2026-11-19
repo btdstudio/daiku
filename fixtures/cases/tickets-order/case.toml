@@ -1,2 +1,9 @@
 args = ["tickets", "order"]
 workspace = "plan-architecture-approved"
+
+[expect]
+exit = 0
+stdout = '''
+E-0001  Accounts
+S-0002  Sign in
+'''

@@ -1,1 +1,9 @@
 args = ["help", "overview"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku overview [<change>] [--check] [--stdout]
+
+write or check the change's README overview
+'''

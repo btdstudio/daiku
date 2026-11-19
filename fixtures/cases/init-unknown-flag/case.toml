@@ -1,1 +1,5 @@
 args = ["init", "--bogus"]
+
+[expect]
+exit = 1
+stderr = "daiku init: unknown flag --bogus\n"

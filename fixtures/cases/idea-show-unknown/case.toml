@@ -1,2 +1,6 @@
 args = ["idea", "show", "9"]
 workspace = "ideas"
+
+[expect]
+exit = 1
+stderr = "daiku: idea 9 not found\n"

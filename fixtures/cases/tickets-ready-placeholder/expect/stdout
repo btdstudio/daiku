@@ -1,2 +1,0 @@
-✗ E-0001: status ready requires at least one acceptance criterion without a placeholder
-✗ E-0001: acceptance criterion "- [ ] AC1: Given … When … Then …" has a placeholder "…"

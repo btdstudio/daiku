@@ -1,2 +1,10 @@
 args = ["gate", "spec", "approved"]
 workspace = "plan-spec-ready"
+
+[expect]
+exit = 1
+stderr = '''
+daiku: spec approved: 1 artifact problem(s):
+  plan/specs/1-auth-flow/functional-spec.md: no R requirements under ## Functional requirements
+(pass --force to override)
+'''

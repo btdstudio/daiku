@@ -1,1 +1,9 @@
 args = ["help", "check"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku check
+
+validate the embedded scaffold
+'''

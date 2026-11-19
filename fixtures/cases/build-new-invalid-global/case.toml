@@ -1,2 +1,6 @@
 args = ["build", "new", "S-0002"]
 workspace = "plan-published"
+
+[expect]
+exit = 1
+stderr = "daiku: cannot parse settings {CONFIG}/daiku/settings.json: invalid character 'n' looking for beginning of object key string\n"

@@ -1,2 +1,10 @@
 args = ["tickets", "new", "story", "Sign out", "--parent", "E-0001", "--repo", "api", "--depends", "S-0002", "--requirements", "R1"]
 workspace = "plan-architecture-approved"
+
+[expect]
+exit = 0
+stdout = "created S-0003 plan/specs/1-auth-flow/tickets/S-0003.md\n"
+changes = [
+  "~ f plan/specs/1-auth-flow/README.md",
+  "+ f plan/specs/1-auth-flow/tickets/S-0003.md",
+]

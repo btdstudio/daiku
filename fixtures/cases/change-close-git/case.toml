@@ -1,3 +1,20 @@
 args = ["change", "close", "1-auth-flow", "--reason", "done"]
 workspace = "git-plan-intake-draft"
 git = true
+
+[expect]
+exit = 0
+stdout = "1-auth-flow: closed\n"
+git_log = '''
+daiku: 1-auth-flow: closed (done)
+
+M	LOG.md
+M	STATE.json
+A	plan/specs/1-auth-flow/README.md
+'''
+changes = [
+  "- f .daiku/active",
+  "~ f LOG.md",
+  "~ f STATE.json",
+  "+ f plan/specs/1-auth-flow/README.md",
+]

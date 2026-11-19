@@ -1,2 +1,6 @@
 args = ["change", "new", "API work", "--repo", "api", "--repo", "{ROOT}"]
 workspace = "plan-published"
+
+[expect]
+exit = 1
+stderr = "daiku: \"{ROOT}\" isn't registered — run `daiku repo add` for each repo in a multi-repo change\n"

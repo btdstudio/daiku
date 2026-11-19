@@ -1,2 +1,6 @@
 args = ["adr", "new", "--title", "x", "--bogus", "y"]
 workspace = "init"
+
+[expect]
+exit = 1
+stderr = "daiku adr new: unknown flag \"--bogus\", or it needs a value (see daiku adr new --help)\n"

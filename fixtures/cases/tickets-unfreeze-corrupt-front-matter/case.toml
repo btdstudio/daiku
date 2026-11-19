@@ -1,2 +1,6 @@
 args = ["tickets", "unfreeze", "S-0002", "--reason", "x"]
 workspace = "plan-published"
+
+[expect]
+exit = 1
+stderr = "daiku: no ticket S-0002\n"

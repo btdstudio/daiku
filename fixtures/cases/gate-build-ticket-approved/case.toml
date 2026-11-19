@@ -1,2 +1,11 @@
 args = ["gate", "ticket", "approved"]
 workspace = "build-ticket-draft"
+
+[expect]
+exit = 0
+stdout = "S-0002: ticket = approved\n"
+changes = [
+  "~ f LOG.md",
+  "~ f STATE.json",
+  "~ f plan/specs/1-auth-flow/README.md",
+]

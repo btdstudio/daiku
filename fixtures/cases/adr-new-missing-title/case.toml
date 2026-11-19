@@ -1,2 +1,6 @@
 args = ["adr", "new"]
 workspace = "init"
+
+[expect]
+exit = 1
+stderr = "usage: daiku adr new --title <t> [--deciders <d>] [--context <c>] [--decision <d>] [--consequences <c>] [--file <path>]\n"

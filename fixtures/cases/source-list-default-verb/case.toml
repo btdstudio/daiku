@@ -1,2 +1,9 @@
 args = ["source"]
 workspace = "adrs"
+
+[expect]
+exit = 0
+stdout = '''
+#1 [issue] Auth flow
+#2 [issue] Customer interviews
+'''

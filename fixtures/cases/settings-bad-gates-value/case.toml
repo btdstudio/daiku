@@ -1,2 +1,6 @@
 args = ["settings"]
 workspace = "init"
+
+[expect]
+exit = 1
+stderr = "daiku: invalid gates \"sometimes\" (expected block|prompt|auto)\n"

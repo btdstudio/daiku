@@ -1,3 +1,7 @@
 args = ["adr", "new", "--title", "x"]
 workspace = "init"
 skip_on = ["windows"]
+
+[expect]
+exit = 1
+stderr = "daiku: won't write plan/04_architecture/adr: plan/04_architecture/adr is a symlink, which could lead outside the workspace\n"

@@ -1,4 +1,5 @@
-//! Fixture cases: a folder holding `case.toml`, `before/` and `expect/`.
+//! Fixture cases: a folder holding `case.toml` (inputs and the `[expect]` table), and
+//! optionally `before/`, `config/`, `stage/` and `expect/` (the files a run writes).
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -37,7 +38,7 @@ impl Os {
 }
 
 /// The contents of `case.toml`.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CaseSpec {
     /// Arguments passed to the binary. `{ROOT}`, `{HOME}` and `{CONFIG}` expand.
@@ -64,7 +65,31 @@ pub struct CaseSpec {
     /// When set, `PATH` holds only these tools, resolved from the caller's `PATH`.
     #[serde(default)]
     pub tools: Vec<String>,
+    /// The expected result, written by `capture`; `None` until then.
+    #[serde(default)]
+    pub expect: Option<Expect>,
 }
+
+/// A case's expected result: the `[expect]` table at the end of `case.toml`, which
+/// `capture` writes. Empty parts are left out.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Expect {
+    pub exit: i32,
+    #[serde(default)]
+    pub stdout: String,
+    #[serde(default)]
+    pub stderr: String,
+    /// What the run changed in the workspace; see `Observation::changes`.
+    #[serde(default)]
+    pub changes: Vec<String>,
+    /// For git cases: the log of the commits the run made.
+    #[serde(default)]
+    pub git_log: String,
+}
+
+/// The line that starts a case's expectation in `case.toml`.
+pub const EXPECT_HEADER: &str = "[expect]";
 
 /// A loaded case.
 #[derive(Debug, Clone)]
@@ -74,6 +99,8 @@ pub struct Case {
     pub spec: CaseSpec,
     /// The named workspace's folder, which holds `tree/` and maybe `config/`.
     pub workspace_dir: Option<PathBuf>,
+    /// `case.toml` up to its `[expect]` table: the inputs, kept as written.
+    pub inputs: String,
 }
 
 impl Case {
@@ -83,6 +110,8 @@ impl Case {
         self.dir.join("before")
     }
 
+    /// The files the run added or changed, at their paths. A case whose run writes
+    /// no file has no `expect/`.
     pub fn expect_dir(&self) -> PathBuf {
         self.dir.join("expect")
     }
@@ -129,6 +158,7 @@ impl Case {
         no_symlink(&file)?;
         let text = std::fs::read_to_string(&file).map_err(|e| Error::at(&file, e))?;
         let spec: CaseSpec = toml::from_str(&text).map_err(|e| Error::at(&file, e))?;
+        let inputs = split_inputs(&text).map_err(|e| Error::at(&file, e))?;
         for sub in ["before", "expect", "config", "stage"] {
             folder_or_none(&dir.join(sub))?;
         }
@@ -172,6 +202,7 @@ impl Case {
             dir: dir.to_path_buf(),
             spec,
             workspace_dir,
+            inputs,
         })
     }
 }
@@ -285,4 +316,17 @@ pub(crate) fn no_git_config(config: &Path) -> Result<(), Error> {
         }
     }
     Ok(())
+}
+
+/// The part of `case.toml` before its `[expect]` header line. `capture` replaces
+/// everything from that line on, and checks the inputs read back unchanged.
+pub(crate) fn split_inputs(text: &str) -> Result<String, String> {
+    let mut inputs = String::new();
+    for line in text.split_inclusive('\n') {
+        if line.trim() == EXPECT_HEADER {
+            return Ok(inputs);
+        }
+        inputs.push_str(line);
+    }
+    Ok(inputs)
 }

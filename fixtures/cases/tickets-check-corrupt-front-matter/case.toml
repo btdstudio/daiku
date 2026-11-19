@@ -1,2 +1,9 @@
 args = ["tickets", "check"]
 workspace = "plan-published"
+
+[expect]
+exit = 1
+stdout = '''
+✗ plan/specs/1-auth-flow/tickets/E-0001.md: frontmatter: line 2: unterminated list
+✗ S-0002: parent E-0001 doesn't exist
+'''

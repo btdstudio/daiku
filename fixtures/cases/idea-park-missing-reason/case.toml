@@ -1,2 +1,6 @@
 args = ["idea", "park", "1"]
 workspace = "ideas"
+
+[expect]
+exit = 1
+stderr = "usage: daiku idea park <id> --reason <r>\n"

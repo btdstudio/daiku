@@ -1,1 +1,15 @@
 args = ["help", "idea"]
+
+[expect]
+exit = 0
+stdout = '''
+usage:
+  daiku idea new <title>                   create an idea in ideas/, from the summary template
+  daiku idea list                          list ideas with their status
+  daiku idea show <id>                     print an idea's summary and status
+  daiku idea park <id> --reason <r>        set an open idea aside, with a reason
+  daiku idea drop <id> --reason <r>        drop an open idea, with a reason (the folder stays)
+  daiku idea reopen <id> --reason <r>      reopen a parked or dropped idea, with a reason
+  daiku idea promote <id> --title <t> [--repo <name|path>]... [--rev <r>]
+                                           start a change from an idea
+'''

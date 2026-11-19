@@ -1,3 +1,0 @@
-+ d .daiku
-+ f .daiku/paths.json
-+ f REPOS.json

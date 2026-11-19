@@ -1,2 +1,6 @@
 args = ["change", "close", "1-auth-flow"]
 workspace = "plan-intake-draft"
+
+[expect]
+exit = 1
+stderr = "daiku: closing 1-auth-flow requires a reason\n"

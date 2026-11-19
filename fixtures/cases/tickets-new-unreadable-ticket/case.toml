@@ -1,2 +1,6 @@
 args = ["tickets", "new", "story", "Sign out", "--repo", "api"]
 workspace = "plan-architecture-approved"
+
+[expect]
+exit = 1
+stderr = "daiku: can't allocate an id while a ticket is unreadable: plan/specs/1-auth-flow/tickets/E-0001.md: frontmatter: line 2: unterminated list\n"

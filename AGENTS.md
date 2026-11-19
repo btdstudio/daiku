@@ -31,31 +31,51 @@ The Rust rewrite of the daiku CLI. Read this before changing code.
 
 ## Fixture cases
 
-A case is a folder in `fixtures/cases/<name>/`:
+A case is a folder in `fixtures/cases/<name>/` holding `case.toml`: the inputs you
+write, then the `[expect]` table that `capture` writes.
+
+```toml
+args = ["gate", "intake", "approved"]   # required
+workspace = "plan-intake-draft"         # optional: a shared starting workspace
+# env = { KEY = "{ROOT}/x" }            # extra variables (see the rules below)
+# unordered_stdout = false              # compare stdout lines sorted
+# git = false                           # run in a git repo, record git_log
+# skip_on = ["windows"]                 # macos, linux, windows
+# tools = ["git"]                       # PATH holds only these (Unix only)
+# deviations = ""                       # recorded differences from Go
+
+[expect]
+exit = 0
+stdout = "1-auth-flow: intake = approved\n"
+changes = [
+  "~ f LOG.md",
+  "~ f STATE.json",
+  "+ f plan/specs/1-auth-flow/README.md",
+]
+```
+
+`[expect]` holds `exit` and, when not empty, `stdout`, `stderr`, `changes` and
+`git_log` (git cases). It must be the last table: `capture` replaces everything from
+its header on, keeps the lines above it exactly as written, and refuses if the
+result wouldn't read back the same.
+
+`changes` lists what the run did to the workspace, compared with its starting files:
+`+ f path` added, `- f path` removed, `~ f path` changed (also `d` folders and
+`l path -> target` links). Files the run didn't touch aren't stored, but they're still
+checked: a change the expectation doesn't list fails the case.
+
+Beside `case.toml`, only what a case needs:
 
 ```
-case.toml   args = ["gate", "spec", "approved"]   # required
-            env = { KEY = "{ROOT}/x" }            # optional
-            unordered_stdout = false              # compare stdout lines sorted
-            git = false                           # run in a git repo, record git-log
-            skip_on = ["windows"]                 # macos, linux, windows
-            deviations = ""                       # recorded differences from Go
-            workspace = "plan-spec-ready"         # a shared starting workspace
-            tools = ["git"]                       # PATH holds only these (Unix only)
 before/     the starting workspace, or files added to or replacing the shared one;
             an empty `.fixture-keep` keeps an empty folder
 config/     files for the run's global config folder (XDG_CONFIG_HOME), e.g.
             config/daiku/settings.json
 stage/      git cases only: files added after the base commit and staged
             (`git add -A`), so the binary starts with staged changes
-expect/     stdout, stderr, exit, changes.txt, tree/ (the added and changed files),
-            git-log (git cases only)
+expect/     the files the run added or changed (`+ f` and `~ f` in `changes`), at
+            their paths; absent when the run wrote no file
 ```
-
-`changes.txt` lists what the run did to the workspace, compared with its starting
-files: `+ f path` added, `- f path` removed, `~ f path` changed (also `d` folders and
-`l path -> target` links). Files the run didn't touch aren't stored, but they're still
-checked: a change the expectation doesn't list fails the case.
 
 Fixture data never holds a file named `.gitignore` or `.gitattributes`, because git
 would apply it to this repo (the daiku scaffold's `.gitignore` would hide
@@ -95,7 +115,7 @@ commits the binary made.
 
 Before comparing, run-specific values become tokens: `{TIMESTAMP}`, `{TODAY}`,
 `{ROOT}`, `{HOME}`, `{CONFIG}` and `{COMMIT}`. `{ROOT}`, `{HOME}` and `{CONFIG}` also
-expand in `args` and `env`. `.json` files compare by value; other files compare as
+expand in `args` and `env`. `.json` files compare by value; other files and outputs compare as
 text with LF line endings.
 
 ```sh
@@ -107,7 +127,7 @@ cargo run -p daiku-fixtures -- capture --bin path/to/go/daiku CASE...
 cargo run -p daiku-fixtures -- coverage
 ```
 
-`capture` deletes a case's `expect/` before writing it. Review the result before
+`capture` rewrites a case's `[expect]` and `expect/`. Review the result before
 committing: it is the contract. It warns (`warning: <case>: <file> contains today's
 date <date>`) when a starting file holds the run's date, which `{TODAY}` would turn
 into a token; use a fixed date in January 2026 instead.

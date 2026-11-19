@@ -1,3 +1,7 @@
 args = ["idea", "reopen", "2", "--reason", "x"]
 workspace = "ideas"
 skip_on = ["windows"]
+
+[expect]
+exit = 1
+stderr = "daiku: won't write ideas/2-dark-mode/summary.md: ideas/2-dark-mode/summary.md is a symlink, which could lead outside the workspace\n"

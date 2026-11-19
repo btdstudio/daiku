@@ -1,2 +1,6 @@
 args = ["idea", "new", "x", "--bogus"]
 workspace = "ideas"
+
+[expect]
+exit = 1
+stderr = "daiku idea new: unknown flag \"--bogus\"\n"

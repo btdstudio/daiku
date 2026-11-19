@@ -1,2 +1,6 @@
 args = ["gate", "intake", "approved", "now"]
 workspace = "plan-intake-draft"
+
+[expect]
+exit = 1
+stderr = "usage: daiku gate <phase> <status> [--reason <r>] [--force]\n"

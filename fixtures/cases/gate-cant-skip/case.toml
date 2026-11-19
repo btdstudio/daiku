@@ -1,2 +1,6 @@
 args = ["gate", "spec", "skipped", "--reason", "x"]
 workspace = "plan-spec-ready"
+
+[expect]
+exit = 1
+stderr = "daiku: spec can't be skipped\n"

@@ -1,2 +1,9 @@
 args = ["switch", "1-auth-flow"]
 workspace = "plan-closed-change"
+
+[expect]
+exit = 0
+stdout = "switched to 1-auth-flow\n"
+changes = [
+  "~ f .daiku/active",
+]

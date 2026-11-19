@@ -1,2 +1,0 @@
-~ f ideas/1-faster-sync/log.md
-~ f ideas/1-faster-sync/summary.md

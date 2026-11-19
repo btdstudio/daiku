@@ -1,3 +1,7 @@
 args = ["idea", "new", "Bulk import"]
 workspace = "ideas"
 skip_on = ["windows"]
+
+[expect]
+exit = 1
+stderr = "daiku: won't write ideas/4-bulk-import: ideas/4-bulk-import is a symlink, which could lead outside the workspace\n"

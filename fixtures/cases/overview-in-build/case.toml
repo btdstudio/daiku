@@ -1,2 +1,6 @@
 args = ["overview"]
 workspace = "build-implement"
+
+[expect]
+exit = 1
+stderr = "daiku: S-0002 is a build change — overview works on plan changes\n"

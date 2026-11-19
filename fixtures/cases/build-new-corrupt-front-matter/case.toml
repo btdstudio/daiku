@@ -1,2 +1,6 @@
 args = ["build", "new", "N-0001"]
 workspace = "plan-published"
+
+[expect]
+exit = 1
+stderr = "daiku: build/tickets/N-0001.md: frontmatter: line 2: unterminated list\n"

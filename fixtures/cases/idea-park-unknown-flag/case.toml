@@ -1,2 +1,6 @@
 args = ["idea", "park", "1", "--why", "x"]
 workspace = "ideas"
+
+[expect]
+exit = 1
+stderr = "daiku idea park: unknown flag \"--why\", or it needs a value\n"

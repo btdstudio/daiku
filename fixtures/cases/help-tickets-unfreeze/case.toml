@@ -1,1 +1,9 @@
 args = ["help", "tickets", "unfreeze"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku tickets unfreeze <id> --reason <r>
+
+clear a ticket's freeze
+'''

@@ -1,2 +1,6 @@
 args = ["reopen", "spec"]
 workspace = "plan-architecture-approved"
+
+[expect]
+exit = 1
+stderr = "daiku: reopening spec requires a reason\n"

@@ -1,1 +1,5 @@
 args = ["change", "new", "Auth flow"]
+
+[expect]
+exit = 1
+stderr = "daiku: . is not a daiku workspace (run `daiku init`)\n"

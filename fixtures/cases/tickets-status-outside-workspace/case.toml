@@ -1,1 +1,11 @@
 args = ["tickets", "status"]
+
+[expect]
+exit = 0
+stdout = '''
+draft      0  
+ready      0  
+published  0  
+unfrozen   0  
+drifted    0  
+'''

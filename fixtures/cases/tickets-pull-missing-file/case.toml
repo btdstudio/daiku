@@ -1,2 +1,6 @@
 args = ["tickets", "pull", "nope.md"]
 workspace = "init"
+
+[expect]
+exit = 1
+stderr = "daiku: cannot read nope.md: open nope.md: no such file or directory\n"

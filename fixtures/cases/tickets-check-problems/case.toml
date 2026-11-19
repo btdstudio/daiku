@@ -1,2 +1,12 @@
 args = ["tickets", "check"]
 workspace = "plan-architecture-approved"
+
+[expect]
+exit = 1
+stdout = '''
+✗ plan/specs/1-auth-flow/tickets/T-0005.md: frontmatter: line 2: unterminated list
+✗ S-0003: repo is required for a story
+✗ S-0004: repo is required for a story
+✗ S-0003: parent E-0009 doesn't exist
+✗ tickets: dependency cycle among S-0003, S-0004
+'''

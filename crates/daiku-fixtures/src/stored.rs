@@ -1,6 +1,6 @@
 //! Names of files as fixture data stores them.
 //!
-//! Fixture trees (a case's starting folders and `expect/tree/`, a workspace's
+//! Fixture trees (a case's starting folders and `expect/`, a workspace's
 //! `tree/` and `config/`) live inside this repo. A `.gitignore` or `.gitattributes`
 //! among them would apply to the repo itself: the daiku scaffold's `.gitignore`
 //! hides `.daiku/active`, so those files would never be committed. Fixture data

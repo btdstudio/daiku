@@ -1,3 +1,0 @@
-usage: daiku tickets ready <id>... | --all [--force]
-
-ready draft tickets once breakdown is approved

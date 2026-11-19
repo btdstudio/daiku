@@ -1,2 +1,11 @@
 args = ["gate", "ship", "complete"]
 workspace = "build-ship"
+
+[expect]
+exit = 0
+stdout = "S-0002: ship = complete\n"
+changes = [
+  "~ f LOG.md",
+  "~ f STATE.json",
+  "~ f plan/specs/1-auth-flow/README.md",
+]

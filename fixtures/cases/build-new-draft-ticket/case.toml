@@ -1,2 +1,6 @@
 args = ["build", "new", "S-0002"]
 workspace = "plan-architecture-approved"
+
+[expect]
+exit = 1
+stderr = "daiku: S-0002 is draft; only a ready or published planned ticket can be built\n"

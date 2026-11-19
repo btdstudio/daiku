@@ -1,1 +1,5 @@
 args = ["change", "close", "1-auth-flow", "--reason", "x"]
+
+[expect]
+exit = 1
+stderr = "daiku: unknown change \"1-auth-flow\"\n"

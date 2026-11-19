@@ -1,2 +1,16 @@
 args = ["tickets", "ready", "--all"]
 workspace = "plan-architecture-approved"
+
+[expect]
+exit = 0
+stdout = '''
+E-0001: ready
+S-0002: ready
+'''
+stderr = "warning: daiku: tickets ready requires breakdown approved for 1-auth-flow (it's \"unset\")\n"
+changes = [
+  "~ f LOG.md",
+  "~ f plan/specs/1-auth-flow/README.md",
+  "~ f plan/specs/1-auth-flow/tickets/E-0001.md",
+  "~ f plan/specs/1-auth-flow/tickets/S-0002.md",
+]

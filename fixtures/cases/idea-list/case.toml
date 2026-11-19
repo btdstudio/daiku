@@ -1,2 +1,10 @@
 args = ["idea", "list"]
 workspace = "ideas"
+
+[expect]
+exit = 0
+stdout = '''
+1 [open] Faster sync
+2 [parked] Dark mode — reason: after the beta
+3 [dropped] Offline edits — reason: out of scope
+'''

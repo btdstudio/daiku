@@ -1,2 +1,6 @@
 args = ["idea", "show", "0"]
 workspace = "ideas"
+
+[expect]
+exit = 1
+stderr = "invalid id: 0\n"

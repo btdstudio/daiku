@@ -1,9 +1,11 @@
 //! Golden fixture runner for daiku binaries.
 //!
-//! A case is a folder holding `case.toml`, `before/`, `config/` and `expect/`. The
-//! runner copies its starting files (a shared workspace, then `before/`) into a sealed
-//! temp workspace, runs the binary, normalises what it saw, and compares that with
-//! `expect/` or writes it. Shared workspaces are built from recipes.
+//! A case is a folder holding `case.toml`: its inputs, then an `[expect]` table with
+//! the expected exit code, output and workspace changes. The runner copies its
+//! starting files (a shared workspace, then `before/`) into a sealed temp workspace,
+//! runs the binary, normalises what it saw, and compares that with `[expect]` and the
+//! changed files in `expect/`, or writes them. Shared workspaces are built from
+//! recipes.
 
 mod case;
 mod compare;
@@ -15,7 +17,7 @@ mod report;
 mod run;
 mod stored;
 
-pub use case::{Case, CaseSpec, Os, load_cases};
+pub use case::{Case, CaseSpec, EXPECT_HEADER, Expect, Os, load_cases};
 pub use compare::{Difference, compare, write_expect};
 pub use coverage::{uncovered, usage_entries};
 #[doc(hidden)]

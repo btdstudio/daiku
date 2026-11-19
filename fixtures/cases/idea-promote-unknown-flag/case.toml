@@ -1,2 +1,6 @@
 args = ["idea", "promote", "1", "--title", "x", "--bogus"]
 workspace = "ideas"
+
+[expect]
+exit = 1
+stderr = "daiku idea promote: unknown flag \"--bogus\", or it needs a value\n"

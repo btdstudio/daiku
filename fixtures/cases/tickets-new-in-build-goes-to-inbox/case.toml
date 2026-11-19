@@ -1,2 +1,9 @@
 args = ["tickets", "new", "task", "Fix typo", "--repo", "api"]
 workspace = "build-implement"
+
+[expect]
+exit = 0
+stdout = "created N-0001 build/tickets/N-0001.md\n"
+changes = [
+  "+ f build/tickets/N-0001.md",
+]

@@ -1,1 +1,9 @@
 args = ["help", "source", "list"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku source list
+
+list intake sources (the default verb)
+'''

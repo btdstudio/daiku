@@ -1,2 +1,6 @@
 args = ["tickets", "unfreeze", "S-0002", "--reason", "x"]
 workspace = "plan-breakdown-approved"
+
+[expect]
+exit = 1
+stderr = "daiku: ticket S-0002: isn't frozen\n"

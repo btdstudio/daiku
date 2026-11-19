@@ -1,2 +1,10 @@
 args = ["idea", "reopen", "3", "--reason", "back in scope"]
 workspace = "ideas"
+
+[expect]
+exit = 0
+stdout = "idea 3: open\n"
+changes = [
+  "~ f ideas/3-offline-edits/log.md",
+  "~ f ideas/3-offline-edits/summary.md",
+]

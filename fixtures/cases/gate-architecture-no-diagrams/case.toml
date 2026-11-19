@@ -1,2 +1,11 @@
 args = ["gate", "architecture", "approved"]
 workspace = "plan-spec-ready"
+
+[expect]
+exit = 1
+stderr = '''
+daiku: architecture requires spec to be approved (currently "")
+daiku: architecture approved: 1 artifact problem(s):
+  plan/specs/1-auth-flow/architecture.md: no ## Diagrams section
+(pass --force to override)
+'''

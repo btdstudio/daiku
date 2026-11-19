@@ -1,2 +1,10 @@
 args = ["tickets", "ready", "E-0001"]
 workspace = "plan-breakdown-approved"
+
+[expect]
+exit = 0
+stdout = "E-0001: ready\n"
+changes = [
+  "~ f LOG.md",
+  "~ f plan/specs/1-auth-flow/tickets/E-0001.md",
+]

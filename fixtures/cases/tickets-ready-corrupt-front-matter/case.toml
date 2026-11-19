@@ -1,2 +1,6 @@
 args = ["tickets", "ready", "--all"]
 workspace = "plan-breakdown-approved"
+
+[expect]
+exit = 1
+stdout = "✗ plan/specs/1-auth-flow/tickets/E-0001.md: frontmatter: line 5: unterminated list\n"

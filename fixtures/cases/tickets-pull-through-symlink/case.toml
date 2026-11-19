@@ -1,3 +1,7 @@
 args = ["tickets", "pull", "pulled.md"]
 workspace = "init"
 skip_on = ["windows"]
+
+[expect]
+exit = 1
+stderr = "daiku: won't write build/tickets: build is a symlink, which could lead outside the workspace\n"

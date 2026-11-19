@@ -1,1 +1,7 @@
 args = ["write", "data.json", "{\"b\":[1,2],\"a\":{\"x\":true}}"]
+
+[expect]
+exit = 0
+changes = [
+  "+ f data.json",
+]

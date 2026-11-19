@@ -1,1 +1,4 @@
 args = ["adr", "list"]
+
+[expect]
+exit = 0

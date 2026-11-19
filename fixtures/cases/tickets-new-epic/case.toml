@@ -1,2 +1,11 @@
 args = ["tickets", "new", "epic", "Accounts"]
 workspace = "plan-spec-ready"
+
+[expect]
+exit = 0
+stdout = "created E-0001 plan/specs/1-auth-flow/tickets/E-0001.md\n"
+changes = [
+  "~ f plan/specs/1-auth-flow/README.md",
+  "+ d plan/specs/1-auth-flow/tickets",
+  "+ f plan/specs/1-auth-flow/tickets/E-0001.md",
+]

@@ -1,1 +1,5 @@
 args = ["tickets", "mark-published", "S-0002", "--external", "github=x"]
+
+[expect]
+exit = 1
+stderr = "daiku: no ticket S-0002\n"

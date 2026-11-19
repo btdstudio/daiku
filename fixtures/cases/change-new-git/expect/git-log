@@ -1,6 +1,0 @@
-daiku: 1-auth-flow: created
-
-M	LOG.md
-M	STATE.json
-A	plan/00_intake/1.md
-A	plan/specs/1-auth-flow/.gitkeep

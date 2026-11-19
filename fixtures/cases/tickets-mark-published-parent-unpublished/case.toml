@@ -1,2 +1,6 @@
 args = ["tickets", "mark-published", "S-0002", "--external", "github=org/api#12"]
 workspace = "plan-publish-in-progress"
+
+[expect]
+exit = 1
+stdout = "✗ S-0002: parent E-0001 has no github id; publish it first\n"

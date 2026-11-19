@@ -1,1 +1,9 @@
 args = ["help", "adr", "show"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku adr show <number>
+
+show an ADR
+'''

@@ -1,2 +1,9 @@
 args = ["repo", "path", "api", "{ROOT}/elsewhere"]
 workspace = "build-implement"
+
+[expect]
+exit = 0
+stdout = "api: {ROOT}/elsewhere\n"
+changes = [
+  "~ f .daiku/paths.json",
+]

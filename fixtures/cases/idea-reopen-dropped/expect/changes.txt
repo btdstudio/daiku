@@ -1,2 +1,0 @@
-~ f ideas/3-offline-edits/log.md
-~ f ideas/3-offline-edits/summary.md

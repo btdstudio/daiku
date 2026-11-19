@@ -1,2 +1,9 @@
 args = ["references", "check"]
 workspace = "init"
+
+[expect]
+exit = 0
+stdout = '''
+! a.md: not in references/index.md
+0 of 1 file(s) indexed, 1 warning(s)
+'''

@@ -1,2 +1,22 @@
 args = ["init", "--no-git", "--force"]
 workspace = "init"
+
+[expect]
+exit = 0
+stdout = '''
+wrote .gitignore
+wrote CLAUDE.md
+wrote README.md
+wrote ideas/context.md
+wrote ideas/personas/facilitator.md
+wrote ideas/templates/log-entry.md
+wrote ideas/templates/summary.md
+wrote references/context.md
+wrote sync-examples/github.md
+wrote sync.md
+wrote AGENTS.md
+scaffolded daiku workspace in .
+'''
+changes = [
+  "~ f CLAUDE.md",
+]

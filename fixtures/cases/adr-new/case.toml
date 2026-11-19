@@ -1,2 +1,9 @@
 args = ["adr", "new", "--title", "Cache sessions", "--deciders", "team", "--context", "Slow logins.", "--decision", "Redis.", "--consequences", "Another service."]
 workspace = "adrs"
+
+[expect]
+exit = 0
+stdout = "created 0003 Cache sessions\n"
+changes = [
+  "+ f plan/04_architecture/adr/0003-cache-sessions.md",
+]

@@ -1,6 +1,0 @@
-baseSource:  
-gates:       block
-sourceDir:   plan/00_intake
-adrDir:      plan/04_architecture/adr
-syncFile:    sync.md
-overview:    auto

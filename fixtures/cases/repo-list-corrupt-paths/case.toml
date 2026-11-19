@@ -1,2 +1,6 @@
 args = ["repo", "list"]
 workspace = "build-implement"
+
+[expect]
+exit = 1
+stderr = "daiku: cannot parse .daiku/paths.json: invalid character 'n' looking for beginning of object key string\n"

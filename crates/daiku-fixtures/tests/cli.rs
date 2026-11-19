@@ -98,7 +98,10 @@ fn check_passes_fails_and_skips() {
         )
     );
 
-    case(&cases, "good", "args = [\"print\", \"ho\"]\n");
+    // Change the args and keep the captured [expect].
+    let file = cases.join("good/case.toml");
+    let toml = std::fs::read_to_string(&file).unwrap();
+    std::fs::write(&file, toml.replacen("\"hi\"]", "\"ho\"]", 1)).unwrap();
     let bad = fixtures(
         &["check", "--bin", stub(), "--cases", cases_arg, "good"],
         dir.path(),
@@ -280,10 +283,9 @@ fn capture_then_check_on_a_copied_case() {
     let dir = tempfile::tempdir().unwrap();
     let from = suite_dir().join("git-two-commits");
     let to = dir.path().join("cases/copy");
-    write(
-        &to.join("case.toml"),
-        &std::fs::read_to_string(from.join("case.toml")).unwrap(),
-    );
+    let original = std::fs::read_to_string(from.join("case.toml")).unwrap();
+    let inputs = original.split("\n[expect]\n").next().unwrap();
+    write(&to.join("case.toml"), inputs);
     let cases = dir.path().join("cases");
     let cases = cases.to_str().unwrap();
     assert_eq!(
@@ -301,8 +303,9 @@ fn capture_then_check_on_a_copied_case() {
     let ok = fixtures(&["check", "--bin", stub(), "--cases", cases], dir.path());
     assert_eq!(ok.status.code(), Some(0), "{}", text(&ok.stdout));
     assert_eq!(
-        std::fs::read(to.join("expect/git-log")).unwrap(),
-        std::fs::read(from.join("expect/git-log")).unwrap()
+        std::fs::read_to_string(to.join("case.toml")).unwrap(),
+        original,
+        "capture writes the suite case's [expect] table exactly"
     );
 }
 
@@ -328,7 +331,12 @@ fn caller_environment_does_not_reach_the_binary() {
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(0), "{}", text(&out.stdout));
-    let env = std::fs::read_to_string(cases.join("env/expect/stdout")).unwrap();
+    let env = daiku_fixtures::Case::load(&cases.join("env"))
+        .unwrap()
+        .spec
+        .expect
+        .unwrap()
+        .stdout;
     assert!(!env.contains("DAIKU_FX_CANARY"), "{env}");
     assert!(!env.contains("leaked"), "{env}");
     assert!(env.lines().any(|l| l == "TZ=UTC"), "{env}");
@@ -371,7 +379,8 @@ fn capture_warns_about_todays_date_and_still_captures() {
     );
     assert!(err.contains("warning: dated: config/daiku/s.json"), "{err}");
     assert!(!err.contains("past"), "{err}");
-    assert!(cases.join("dated/expect/stdout").is_file());
+    let toml = std::fs::read_to_string(cases.join("dated/case.toml")).unwrap();
+    assert!(toml.contains("\n[expect]\nexit = 0\n"), "{toml}");
 }
 
 #[test]

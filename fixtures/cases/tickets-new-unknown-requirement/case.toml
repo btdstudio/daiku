@@ -1,2 +1,6 @@
 args = ["tickets", "new", "story", "Sign out", "--repo", "api", "--requirements", "R9"]
 workspace = "plan-architecture-approved"
+
+[expect]
+exit = 1
+stderr = "daiku tickets new: R9 isn't in 1-auth-flow's spec\n"

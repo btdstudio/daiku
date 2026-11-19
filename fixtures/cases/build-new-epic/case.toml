@@ -1,2 +1,6 @@
 args = ["build", "new", "E-0001"]
 workspace = "plan-published"
+
+[expect]
+exit = 1
+stderr = "daiku: E-0001 has no repo — a build needs one\n"

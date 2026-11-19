@@ -1,2 +1,6 @@
 args = ["repo", "add", "web", "-x"]
 workspace = "init"
+
+[expect]
+exit = 1
+stderr = "daiku: invalid remote \"-x\"\n"

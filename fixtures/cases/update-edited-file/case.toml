@@ -1,2 +1,9 @@
 args = ["update"]
 workspace = "init"
+
+[expect]
+exit = 0
+stdout = '''
+skipped (edited) sync.md
+update complete (0 updated, 1 skipped, 10 unchanged, 0 merged)
+'''

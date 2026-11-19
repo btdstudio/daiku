@@ -1,2 +1,6 @@
 args = ["tickets", "new", "task", "Fix typo"]
 workspace = "init"
+
+[expect]
+exit = 1
+stderr = "daiku: an inbox ticket needs a repo (--repo <name>)\n"

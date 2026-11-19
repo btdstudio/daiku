@@ -1,1 +1,9 @@
 args = ["help", "tickets", "new"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku tickets new <type> <title> [--parent <id>] [--repo <name>] [--depends <id,id>] [--requirements <id,id>] [--inbox]
+
+create a ticket in the active plan change, or with --inbox (or no open plan change) an N- task in build/tickets/
+'''

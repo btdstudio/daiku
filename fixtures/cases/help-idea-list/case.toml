@@ -1,1 +1,9 @@
 args = ["help", "idea", "list"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku idea list
+
+list ideas with their status
+'''

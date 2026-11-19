@@ -1,1 +1,9 @@
 args = ["help", "idea", "park"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku idea park <id> --reason <r>
+
+set an open idea aside, with a reason
+'''

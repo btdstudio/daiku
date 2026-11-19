@@ -1,1 +1,5 @@
 args = ["switch"]
+
+[expect]
+exit = 0
+stdout = "no changes yet — run `daiku change new <title>` first\n"

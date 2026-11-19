@@ -1,2 +1,0 @@
-~ f LOG.md
-+ f build/tickets/X-1234.md

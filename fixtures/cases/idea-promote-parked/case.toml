@@ -1,2 +1,6 @@
 args = ["idea", "promote", "2", "--title", "Dark mode"]
 workspace = "ideas"
+
+[expect]
+exit = 1
+stderr = "daiku: idea 2 is parked: reopen it first\n"

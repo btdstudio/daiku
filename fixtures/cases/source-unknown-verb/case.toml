@@ -1,2 +1,13 @@
 args = ["source", "bogus"]
 workspace = "init"
+
+[expect]
+exit = 1
+stderr = '''
+daiku source: unknown verb "bogus"
+usage:
+  daiku source new --title <t> [--repo <path>] [--rev <r>] [--body <b>]
+                                           add an intake source to plan/00_intake/
+  daiku source list                        list intake sources (the default verb)
+  daiku source show <id>                   show an intake source
+'''

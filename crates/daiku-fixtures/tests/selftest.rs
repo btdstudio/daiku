@@ -91,7 +91,8 @@ fn toml_list(items: &[String]) -> String {
                 .replace('\\', "\\\\")
                 .replace('"', "\\\"")
                 .replace('\n', "\\n")
-                .replace('\r', "\\r");
+                .replace('\r', "\\r")
+                .replace('\u{7}', "\\u0007");
             format!("\"{e}\"")
         })
         .collect();
@@ -273,25 +274,23 @@ fn capture_then_check_passes() {
         parts(&c),
         [(
             "expect".to_string(),
-            "no expect/ folder; run capture".to_string()
+            "case.toml has no [expect] table; run capture".to_string()
         )]
     );
     write_expect(&c, &run(&c)).unwrap();
-    for f in [
-        "exit",
-        "stdout",
-        "stderr",
-        "changes.txt",
-        "tree/a/b.json",
-        "tree/x.txt",
-        "git-log",
-    ] {
+    for f in ["a/b.json", "x.txt"] {
         assert!(c.expect_dir().join(f).is_file(), "{f}");
     }
+    let c = Case::load(&c.dir).unwrap();
+    let want = c.spec.expect.as_ref().unwrap();
+    assert_eq!(want.exit, 0);
+    assert_eq!(want.stdout, "hello\n{TIMESTAMP}\n{COMMIT}\n");
+    assert_eq!(want.stderr, "");
     assert_eq!(
-        std::fs::read_to_string(c.expect_dir().join("stdout")).unwrap(),
-        "hello\n{TIMESTAMP}\n{COMMIT}\n"
+        want.changes,
+        ["+ d a", "+ f a/b.json", "+ d empty", "+ f x.txt"]
     );
+    assert_eq!(want.git_log, "c\n\nA\ta/b.json\nA\tx.txt\n");
     assert_eq!(parts(&c), []);
 }
 
@@ -299,9 +298,12 @@ fn capture_then_check_passes() {
 fn capture_replaces_stale_files() {
     let dir = tempfile::tempdir().unwrap();
     let c = case(dir.path(), "stale", &script(&[&["print", "x"]]));
-    write(&c.expect_dir().join("tree/old.txt"), "old");
+    write(&c.expect_dir().join("old.txt"), "old");
     write_expect(&c, &run(&c)).unwrap();
-    assert!(!c.expect_dir().join("tree/old.txt").exists());
+    assert!(
+        !c.expect_dir().exists(),
+        "a run that writes no file has no expect/"
+    );
 }
 
 #[test]
@@ -365,7 +367,7 @@ fn json_compares_by_value() {
     let p = parts(&c);
     // captured_then recaptured the previous script, so this compares against {a:1}.
     assert_eq!(p.len(), 1, "{p:?}");
-    assert_eq!(p[0].0, "tree/d.json");
+    assert_eq!(p[0].0, "expect/d.json");
 }
 
 #[test]
@@ -411,8 +413,9 @@ fn git_log_records_both_commits() {
     ]) + "git = true\n";
     let c = case(dir.path(), "log", &toml);
     write_expect(&c, &run(&c)).unwrap();
+    let c = Case::load(&c.dir).unwrap();
     assert_eq!(
-        std::fs::read_to_string(c.expect_dir().join("git-log")).unwrap(),
+        c.spec.expect.as_ref().unwrap().git_log,
         "first\n\nA\ta.txt\nsecond\n\nM\ta.txt\nA\tb.txt\n"
     );
     assert_eq!(parts(&c), []);
@@ -572,16 +575,13 @@ mod symlinks {
         let o = outside(dir.path());
         let c = case(dir.path(), "x", &script(&[&["write", "a.txt", "a"]]));
         write_expect(&c, &run(&c)).unwrap();
-        std::fs::remove_file(c.expect_dir().join("stdout")).unwrap();
-        symlink(o.join("secret.txt"), c.expect_dir().join("stdout")).unwrap();
-        let tree = c.expect_dir().join("tree");
-        std::fs::remove_dir_all(&tree).unwrap();
-        symlink(&o, &tree).unwrap();
-        std::fs::copy(o.join("secret.txt"), o.join("a.txt")).unwrap();
+        let c = Case::load(&c.dir).unwrap();
+        std::fs::remove_file(c.expect_dir().join("a.txt")).unwrap();
+        symlink(o.join("secret.txt"), c.expect_dir().join("a.txt")).unwrap();
 
         let diffs = compare(&c, &run(&c));
         let parts: Vec<&str> = diffs.iter().map(|d| d.part.as_str()).collect();
-        assert_eq!(parts, ["stdout", "tree/a.txt"], "{diffs:?}");
+        assert_eq!(parts, ["expect/a.txt"], "{diffs:?}");
         for d in &diffs {
             assert!(d.detail.contains("is a symlink"), "{d:?}");
             assert!(!d.detail.contains("SECRET"), "{d:?}");
@@ -603,4 +603,69 @@ mod symlinks {
             "SECRET"
         );
     }
+}
+
+// ---- the [expect] table in case.toml ----
+
+#[test]
+fn capture_keeps_the_inputs_as_written() {
+    let dir = tempfile::tempdir().unwrap();
+    let inputs = "# A comment the owner wrote.\nargs = [\"print\", \"x\"]   # trailing\n\nunordered_stdout = false\n";
+    let c = case(dir.path(), "keep", inputs);
+    write_expect(&c, &run(&c)).unwrap();
+    let text = std::fs::read_to_string(c.dir.join("case.toml")).unwrap();
+    assert_eq!(
+        text,
+        format!(
+            "{}\n\n[expect]\nexit = 0\nstdout = \"x\\n\"\n",
+            inputs.trim_end()
+        )
+    );
+    // Capturing again replaces the table, not the inputs.
+    let c = Case::load(&c.dir).unwrap();
+    write_expect(&c, &run(&c)).unwrap();
+    assert_eq!(
+        std::fs::read_to_string(c.dir.join("case.toml")).unwrap(),
+        text
+    );
+}
+
+#[test]
+fn awkward_output_round_trips() {
+    let dir = tempfile::tempdir().unwrap();
+    for (name, text) in [
+        ("quote-end", "it's\nend'"),
+        ("triple", "a\n'''\nb\n"),
+        ("control", "bell\u{7}\nx\n"),
+        ("crlf", "a\r\nb\r\n"),
+        ("lead", "\n\nlead\n"),
+        ("backslash", "C:\\x\n\"q\"\n"),
+        ("unicode", "✗ — café\n"),
+    ] {
+        let c = case(dir.path(), name, &script(&[&["eprint", text]]));
+        write_expect(&c, &run(&c)).unwrap();
+        let c = Case::load(&c.dir).unwrap();
+        assert_eq!(
+            c.spec.expect.as_ref().unwrap().stderr,
+            format!("{text}\n"),
+            "{name}"
+        );
+        assert_eq!(parts(&c), [], "{name}");
+    }
+}
+
+#[test]
+fn an_input_after_expect_stops_capture() {
+    // `[env]` after `[expect]` is a valid input, but capture would drop it, so the
+    // read-back check refuses and leaves case.toml alone.
+    let dir = tempfile::tempdir().unwrap();
+    let text = "args = [\"print\", \"x\"]\n[expect]\nexit = 0\n[env]\nDAIKU_K = \"v\"\n";
+    let c = case(dir.path(), "late", text);
+    assert_eq!(c.spec.env["DAIKU_K"], "v");
+    let err = write_expect(&c, &run(&c)).unwrap_err().to_string();
+    assert!(err.contains("reads back differently"), "{err}");
+    assert_eq!(
+        std::fs::read_to_string(c.dir.join("case.toml")).unwrap(),
+        text
+    );
 }

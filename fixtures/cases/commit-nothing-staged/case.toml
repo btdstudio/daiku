@@ -1,3 +1,7 @@
 args = ["commit", "-q", "-m", "x"]
 workspace = "build-implement"
 git = true
+
+[expect]
+exit = 1
+stderr = "daiku commit: nothing staged — stage one logical change with `git add`, then commit it\n"

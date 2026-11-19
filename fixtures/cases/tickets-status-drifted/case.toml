@@ -1,2 +1,12 @@
 args = ["tickets", "status"]
 workspace = "plan-published"
+
+[expect]
+exit = 0
+stdout = '''
+draft      0  
+ready      0  
+published  1  E-0001
+unfrozen   0  
+drifted    1  S-0002
+'''

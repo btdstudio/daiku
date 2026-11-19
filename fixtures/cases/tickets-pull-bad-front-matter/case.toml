@@ -1,2 +1,6 @@
 args = ["tickets", "pull", "pulled.md"]
 workspace = "init"
+
+[expect]
+exit = 1
+stderr = "daiku: draft: frontmatter: file must start with \"---\"\n"

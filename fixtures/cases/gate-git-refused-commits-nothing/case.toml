@@ -1,3 +1,7 @@
 args = ["gate", "spec", "draft"]
 workspace = "git-plan-intake-draft"
 git = true
+
+[expect]
+exit = 1
+stderr = "daiku: spec requires intake to be approved (currently \"draft\") (pass --force to override)\n"

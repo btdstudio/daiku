@@ -1,2 +1,0 @@
-~ f plan/specs/1-auth-flow/README.md
-+ f plan/specs/1-auth-flow/tickets/T-0003.md

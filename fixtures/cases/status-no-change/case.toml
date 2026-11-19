@@ -1,2 +1,11 @@
 args = ["status"]
 workspace = "init"
+
+[expect]
+exit = 0
+stdout = '''
+no active change
+vcs:      none
+
+no changes yet
+'''

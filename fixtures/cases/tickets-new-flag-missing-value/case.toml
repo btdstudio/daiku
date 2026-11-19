@@ -1,2 +1,6 @@
 args = ["tickets", "new", "story", "Sign out", "--parent"]
 workspace = "plan-spec-ready"
+
+[expect]
+exit = 1
+stderr = "daiku tickets new: unknown flag \"--parent\"\n"

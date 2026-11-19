@@ -1,2 +1,6 @@
 args = ["overview"]
 workspace = "init"
+
+[expect]
+exit = 1
+stderr = "daiku: no active change — name one, or run `daiku switch <change>` first\n"

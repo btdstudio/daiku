@@ -1,1 +1,0 @@
-usage: daiku tickets new <type> <title> [--parent <id>] [--repo <name>] [--depends <id,id>] [--requirements <id,id>] [--inbox] (quote a multi-word title)

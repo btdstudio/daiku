@@ -1,2 +1,6 @@
 args = ["status", "1-auth-flow", "x"]
 workspace = "plan-intake-draft"
+
+[expect]
+exit = 1
+stderr = "usage: daiku status [<plan-change>]\n"

@@ -1,1 +1,5 @@
 args = ["references", "check"]
+
+[expect]
+exit = 0
+stdout = "no references/ folder: run `daiku update` to add it\n"

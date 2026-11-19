@@ -1,2 +1,6 @@
 args = ["tickets", "new", "task", "Write docs"]
 workspace = "plan-architecture-approved"
+
+[expect]
+exit = 1
+stderr = "daiku: a task needs --repo <name>\n"

@@ -1,2 +1,6 @@
 args = ["adr", "show", "9"]
 workspace = "adrs"
+
+[expect]
+exit = 1
+stderr = "daiku: adr 0009 not found\n"
