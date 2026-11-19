@@ -48,25 +48,29 @@ pub struct Loaded {
 /// part daiku adds is joined with `/`, so it prints the same on Windows.
 pub fn global_path(dirs: &Dirs) -> String {
     let base = match &dirs.xdg_config_home {
-        Some(x) if !x.is_empty() => x.to_string_lossy().into_owned(),
+        Some(x) if !x.is_empty() => clean_base(&x.to_string_lossy()),
         _ => match &dirs.home {
-            Some(h) => format!("{}/.config", h.to_string_lossy()),
-            None => String::new(),
+            Some(h) if !h.as_os_str().is_empty() => {
+                let home = clean_base(&h.to_string_lossy());
+                format!("{}/.config", home.trim_end_matches('/'))
+            }
+            _ => return "daiku/settings.json".into(),
         },
     };
-    if base.is_empty() {
-        return "daiku/settings.json".into();
-    }
-    // Cleaned as Go's filepath.Join cleans it; on Windows a `//server` (UNC) prefix
-    // is kept, as Go's Windows Clean keeps the volume.
-    let slashed = gofmt::to_slash(&base);
-    let cleaned = match slashed.strip_prefix("//") {
-        Some(rest) if cfg!(windows) && !rest.starts_with('/') => {
+    format!("{}/daiku/settings.json", base.trim_end_matches('/'))
+}
+
+/// A folder from the environment, cleaned as Go's `filepath.Join` cleans it and
+/// slash-separated. On Windows a `\\server\share` (UNC) prefix written by the user
+/// is kept, as Go's Windows `Clean` keeps the volume.
+fn clean_base(raw: &str) -> String {
+    let slashed = gofmt::to_slash(raw);
+    match slashed.strip_prefix("//") {
+        Some(rest) if cfg!(windows) && !rest.is_empty() && !rest.starts_with('/') => {
             format!("//{}", gofmt::clean(rest).trim_start_matches('/'))
         }
         _ => gofmt::clean(&slashed),
-    };
-    format!("{}/daiku/settings.json", cleaned.trim_end_matches('/'))
+    }
 }
 
 /// The project settings file for the workspace at `root`, as Go prints it
@@ -404,6 +408,30 @@ mod tests {
         );
         assert_eq!(global_path(&home("/h", Some("/"))), "/daiku/settings.json");
         assert_eq!(project_path(Path::new(".")), ".daiku/settings.json");
+    }
+
+    /// Windows spellings: backslashes become slashes, a drive is kept, and a UNC
+    /// prefix the user wrote is kept (the CI failure at ship: a home of `/` must not
+    /// turn into `//`).
+    #[cfg(windows)]
+    #[test]
+    fn global_path_on_windows() {
+        let dirs = |h: &str, x: Option<&str>| Dirs {
+            home: Some(h.into()),
+            xdg_config_home: x.map(Into::into),
+        };
+        assert_eq!(
+            global_path(&dirs(r"C:\Users\me", None)),
+            "C:/Users/me/.config/daiku/settings.json"
+        );
+        assert_eq!(
+            global_path(&dirs(r"C:\h", Some(r"\\server\share\cfg"))),
+            "//server/share/cfg/daiku/settings.json"
+        );
+        assert_eq!(
+            global_path(&dirs(r"C:\h", Some(r"C:\a\..\b\"))),
+            "C:/b/daiku/settings.json"
+        );
     }
 
     #[test]
