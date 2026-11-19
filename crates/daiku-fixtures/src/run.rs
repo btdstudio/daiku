@@ -99,11 +99,15 @@ impl Sandbox {
         Err("tools isn't supported on Windows".into())
     }
 
-    /// Replaces `{ROOT}`, `{HOME}` and `{CONFIG}` with this run's paths.
+    /// Replaces `{ROOT}`, `{HOME}` and `{CONFIG}` with this run's paths, written
+    /// with `/`. On Windows that's still a valid path, and it stays valid inside a
+    /// JSON string (a stored `.daiku/paths.json`) and unchanged by Go's `%q`
+    /// quoting, where `\` wouldn't. The normalizer maps every form back.
     pub(crate) fn expand(&self, s: &str) -> String {
-        s.replace("{ROOT}", &self.root.to_string_lossy())
-            .replace("{HOME}", &self.home.to_string_lossy())
-            .replace("{CONFIG}", &self.config.to_string_lossy())
+        let slash = |p: &std::path::Path| p.to_string_lossy().replace('\\', "/");
+        s.replace("{ROOT}", &slash(&self.root))
+            .replace("{HOME}", &slash(&self.home))
+            .replace("{CONFIG}", &slash(&self.config))
     }
 
     /// The environment every process in the run gets (D7, D8), before the case's own.
@@ -555,6 +559,16 @@ mod tests {
         assert_eq!(read("t.json"), br#"{"p": "/real/x"}"#);
         assert_eq!(read("b.bin"), [0xffu8, b'{', b'R']);
         assert_eq!(read("plain.txt"), b"{ROOT");
+    }
+
+    /// Expanded paths use `/`, so they can sit in JSON and survive `%q`.
+    #[test]
+    fn expand_writes_paths_with_slashes() {
+        let sb = Sandbox::new().unwrap();
+        let got = sb.expand(r#"{"api": "{ROOT}", "h": "{HOME}/x", "c": "{CONFIG}"}"#);
+        assert!(!got.contains('\\'), "{got}");
+        let v: serde_json::Value = serde_json::from_str(&got).unwrap();
+        assert_eq!(v["api"], sb.root.to_string_lossy().replace('\\', "/"));
     }
 
     #[test]
