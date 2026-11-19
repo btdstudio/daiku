@@ -33,12 +33,13 @@ pub fn create_dir_all(root: &Path, path: &Path) -> Result<(), Error> {
 /// A port of Go's `os.MkdirAll`, so failures name what Go names: an existing
 /// non-folder anywhere on the path is `mkdir <that path>: not a directory`, found
 /// by checking the parents first; otherwise the failing `mkdir`'s own error.
-/// Paths print slash-separated and cleaned, as Go's joined paths are. It does no
-/// workspace check; [`create_dir_all`] is the guarded form.
+/// Paths print as given (slash-separated), as Go's do: callers pass joined, clean
+/// paths, and `init` passes the folder as the user typed it. It does no workspace
+/// check; [`create_dir_all`] is the guarded form.
 pub fn mkdir_all(path: &Path) -> Result<(), Error> {
     let fail = |p: &Path, source: std::io::Error| Error::Io {
         op: "mkdir",
-        path: gofmt::clean(&gofmt::to_slash(&p.to_string_lossy())),
+        path: gofmt::to_slash(&p.to_string_lossy()),
         source,
     };
     match std::fs::metadata(path) {
@@ -317,7 +318,7 @@ mod tests {
     fn mkdir_all_names_what_go_names() {
         let (_d, root) = temp();
         std::fs::write(root.join("file"), "x").unwrap();
-        let shown = |rel: &str| gofmt::clean(&gofmt::to_slash(&root.join(rel).to_string_lossy()));
+        let shown = |rel: &str| gofmt::to_slash(&root.join(rel).to_string_lossy());
         for (target, at) in [
             ("file", "file"),
             ("file/sub", "file"),
@@ -330,6 +331,16 @@ mod tests {
                 "{target}"
             );
         }
+        // The path prints as given, unclean parts included, as Go's does.
+        let given = format!("{}/./file/sub", gofmt::to_slash(&root.to_string_lossy()));
+        let err = mkdir_all(Path::new(&given)).unwrap_err().to_string();
+        assert_eq!(
+            err,
+            format!(
+                "mkdir {}/./file: not a directory",
+                gofmt::to_slash(&root.to_string_lossy())
+            )
+        );
         mkdir_all(&root.join("new/a/b")).unwrap();
         mkdir_all(&root.join("new/a/b")).unwrap();
         assert!(root.join("new/a/b").is_dir());

@@ -133,12 +133,12 @@ impl Engine<'_> {
         self.vcs == "none"
     }
 
+    /// Go's `filepath.Join(root, rel)`, which cleans the result, root included.
     fn path(&self, rel: &str) -> PathBuf {
-        let mut p = self.root.to_path_buf();
-        for part in rel.split('/') {
-            p.push(part);
-        }
-        p
+        PathBuf::from(gofmt::join(&[
+            gofmt::to_slash(&self.root.to_string_lossy()).as_str(),
+            rel,
+        ]))
     }
 
     /// Go's `HasRoom`: a real folder, plus its marker when the room has one.
@@ -228,8 +228,10 @@ impl Engine<'_> {
             });
         }
         let dest = self.path(rel);
-        if let Some(parent) = dest.parent() {
-            crate::write::mkdir_all(parent)?;
+        // Go's filepath.Dir: a bare file name's folder is ".".
+        match dest.parent().filter(|p| !p.as_os_str().is_empty()) {
+            Some(parent) => crate::write::mkdir_all(parent)?,
+            None => crate::write::mkdir_all(Path::new("."))?,
         }
         std::fs::write(&dest, data).map_err(io("open", shown(self.root, rel)))
     }
