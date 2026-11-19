@@ -188,6 +188,41 @@ pub enum Error {
     #[error("daiku: state saved but not committed: {detail}")]
     NotCommitted { detail: String },
 
+    // Repos.
+    #[error("daiku: unknown repo {} — run `daiku repo add`", gofmt::quote(.name))]
+    UnknownRepo { name: String },
+
+    #[error("daiku: repo {} has no local path — run `daiku repo path {name} <path>`", gofmt::quote(.name))]
+    RepoNoPath { name: String },
+
+    /// Go's `os.UserHomeDir` error.
+    #[error("$HOME is not defined")]
+    NoHome,
+
+    #[error(
+        "daiku: {repo} is locked by {holder} ({phase} {status}) — finish, close or reopen it to tasks"
+    )]
+    RepoLocked {
+        repo: String,
+        holder: String,
+        phase: String,
+        status: String,
+    },
+
+    // Sources.
+    #[error("daiku: source {id} not found at {path}")]
+    SourceNotFound { id: i64, path: String },
+
+    #[error("daiku: source {id} already exists at {path}; not overwriting")]
+    SourceExists { id: i64, path: String },
+
+    #[error("daiku: intake id out of range: the highest intake id ({highest}) leaves no next id")]
+    IntakeIdExhausted { highest: i64 },
+
+    /// A file error worded as Go's `*PathError` (`open x: permission denied`).
+    #[error("{text}")]
+    PathError { text: String },
+
     /// A file operation failed, worded as Go's `*os.PathError` (`open x: no such
     /// file or directory`).
     #[error("{op} {path}: {}", gofmt::io_error_text(.source))]

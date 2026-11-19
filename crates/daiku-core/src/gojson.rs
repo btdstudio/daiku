@@ -485,3 +485,29 @@ fn first_overflow(data: &[u8]) -> Option<String> {
     }
     None
 }
+
+/// A string as Go's `json.Marshal` writes it: `"`, `\` and the short escapes
+/// (`\b \f \n \r \t`), other control characters as `\u00XX`, and, since Go
+/// escapes HTML by default, `<`, `>`, `&`, U+2028 and U+2029 as `\uXXXX`.
+pub fn marshal_string(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 2);
+    out.push('"');
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\u{8}' => out.push_str("\\b"),
+            '\u{c}' => out.push_str("\\f"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            '<' | '>' | '&' | '\u{2028}' | '\u{2029}' => {
+                out.push_str(&format!("\\u{:04x}", c as u32));
+            }
+            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out.push('"');
+    out
+}

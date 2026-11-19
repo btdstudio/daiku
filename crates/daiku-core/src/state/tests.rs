@@ -314,7 +314,7 @@ fn go_json(f: &file::RawFile) -> String {
             }
         }
     }
-    fn slice(v: &file::GoSlice) -> String {
+    fn slice(v: &crate::gojson::decode::GoSlice) -> String {
         if v.is_nil() {
             return "null".into();
         }

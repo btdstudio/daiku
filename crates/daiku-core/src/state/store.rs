@@ -53,7 +53,7 @@ pub struct Store<'a> {
 
 /// Go's `os.ReadFile`, with the error worded as Go's `*PathError`: `None` when the
 /// file doesn't exist.
-pub(crate) fn read_file(path: &Path) -> Result<Option<Vec<u8>>, String> {
+pub fn read_file(path: &Path) -> Result<Option<Vec<u8>>, String> {
     let shown = gofmt::to_slash(&path.to_string_lossy());
     let mut f = match std::fs::File::open(path) {
         Ok(f) => f,
@@ -67,17 +67,17 @@ pub(crate) fn read_file(path: &Path) -> Result<Option<Vec<u8>>, String> {
 }
 
 /// Go's `realDir`: a folder that isn't a symlink.
-pub(crate) fn real_dir(p: &Path) -> bool {
+pub fn real_dir(p: &Path) -> bool {
     std::fs::symlink_metadata(p).is_ok_and(|m| m.is_dir())
 }
 
 /// `rel` joined to `root` for messages, slash-separated, as Go's `filepath.Join`.
-pub(crate) fn shown(root: &Path, rel: &str) -> String {
+pub fn shown(root: &Path, rel: &str) -> String {
     gofmt::join(&[gofmt::to_slash(&root.to_string_lossy()).as_str(), rel])
 }
 
 /// `rel` (slash-separated) joined to `root`.
-pub(crate) fn at(root: &Path, rel: &str) -> PathBuf {
+pub fn at(root: &Path, rel: &str) -> PathBuf {
     rel.split('/')
         .filter(|p| !p.is_empty())
         .fold(root.to_path_buf(), |p, part| p.join(part))

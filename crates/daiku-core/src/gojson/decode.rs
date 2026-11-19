@@ -4,6 +4,8 @@
 //! use. Input must have passed [`super::check`] first; the reader then assumes
 //! valid JSON and never fails on syntax.
 
+use std::collections::BTreeMap;
+
 /// What the next value is, by its first byte.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
@@ -236,6 +238,180 @@ fn decode_rune(b: &[u8]) -> (char, usize) {
         Some(s) => (s.chars().next().unwrap_or('\u{FFFD}'), n),
         None => ('\u{FFFD}', 1),
     }
+}
+
+/// Where a value sits, for Go's type errors: a struct field (`Struct.path`), or a
+/// plain value.
+#[derive(Debug, Clone, Copy)]
+pub enum At<'a> {
+    Value,
+    Field { strukt: &'a str, field: &'a str },
+}
+
+/// Go's `UnmarshalTypeError` text.
+pub fn type_error(value: &str, at: At, ty: &str) -> String {
+    match at {
+        At::Value => format!("json: cannot unmarshal {value} into Go value of type {ty}"),
+        At::Field { strukt, field } => format!(
+            "json: cannot unmarshal {value} into Go struct field {strukt}.{field} of type {ty}"
+        ),
+    }
+}
+
+/// Skips a value of the wrong kind and returns Go's type error for it.
+pub fn mismatch(r: &mut Reader, k: Kind, at: At, ty: &str) -> String {
+    r.skip();
+    type_error(k.go_name(), at, ty)
+}
+
+/// Decodes into a Go `int`: `null` leaves it, a number must be a decimal integer
+/// that fits.
+pub fn int(r: &mut Reader, into: &mut i64, at: At) -> Result<(), String> {
+    match r.kind() {
+        Kind::Null => {
+            r.literal();
+            Ok(())
+        }
+        Kind::Number => {
+            let lit = r.literal();
+            match lit.parse::<i64>() {
+                Ok(n) => {
+                    *into = n;
+                    Ok(())
+                }
+                Err(_) => Err(type_error(&format!("number {lit}"), at, "int")),
+            }
+        }
+        k => Err(mismatch(r, k, at, "int")),
+    }
+}
+
+/// Decodes into a Go `string`: `null` leaves it as it was.
+pub fn string(r: &mut Reader, into: &mut String, at: At) -> Result<(), String> {
+    match r.kind() {
+        Kind::Null => {
+            r.literal();
+            Ok(())
+        }
+        Kind::String => {
+            *into = r.string();
+            Ok(())
+        }
+        k => Err(mismatch(r, k, at, "string")),
+    }
+}
+
+/// Decodes into a Go `map[string]string` (`None` is nil): `null` sets nil, an
+/// object merges into the map, each value decoded fresh.
+pub fn string_map(
+    r: &mut Reader,
+    into: &mut Option<BTreeMap<String, String>>,
+    at: At,
+) -> Result<(), String> {
+    match r.kind() {
+        Kind::Null => {
+            r.literal();
+            *into = None;
+            Ok(())
+        }
+        Kind::Object => {
+            r.open();
+            let map = into.get_or_insert_with(BTreeMap::new);
+            while let Some(key) = r.next_key() {
+                let mut v = String::new();
+                string(r, &mut v, at)?;
+                map.insert(key, v);
+            }
+            Ok(())
+        }
+        k => Err(mismatch(r, k, at, "map[string]string")),
+    }
+}
+
+/// A Go `[]string` as `json.Unmarshal` fills it: decoding an array into a slice
+/// reuses its backing array, so elements past the length can come back.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GoSlice {
+    backing: Vec<String>,
+    len: usize,
+    nil: bool,
+}
+
+impl Default for GoSlice {
+    /// A nil slice.
+    fn default() -> GoSlice {
+        GoSlice {
+            backing: Vec::new(),
+            len: 0,
+            nil: true,
+        }
+    }
+}
+
+impl GoSlice {
+    pub fn is_nil(&self) -> bool {
+        self.nil
+    }
+
+    pub fn items(&self) -> &[String] {
+        &self.backing[..self.len]
+    }
+}
+
+/// Decodes into a Go `[]string`.
+pub fn string_slice(r: &mut Reader, into: &mut GoSlice, at: At) -> Result<(), String> {
+    match r.kind() {
+        Kind::Null => {
+            r.literal();
+            *into = GoSlice::default();
+            Ok(())
+        }
+        Kind::Array => {
+            r.open();
+            into.nil = false;
+            let mut i = 0;
+            while r.next_item() {
+                if i >= into.backing.len() {
+                    into.backing.push(String::new());
+                }
+                if i >= into.len {
+                    into.len = i + 1;
+                }
+                string(r, &mut into.backing[i], at)?;
+                i += 1;
+            }
+            if i < into.len {
+                into.len = i;
+            }
+            if i == 0 {
+                *into = GoSlice {
+                    backing: Vec::new(),
+                    len: 0,
+                    nil: false,
+                };
+            }
+            Ok(())
+        }
+        k => Err(mismatch(r, k, at, "[]string")),
+    }
+}
+
+/// `data` as a string the way Go converts bytes to runes: each byte that isn't
+/// part of valid UTF-8 becomes one U+FFFD.
+pub fn lossy(data: &[u8]) -> String {
+    let mut out = String::with_capacity(data.len());
+    let mut i = 0;
+    while i < data.len() {
+        if data[i] < 0x80 {
+            out.push(char::from(data[i]));
+            i += 1;
+        } else {
+            let (c, n) = decode_rune(&data[i..]);
+            out.push(c);
+            i += n;
+        }
+    }
+    out
 }
 
 /// Go's `foldName` for matching a JSON key to an ASCII field name: ASCII letters
