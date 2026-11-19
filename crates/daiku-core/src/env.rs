@@ -1,0 +1,101 @@
+//! What varies between runs and clients, passed in by the caller (ADR-0003, D4).
+//!
+//! Core never reads the process environment, the real clock or spawns a process
+//! itself: it asks the `Env`. The CLI supplies real implementations; tests use the
+//! ones in [`crate::fake`].
+
+use std::ffi::OsString;
+use std::path::PathBuf;
+use std::time::SystemTime;
+
+/// Everything core needs from outside itself.
+pub struct Env {
+    pub clock: Box<dyn Clock>,
+    pub process: Box<dyn Process>,
+    pub events: Box<dyn Events>,
+    pub dirs: Dirs,
+}
+
+/// The current time.
+pub trait Clock {
+    fn now(&self) -> SystemTime;
+}
+
+/// Runs external programs (git, gh).
+pub trait Process {
+    /// Runs `cmd` to completion and returns what it printed.
+    fn output(&self, cmd: &Cmd) -> std::io::Result<Output>;
+    /// Runs `cmd` attached to the user's terminal (for `commit` and `pr`) and
+    /// returns its exit code.
+    fn run_attached(&self, cmd: &Cmd) -> std::io::Result<i32>;
+}
+
+/// A program to run.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Cmd {
+    pub program: String,
+    pub args: Vec<String>,
+    /// The folder to run in; `None` is the caller's current folder.
+    pub dir: Option<PathBuf>,
+    /// Variables added to the inherited environment.
+    pub env: Vec<(String, String)>,
+}
+
+impl Cmd {
+    pub fn new(program: impl Into<String>) -> Cmd {
+        Cmd {
+            program: program.into(),
+            args: Vec::new(),
+            dir: None,
+            env: Vec::new(),
+        }
+    }
+
+    pub fn args<I, S>(mut self, args: I) -> Cmd
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.args.extend(args.into_iter().map(Into::into));
+        self
+    }
+
+    pub fn dir(mut self, dir: impl Into<PathBuf>) -> Cmd {
+        self.dir = Some(dir.into());
+        self
+    }
+}
+
+/// What a finished program printed, and how it exited.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Output {
+    /// The exit code; `None` when it was killed by a signal.
+    pub code: Option<i32>,
+    pub stdout: Vec<u8>,
+    pub stderr: Vec<u8>,
+}
+
+impl Output {
+    pub fn success(&self) -> bool {
+        self.code == Some(0)
+    }
+}
+
+/// Where core reports progress while an operation runs.
+pub trait Events {
+    fn emit(&self, event: Event);
+}
+
+/// Progress from an operation. Variants arrive with the operations that report them.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum Event {}
+
+/// The user's home and config folders, as the client found them.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Dirs {
+    /// The home folder (`$HOME`, or `%USERPROFILE%` on Windows).
+    pub home: Option<PathBuf>,
+    /// `$XDG_CONFIG_HOME` as set, even when empty.
+    pub xdg_config_home: Option<OsString>,
+}

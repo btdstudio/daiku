@@ -1,4 +1,28 @@
 //! daiku's core. It holds no UI: every operation returns data and never prints.
+//!
+//! Callers open a [`Workspace`] with an [`Env`], which carries everything that
+//! varies between runs and clients: the clock, external processes, progress events
+//! and the home and config folders (ADR-0003). Operations return
+//! `Result<Outcome<T>, Error>`; an [`Error`]'s `Display` is the Go CLI's message.
+
+pub mod env;
+pub mod error;
+pub mod fake;
+pub mod frontmatter;
+pub mod gofmt;
+pub mod gojson;
+pub mod json;
+pub mod markdown;
+pub mod outcome;
+pub mod placeholder;
+pub mod settings;
+pub mod workspace;
+pub mod write;
+
+pub use env::{Clock, Cmd, Dirs, Env, Event, Events, Output, Process};
+pub use error::Error;
+pub use outcome::{Outcome, Warning};
+pub use workspace::Workspace;
 
 /// The crate's version, as Cargo built it.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
