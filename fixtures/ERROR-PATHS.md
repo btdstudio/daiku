@@ -35,7 +35,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | `init-through-symlink` |
 | corrupt | n/a: doesn't read STATE.json or settings; it writes them |
-| other | `init-dir-argument`, `init-existing`, `init-force`, `init-fresh`, `init-git` |
+| other | `init-dir-argument`, `init-existing`, `init-force`, `init-fresh`, `init-git`, `init-help-flag` |
 
 ## daiku update
 
@@ -46,7 +46,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | `update-through-symlink` |
 | corrupt | `update-corrupt-manifest` |
-| other | `update-edited-file`, `update-unchanged` |
+| other | `update-edited-file`, `update-help-flag`, `update-unchanged` |
 
 ## daiku status
 
@@ -57,7 +57,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `status-corrupt-state` |
-| other | `status-build-change`, `status-git-workspace`, `status-plan-argument`, `status-plan-change`, `status-unknown-plan` |
+| other | `status-build-change`, `status-git-workspace`, `status-help-flag`, `status-plan-argument`, `status-plan-change`, `status-unknown-plan` |
 
 ## daiku settings
 
@@ -68,7 +68,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `settings-bad-gates-value`, `settings-bad-overview-value`, `settings-invalid-global`, `settings-invalid-project` |
-| other | `settings-defaults`, `settings-global`, `settings-project`, `settings-project-overrides-global` |
+| other | `settings-defaults`, `settings-global`, `settings-help-flag`, `settings-project`, `settings-project-overrides-global` |
 
 ## daiku switch
 
@@ -79,7 +79,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | `switch-through-symlink` |
 | corrupt | `switch-corrupt-state` |
-| other | `switch-all`, `switch-closed`, `switch-list`, `switch-list-hides-closed`, `switch-to-change`, `switch-unknown` |
+| other | `switch-all`, `switch-closed`, `switch-help-flag`, `switch-list`, `switch-list-hides-closed`, `switch-to-change`, `switch-unknown` |
 
 ## daiku source new
 
@@ -90,7 +90,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | `source-new-dir-outside-workspace`, `source-new-through-symlink` |
 | corrupt | `source-new-corrupt-state` |
-| other | `source-new`, `source-new-repo` |
+| other | `source-new`, `source-new-help-flag`, `source-new-repo` |
 
 ## daiku source list
 
@@ -101,7 +101,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `source-list-bad-front-matter`, `source-list-invalid-settings` |
-| other | `source-list`, `source-list-default-verb`, `source-list-empty` |
+| other | `source-list`, `source-list-default-verb`, `source-list-empty`, `source-list-help-flag` |
 
 ## daiku source show
 
@@ -112,7 +112,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `source-show-bad-front-matter` |
-| other | `source-show`, `source-show-unknown` |
+| other | `source-show`, `source-show-help-flag`, `source-show-unknown` |
 
 ## daiku adr new
 
@@ -123,7 +123,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | `adr-new-dir-absolute`, `adr-new-dir-outside-workspace`, `adr-new-through-symlink` |
 | corrupt | `adr-new-invalid-settings` |
-| other | `adr-new`, `adr-new-file-missing`, `adr-new-from-file`, `adr-new-title-only` |
+| other | `adr-new`, `adr-new-file-missing`, `adr-new-from-file`, `adr-new-help-flag`, `adr-new-title-only` |
 
 ## daiku adr list
 
@@ -134,7 +134,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `adr-list-invalid-settings` |
-| other | `adr-list`, `adr-list-default-verb`, `adr-list-empty` |
+| other | `adr-list`, `adr-list-default-verb`, `adr-list-empty`, `adr-list-help-flag` |
 
 ## daiku adr show
 
@@ -145,7 +145,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `adr-show-bad-file` |
-| other | `adr-show`, `adr-show-unknown` |
+| other | `adr-show`, `adr-show-help-flag`, `adr-show-unknown` |
 
 ## daiku build new
 
@@ -156,7 +156,7 @@ The classes:
 | order | `build-new-draft-ticket` |
 | unsafe | `build-new-through-symlink` |
 | corrupt | `build-new-corrupt-front-matter`, `build-new-corrupt-repos`, `build-new-corrupt-state`, `build-new-invalid-global` |
-| other | `build-new`, `build-new-again`, `build-new-epic`, `build-new-git`, `build-new-inbox-ticket`, `build-new-pulled-ticket`, `build-new-ready-ticket`, `build-new-unknown-ticket` |
+| other | `build-new`, `build-new-again`, `build-new-epic`, `build-new-git`, `build-new-help-flag`, `build-new-inbox-ticket`, `build-new-pulled-ticket`, `build-new-ready-ticket`, `build-new-unknown-ticket` |
 
 ## daiku change new
 
@@ -167,7 +167,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | `change-new-through-symlink` |
 | corrupt | `change-new-corrupt-state`, `change-new-invalid-global` |
-| other | `change-new`, `change-new-body-rev`, `change-new-git`, `change-new-registered-repo`, `change-new-repo-path`, `change-new-second`, `change-new-two-repos-with-path`, `change-new-unknown-repo-name` |
+| other | `change-new`, `change-new-body-rev`, `change-new-git`, `change-new-help-flag`, `change-new-registered-repo`, `change-new-repo-path`, `change-new-second`, `change-new-two-repos-with-path`, `change-new-unknown-repo-name` |
 
 ## daiku change close
 
@@ -178,7 +178,7 @@ The classes:
 | order | `change-close-already-closed` |
 | unsafe | `change-close-through-symlink` |
 | corrupt | `change-close-corrupt-state` |
-| other | `change-close`, `change-close-build`, `change-close-git`, `change-close-unknown` |
+| other | `change-close`, `change-close-build`, `change-close-git`, `change-close-help-flag`, `change-close-unknown` |
 
 ## daiku gate
 
@@ -189,7 +189,7 @@ The classes:
 | order | `gate-architecture-no-diagrams`, `gate-build-out-of-order`, `gate-build-repo-held`, `gate-build-repo-held-forced`, `gate-build-repo-held-prompt`, `gate-build-skip-out-of-order`, `gate-out-of-order-auto`, `gate-out-of-order-blocked`, `gate-out-of-order-forced`, `gate-out-of-order-global-overridden`, `gate-out-of-order-global-prompt`, `gate-out-of-order-prompt`, `gate-publish-complete-unpublished`, `gate-spec-artifact-forced`, `gate-spec-artifact-problems`, `gate-violations-listed-together` |
 | unsafe | `gate-log-through-symlink`, `gate-through-symlink` |
 | corrupt | `gate-corrupt-state`, `gate-out-of-order-invalid-global`, `gate-out-of-order-invalid-project` |
-| other | `gate-breakdown-approved`, `gate-build-implement-complete`, `gate-build-plan-phase`, `gate-build-ship-complete`, `gate-build-ticket-approved`, `gate-git-breakdown`, `gate-git-build-implement`, `gate-git-intake`, `gate-git-refused-commits-nothing`, `gate-git-ship-complete`, `gate-git-spec`, `gate-intake-approved`, `gate-intake-await-approval`, `gate-publish-in-progress`, `gate-research-skipped`, `gate-spec-approved` |
+| other | `gate-breakdown-approved`, `gate-build-implement-complete`, `gate-build-plan-phase`, `gate-build-ship-complete`, `gate-build-ticket-approved`, `gate-git-breakdown`, `gate-git-build-implement`, `gate-git-intake`, `gate-git-refused-commits-nothing`, `gate-git-ship-complete`, `gate-git-spec`, `gate-help-flag`, `gate-intake-approved`, `gate-intake-await-approval`, `gate-publish-in-progress`, `gate-research-skipped`, `gate-spec-approved` |
 
 ## daiku reopen
 
@@ -200,7 +200,7 @@ The classes:
 | order | `reopen-not-started` |
 | unsafe | `reopen-through-symlink` |
 | corrupt | `reopen-corrupt-state` |
-| other | `reopen-build-design`, `reopen-build-implement`, `reopen-git`, `reopen-intake-keeps-skips`, `reopen-spec` |
+| other | `reopen-build-design`, `reopen-build-implement`, `reopen-git`, `reopen-help-flag`, `reopen-intake-keeps-skips`, `reopen-spec` |
 
 ## daiku tickets new
 
@@ -211,7 +211,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | `tickets-new-through-symlink` |
 | corrupt | `tickets-new-corrupt-state`, `tickets-new-unreadable-ticket` |
-| other | `tickets-new-epic`, `tickets-new-feature-parent`, `tickets-new-in-build-goes-to-inbox`, `tickets-new-inbox`, `tickets-new-inbox-not-task`, `tickets-new-story-full`, `tickets-new-task`, `tickets-new-unknown-repo`, `tickets-new-unknown-requirement` |
+| other | `tickets-new-epic`, `tickets-new-feature-parent`, `tickets-new-help-flag`, `tickets-new-in-build-goes-to-inbox`, `tickets-new-inbox`, `tickets-new-inbox-not-task`, `tickets-new-story-full`, `tickets-new-task`, `tickets-new-unknown-repo`, `tickets-new-unknown-requirement` |
 
 ## daiku tickets pull
 
@@ -222,7 +222,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | `tickets-pull-through-symlink` |
 | corrupt | `tickets-pull-bad-front-matter`, `tickets-pull-corrupt-state` |
-| other | `tickets-pull`, `tickets-pull-no-external`, `tickets-pull-twice` |
+| other | `tickets-pull`, `tickets-pull-help-flag`, `tickets-pull-no-external`, `tickets-pull-twice` |
 
 ## daiku tickets check
 
@@ -233,7 +233,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `tickets-check-corrupt-front-matter` |
-| other | `tickets-check-clean`, `tickets-check-drafts`, `tickets-check-no-tickets`, `tickets-check-problems` |
+| other | `tickets-check-clean`, `tickets-check-drafts`, `tickets-check-help-flag`, `tickets-check-no-tickets`, `tickets-check-problems` |
 
 ## daiku tickets status
 
@@ -244,7 +244,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `tickets-status-corrupt-front-matter` |
-| other | `tickets-status`, `tickets-status-drifted`, `tickets-status-mixed` |
+| other | `tickets-status`, `tickets-status-drifted`, `tickets-status-help-flag`, `tickets-status-mixed` |
 
 ## daiku tickets order
 
@@ -255,7 +255,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `tickets-order-corrupt-front-matter` |
-| other | `tickets-order`, `tickets-order-cycle` |
+| other | `tickets-order`, `tickets-order-cycle`, `tickets-order-help-flag` |
 
 ## daiku tickets ready
 
@@ -266,7 +266,7 @@ The classes:
 | order | `tickets-ready-already-ready`, `tickets-ready-before-breakdown`, `tickets-ready-before-breakdown-forced` |
 | unsafe | `tickets-ready-through-symlink` |
 | corrupt | `tickets-ready-corrupt-front-matter`, `tickets-ready-corrupt-state` |
-| other | `tickets-ready-all`, `tickets-ready-one`, `tickets-ready-placeholder`, `tickets-ready-unknown` |
+| other | `tickets-ready-all`, `tickets-ready-help-flag`, `tickets-ready-one`, `tickets-ready-placeholder`, `tickets-ready-unknown` |
 
 ## daiku tickets mark-published
 
@@ -277,7 +277,7 @@ The classes:
 | order | `tickets-mark-published-before-publish`, `tickets-mark-published-draft`, `tickets-mark-published-draft-forced`, `tickets-mark-published-parent-unpublished` |
 | unsafe | `tickets-mark-published-through-symlink` |
 | corrupt | `tickets-mark-published-corrupt-front-matter`, `tickets-mark-published-corrupt-state` |
-| other | `tickets-mark-published`, `tickets-mark-published-again`, `tickets-mark-published-unknown` |
+| other | `tickets-mark-published`, `tickets-mark-published-again`, `tickets-mark-published-help-flag`, `tickets-mark-published-unknown` |
 
 ## daiku tickets unfreeze
 
@@ -288,7 +288,7 @@ The classes:
 | order | `tickets-unfreeze-not-frozen` |
 | unsafe | `tickets-unfreeze-through-symlink` |
 | corrupt | `tickets-unfreeze-corrupt-front-matter` |
-| other | `tickets-unfreeze`, `tickets-unfreeze-unknown` |
+| other | `tickets-unfreeze`, `tickets-unfreeze-help-flag`, `tickets-unfreeze-unknown` |
 
 ## daiku overview
 
@@ -299,7 +299,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | `overview-through-symlink` |
 | corrupt | `overview-corrupt-state` |
-| other | `overview`, `overview-check-current`, `overview-check-stale`, `overview-manual-setting`, `overview-named-change`, `overview-stdout`, `overview-unknown-change`, `overview-up-to-date` |
+| other | `overview`, `overview-check-current`, `overview-check-stale`, `overview-help-flag`, `overview-manual-setting`, `overview-named-change`, `overview-stdout`, `overview-unknown-change`, `overview-up-to-date` |
 
 ## daiku idea new
 
@@ -310,7 +310,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | `idea-new-through-symlink` |
 | corrupt | `idea-new-corrupt-summary` |
-| other | `idea-new`, `idea-new-first` |
+| other | `idea-new`, `idea-new-first`, `idea-new-help-flag` |
 
 ## daiku idea list
 
@@ -321,7 +321,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `idea-list-corrupt-summary` |
-| other | `idea-list`, `idea-list-empty` |
+| other | `idea-list`, `idea-list-empty`, `idea-list-help-flag` |
 
 ## daiku idea show
 
@@ -332,7 +332,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `idea-show-corrupt-summary` |
-| other | `idea-show`, `idea-show-unknown` |
+| other | `idea-show`, `idea-show-help-flag`, `idea-show-unknown` |
 
 ## daiku idea park
 
@@ -343,7 +343,7 @@ The classes:
 | order | `idea-park-already-parked` |
 | unsafe | `idea-park-through-symlink` |
 | corrupt | `idea-park-corrupt-summary` |
-| other | `idea-park`, `idea-park-unknown` |
+| other | `idea-park`, `idea-park-help-flag`, `idea-park-unknown` |
 
 ## daiku idea drop
 
@@ -354,7 +354,7 @@ The classes:
 | order | `idea-drop-already-dropped` |
 | unsafe | `idea-drop-through-symlink` |
 | corrupt | `idea-drop-corrupt-summary` |
-| other | `idea-drop` |
+| other | `idea-drop`, `idea-drop-help-flag` |
 
 ## daiku idea reopen
 
@@ -365,7 +365,7 @@ The classes:
 | order | `idea-reopen-open` |
 | unsafe | `idea-reopen-through-symlink` |
 | corrupt | `idea-reopen-corrupt-summary` |
-| other | `idea-reopen-dropped`, `idea-reopen-parked` |
+| other | `idea-reopen-dropped`, `idea-reopen-help-flag`, `idea-reopen-parked` |
 
 ## daiku idea promote
 
@@ -376,7 +376,7 @@ The classes:
 | order | `idea-promote-parked` |
 | unsafe | `idea-promote-through-symlink` |
 | corrupt | `idea-promote-corrupt-state`, `idea-promote-corrupt-summary` |
-| other | `idea-promote`, `idea-promote-unknown`, `idea-promote-with-repo` |
+| other | `idea-promote`, `idea-promote-help-flag`, `idea-promote-unknown`, `idea-promote-with-repo` |
 
 ## daiku references check
 
@@ -387,7 +387,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | n/a: reads only references/, never state or settings |
-| other | `references-check-clean`, `references-check-findings`, `references-check-no-index` |
+| other | `references-check-clean`, `references-check-findings`, `references-check-help-flag`, `references-check-no-index` |
 
 ## daiku repo add
 
@@ -398,7 +398,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | `repo-add-through-symlink` |
 | corrupt | `repo-add-corrupt-repos` |
-| other | `repo-add`, `repo-add-dash-remote`, `repo-add-existing-name`, `repo-add-home-path`, `repo-add-invalid-name`, `repo-add-path-branch`, `repo-add-relative-path`, `repo-add-remote-credentials`, `repo-add-remote-helper` |
+| other | `repo-add`, `repo-add-dash-remote`, `repo-add-existing-name`, `repo-add-help-flag`, `repo-add-home-path`, `repo-add-invalid-name`, `repo-add-path-branch`, `repo-add-relative-path`, `repo-add-remote-credentials`, `repo-add-remote-helper` |
 
 ## daiku repo list
 
@@ -409,7 +409,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `repo-list-corrupt-paths`, `repo-list-corrupt-repos` |
-| other | `repo-list`, `repo-list-empty`, `repo-list-no-path` |
+| other | `repo-list`, `repo-list-empty`, `repo-list-help-flag`, `repo-list-no-path` |
 
 ## daiku repo path
 
@@ -420,7 +420,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | `repo-path-through-symlink` |
 | corrupt | `repo-path-corrupt-paths` |
-| other | `repo-path`, `repo-path-unknown` |
+| other | `repo-path`, `repo-path-help-flag`, `repo-path-unknown` |
 
 ## daiku repo doctor
 
@@ -431,7 +431,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: --clone's one workspace write is .daiku/paths.json, the writer covered by repo-path-through-symlink |
 | corrupt | `repo-doctor-corrupt-repos` |
-| other | `repo-doctor-clone`, `repo-doctor-clone-no-into`, `repo-doctor-clone-nothing-missing`, `repo-doctor-empty`, `repo-doctor-no-origin` |
+| other | `repo-doctor-clone`, `repo-doctor-clone-no-into`, `repo-doctor-clone-nothing-missing`, `repo-doctor-empty`, `repo-doctor-help-flag`, `repo-doctor-no-origin` |
 
 ## daiku env
 
@@ -442,7 +442,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `env-corrupt-repos`, `env-corrupt-state` |
-| other | `env-build-change`, `env-plan-without-repos` |
+| other | `env-build-change`, `env-help-flag`, `env-plan-without-repos` |
 
 ## daiku commit
 
@@ -453,7 +453,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: daiku writes nothing; git does the commit |
 | corrupt | `commit-corrupt-state` |
-| other | `commit-nothing-staged`, `commit-staged`, `commit-staged-two-paragraphs` |
+| other | `commit-help-flag`, `commit-nothing-staged`, `commit-staged`, `commit-staged-two-paragraphs` |
 
 ## daiku pr
 
@@ -464,7 +464,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: daiku writes nothing; gh opens the pull request |
 | corrupt | `pr-corrupt-state` |
-| other | `pr-gh-missing`, `pr-title-gh-missing` |
+| other | `pr-gh-missing`, `pr-help-flag`, `pr-title-gh-missing` |
 
 ## daiku check
 
@@ -475,7 +475,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | n/a: reads no workspace state |
-| other | `check` |
+| other | `check`, `check-help-flag` |
 
 ## daiku version
 
@@ -486,7 +486,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | n/a: reads no workspace state |
-| other | `version`, `version-flag` |
+| other | `version`, `version-flag`, `version-help-flag` |
 
 ## daiku help
 
@@ -497,7 +497,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | n/a: reads no workspace state |
-| other | `help`, `help-adr`, `help-adr-list`, `help-adr-new`, `help-adr-show`, `help-build`, `help-build-new`, `help-change`, `help-change-close`, `help-change-new`, `help-check`, `help-commit`, `help-env`, `help-flag`, `help-gate`, `help-help`, `help-idea`, `help-idea-drop`, `help-idea-list`, `help-idea-new`, `help-idea-park`, `help-idea-promote`, `help-idea-reopen`, `help-idea-show`, `help-init`, `help-overview`, `help-pr`, `help-references`, `help-references-check`, `help-reopen`, `help-repo`, `help-repo-add`, `help-repo-doctor`, `help-repo-list`, `help-repo-path`, `help-settings`, `help-source`, `help-source-list`, `help-source-new`, `help-source-show`, `help-status`, `help-switch`, `help-tickets`, `help-tickets-check`, `help-tickets-mark-published`, `help-tickets-new`, `help-tickets-order`, `help-tickets-pull`, `help-tickets-ready`, `help-tickets-status`, `help-tickets-unfreeze`, `help-update`, `help-verb-flag`, `help-version` |
+| other | `help`, `help-adr`, `help-adr-list`, `help-adr-new`, `help-adr-show`, `help-build`, `help-build-new`, `help-change`, `help-change-close`, `help-change-new`, `help-check`, `help-commit`, `help-env`, `help-flag`, `help-flag-after-arguments`, `help-flag-after-double-dash`, `help-gate`, `help-help`, `help-help-flag`, `help-idea`, `help-idea-drop`, `help-idea-list`, `help-idea-new`, `help-idea-park`, `help-idea-promote`, `help-idea-reopen`, `help-idea-show`, `help-init`, `help-overview`, `help-pr`, `help-references`, `help-references-check`, `help-reopen`, `help-repo`, `help-repo-add`, `help-repo-doctor`, `help-repo-list`, `help-repo-path`, `help-settings`, `help-short-flag`, `help-source`, `help-source-list`, `help-source-new`, `help-source-show`, `help-status`, `help-switch`, `help-tickets`, `help-tickets-check`, `help-tickets-mark-published`, `help-tickets-new`, `help-tickets-order`, `help-tickets-pull`, `help-tickets-ready`, `help-tickets-status`, `help-tickets-unfreeze`, `help-update`, `help-verb-flag`, `help-version` |
 
 ## daiku adr (no verb, or an unknown one)
 
@@ -508,6 +508,7 @@ The classes:
 | order | n/a: a command with verbs: the verbs' rows cover this class |
 | unsafe | n/a: a command with verbs: the verbs' rows cover this class |
 | corrupt | n/a: a command with verbs: the verbs' rows cover this class |
+| other | `adr-help-flag` |
 
 ## daiku build (no verb, or an unknown one)
 
@@ -518,6 +519,7 @@ The classes:
 | order | n/a: a command with verbs: the verbs' rows cover this class |
 | unsafe | n/a: a command with verbs: the verbs' rows cover this class |
 | corrupt | n/a: a command with verbs: the verbs' rows cover this class |
+| other | `build-help-flag` |
 
 ## daiku change (no verb, or an unknown one)
 
@@ -528,6 +530,7 @@ The classes:
 | order | n/a: a command with verbs: the verbs' rows cover this class |
 | unsafe | n/a: a command with verbs: the verbs' rows cover this class |
 | corrupt | n/a: a command with verbs: the verbs' rows cover this class |
+| other | `change-help-flag` |
 
 ## daiku idea (no verb, or an unknown one)
 
@@ -538,6 +541,7 @@ The classes:
 | order | n/a: a command with verbs: the verbs' rows cover this class |
 | unsafe | n/a: a command with verbs: the verbs' rows cover this class |
 | corrupt | n/a: a command with verbs: the verbs' rows cover this class |
+| other | `idea-help-flag` |
 
 ## daiku references (no verb, or an unknown one)
 
@@ -548,6 +552,7 @@ The classes:
 | order | n/a: a command with verbs: the verbs' rows cover this class |
 | unsafe | n/a: a command with verbs: the verbs' rows cover this class |
 | corrupt | n/a: a command with verbs: the verbs' rows cover this class |
+| other | `references-help-flag` |
 
 ## daiku repo (no verb, or an unknown one)
 
@@ -558,6 +563,7 @@ The classes:
 | order | n/a: a command with verbs: the verbs' rows cover this class |
 | unsafe | n/a: a command with verbs: the verbs' rows cover this class |
 | corrupt | n/a: a command with verbs: the verbs' rows cover this class |
+| other | `repo-help-flag` |
 
 ## daiku source (no verb, or an unknown one)
 
@@ -568,6 +574,7 @@ The classes:
 | order | n/a: a command with verbs: the verbs' rows cover this class |
 | unsafe | n/a: a command with verbs: the verbs' rows cover this class |
 | corrupt | n/a: a command with verbs: the verbs' rows cover this class |
+| other | `source-help-flag` |
 
 ## daiku tickets (no verb, or an unknown one)
 
@@ -578,3 +585,4 @@ The classes:
 | order | n/a: a command with verbs: the verbs' rows cover this class |
 | unsafe | n/a: a command with verbs: the verbs' rows cover this class |
 | corrupt | n/a: a command with verbs: the verbs' rows cover this class |
+| other | `tickets-help-flag` |

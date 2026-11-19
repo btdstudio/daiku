@@ -489,3 +489,74 @@ fn checklist_check_catches_renames_and_gaps() {
         ["named twice: a"]
     );
 }
+
+// ---- S-0003: check --list and fixtures/ported.txt ----
+
+#[test]
+fn check_list_runs_the_listed_cases() {
+    let dir = tempfile::tempdir().unwrap();
+    let cases = dir.path().join("cases");
+    case(
+        &cases,
+        "one",
+        "args = [\"print\", \"1\"]\n\n[expect]\nexit = 0\nstdout = \"1\\n\"\n",
+    );
+    case(&cases, "two", "args = [\"print\", \"2\"]\n");
+    let c = cases.to_str().unwrap();
+    let list = dir.path().join("list.txt");
+    write(&list, "# a comment\n\none   # trailing comment\n");
+    let l = list.to_str().unwrap();
+    let out = fixtures(
+        &["check", "--bin", stub(), "--cases", c, "--list", l],
+        dir.path(),
+    );
+    assert_eq!(out.status.code(), Some(0), "{}", text(&out.stdout));
+    assert_eq!(
+        text(&out.stdout),
+        "ok   one\n1 passed, 0 failed, 0 skipped\n"
+    );
+
+    write(&list, "one\nghost\n");
+    let out = fixtures(
+        &["check", "--bin", stub(), "--cases", c, "--list", l],
+        dir.path(),
+    );
+    assert_eq!(out.status.code(), Some(1));
+    assert!(text(&out.stderr).contains("ghost") && text(&out.stderr).contains("no such case"));
+
+    write(&list, "# nothing\n");
+    let out = fixtures(
+        &["check", "--bin", stub(), "--cases", c, "--list", l],
+        dir.path(),
+    );
+    assert_eq!(out.status.code(), Some(2));
+    assert!(text(&out.stderr).contains("lists no cases"));
+}
+
+/// AC10: every name in fixtures/ported.txt is a case.
+#[test]
+fn ported_list_names_only_cases() {
+    let dir = repo_fixtures();
+    let text = std::fs::read_to_string(dir.join("ported.txt")).unwrap();
+    let names: Vec<&str> = text
+        .lines()
+        .map(|l| l.split('#').next().unwrap_or("").trim())
+        .filter(|l| !l.is_empty())
+        .collect();
+    assert!(!names.is_empty());
+    let missing: Vec<&&str> = names
+        .iter()
+        .filter(|n| !dir.join("cases").join(n).join("case.toml").is_file())
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "fixtures/ported.txt names cases that don't exist: {missing:?}"
+    );
+    let mut sorted = names.clone();
+    sorted.dedup();
+    assert_eq!(
+        sorted.len(),
+        names.len(),
+        "fixtures/ported.txt names a case twice"
+    );
+}

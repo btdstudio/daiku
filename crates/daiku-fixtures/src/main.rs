@@ -10,7 +10,7 @@ use daiku_fixtures::{
 };
 
 const USAGE: &str = "usage:
-  daiku-fixtures check    --bin PATH [--cases DIR] [CASE...]
+  daiku-fixtures check    --bin PATH [--cases DIR] [--list FILE] [CASE...]
   daiku-fixtures capture  --bin PATH [--cases DIR] [CASE...]
   daiku-fixtures coverage [--cases DIR] [--usage FILE]
   daiku-fixtures workspaces --bin PATH [--workspaces DIR] [NAME...]
@@ -51,6 +51,16 @@ fn parse(argv: &[String]) -> Result<Args, String> {
         match a.as_str() {
             "--bin" if args.command != "coverage" => args.bin = Some(value()?),
             "--cases" if args.command != "workspaces" => args.cases = value()?,
+            "--list" if args.command == "check" => {
+                let file = value()?;
+                let text = std::fs::read_to_string(&file)
+                    .map_err(|e| format!("{}: {e}", file.display()))?;
+                let names = list_names(&text);
+                if names.is_empty() {
+                    return Err(format!("{} lists no cases", file.display()));
+                }
+                args.names.extend(names);
+            }
             "--workspaces" if args.command == "workspaces" => args.workspaces = value()?,
             "--usage" if args.command == "coverage" => args.usage = value()?,
             f if f.starts_with('-') => {
@@ -64,6 +74,15 @@ fn parse(argv: &[String]) -> Result<Args, String> {
         return Err(format!("{} needs --bin PATH", args.command));
     }
     Ok(args)
+}
+
+/// Case names from a list file: one per line, blank lines and `#` comments skipped.
+fn list_names(text: &str) -> Vec<String> {
+    text.lines()
+        .map(|l| l.split('#').next().unwrap_or("").trim())
+        .filter(|l| !l.is_empty())
+        .map(str::to_string)
+        .collect()
 }
 
 fn main() -> ExitCode {

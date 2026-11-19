@@ -54,3 +54,26 @@ jobs:
       - run: target/release/daiku-fixtures coverage
       - name: usage.txt matches Go's help
         run: diff fixtures/usage.txt <(target/go-daiku/daiku help)
+
+  # Checks the Rust daiku against the cases it has been ported for
+  # (fixtures/ported.txt), on all three OSes. Each story adds its cases.
+  rust-fixtures:
+    name: rust-fixtures (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build -p daiku-cli -p daiku-fixtures
+      - name: check the ported cases against the Rust daiku
+        run: |
+          exe=""
+          if [ "$RUNNER_OS" = "Windows" ]; then exe=".exe"; fi
+          target/debug/daiku-fixtures$exe check --bin "target/debug/daiku$exe" --list fixtures/ported.txt

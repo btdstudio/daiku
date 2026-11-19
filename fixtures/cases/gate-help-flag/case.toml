@@ -1,0 +1,9 @@
+args = ["gate", "--help"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku gate <phase> <status> [--reason <r>] [--force]
+
+advance the active change's gate
+'''

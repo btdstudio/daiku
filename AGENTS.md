@@ -23,6 +23,16 @@ The Rust rewrite of the daiku CLI. Read this before changing code.
   Operations return a value plus warnings; they don't print warnings.
 - **No UI, terminal or async crates.** Time, processes, events and directories come
   through the `Env` the caller passes in, so tests and other clients can replace them.
+  Core never reads the process environment or the clock, and never spawns a process
+  itself; `daiku_core::fake` has test versions of each.
+- **Every write goes through `daiku_core::write`** (`write_file`, `create_dir_all`,
+  `open_file`), which refuses paths outside the workspace or through a symlink.
+- **Error text lives in `Error`'s `Display`.** The CLI prints `{err}` and adds
+  nothing, so a new message is a new variant, worded as Go words it. Use
+  `daiku_core::gofmt` for Go's quoting (`%q`) and paths (`path.Join`, `IsLocal`),
+  and `daiku_core::gojson::parse` to read JSON with Go's error wording.
+- **Ports follow the Go code** at `5aa7a78` function by function, with Go's tests
+  translated alongside.
 - **Dependency allowlist (ADR-0005).** Core may depend on `serde`, `serde_json`,
   `thiserror`, `sha2`, `regex`, `jiff`, `include_dir` and `schemars` only. The CLI adds
   no runtime dependency beyond core; argument parsing is a port of Go's parsers, not
@@ -190,3 +200,17 @@ cargo test --workspace
 
 CI runs the same four on macOS, Linux and Windows, and the `fixtures` job above on
 Linux and macOS. When you add or recapture cases, also run the Go check.
+
+### Porting a command
+
+`fixtures/ported.txt` lists the cases the Rust `daiku` must pass; CI's
+`rust-fixtures` job checks them on all three OSes:
+
+```sh
+cargo build -p daiku-cli
+cargo run -p daiku-fixtures -- check --bin target/debug/daiku --list fixtures/ported.txt
+```
+
+When a story ports a command, it adds that command's cases to the list (all of them,
+error paths included) and they must pass before the story ships. Commands not ported
+yet print `daiku: <command> isn't implemented yet`.

@@ -1,0 +1,9 @@
+args = ["tickets", "order", "--help"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku tickets order
+
+list tickets in publish order
+'''
