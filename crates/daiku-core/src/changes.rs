@@ -96,7 +96,11 @@ impl crate::Workspace {
 
     /// Go's `gatePolicyAll`: under `gates: block` without `--force`, the
     /// violations refuse the transition together; otherwise each is a warning.
-    fn policy(&self, violations: Vec<String>, force: bool) -> Result<Vec<Warning>, Error> {
+    pub(crate) fn policy(
+        &self,
+        violations: Vec<String>,
+        force: bool,
+    ) -> Result<Vec<Warning>, Error> {
         let loaded = settings::load(self.root(), &self.env().dirs)?;
         if loaded.effective.gates == "block" && !force {
             return Err(Error::GateRefused { violations });

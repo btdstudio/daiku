@@ -29,6 +29,7 @@ pub mod state;
 pub(crate) mod testutil;
 pub mod text;
 pub mod ticket;
+pub mod tickets;
 pub mod workspace;
 pub mod write;
 
