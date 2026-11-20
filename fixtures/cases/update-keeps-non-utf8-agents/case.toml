@@ -1,0 +1,12 @@
+args = ["update"]
+workspace = "init"
+
+[expect]
+exit = 0
+stdout = '''
+merged AGENTS.md (daiku's ## sections updated; your sections and the text under the title kept)
+update complete (0 updated, 0 skipped, 10 unchanged, 1 merged)
+'''
+changes = [
+  "~ f AGENTS.md",
+]

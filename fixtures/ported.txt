@@ -389,3 +389,19 @@ source-show-missing-id
 source-show-outside-workspace
 source-show-unknown
 source-unknown-verb
+
+# N-0001: bytes that aren't valid UTF-8 kept in user files and output
+adr-list-non-utf8
+adr-new-file-non-utf8
+adr-show-non-utf8
+gate-refresh-keeps-non-utf8
+idea-list-non-utf8
+idea-park-non-utf8
+idea-promote-non-utf8
+idea-show-non-utf8
+overview-check-non-utf8
+overview-keeps-non-utf8
+overview-stdout-non-utf8
+source-list-non-utf8
+source-show-non-utf8
+update-keeps-non-utf8-agents

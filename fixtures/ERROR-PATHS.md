@@ -46,7 +46,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | `update-through-symlink` |
 | corrupt | `update-corrupt-manifest` |
-| other | `update-edited-file`, `update-help-flag`, `update-unchanged` |
+| other | `update-edited-file`, `update-help-flag`, `update-keeps-non-utf8-agents`, `update-unchanged` |
 
 ## daiku status
 
@@ -101,7 +101,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `source-list-bad-front-matter`, `source-list-invalid-settings` |
-| other | `source-list`, `source-list-default-verb`, `source-list-empty`, `source-list-help-flag` |
+| other | `source-list`, `source-list-default-verb`, `source-list-empty`, `source-list-help-flag`, `source-list-non-utf8` |
 
 ## daiku source show
 
@@ -112,7 +112,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `source-show-bad-front-matter` |
-| other | `source-show`, `source-show-help-flag`, `source-show-unknown` |
+| other | `source-show`, `source-show-help-flag`, `source-show-non-utf8`, `source-show-unknown` |
 
 ## daiku adr new
 
@@ -123,7 +123,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | `adr-new-dir-absolute`, `adr-new-dir-outside-workspace`, `adr-new-through-symlink` |
 | corrupt | `adr-new-invalid-settings` |
-| other | `adr-new`, `adr-new-file-missing`, `adr-new-from-file`, `adr-new-help-flag`, `adr-new-title-only` |
+| other | `adr-new`, `adr-new-file-missing`, `adr-new-file-non-utf8`, `adr-new-from-file`, `adr-new-help-flag`, `adr-new-title-only` |
 
 ## daiku adr list
 
@@ -134,7 +134,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `adr-list-invalid-settings` |
-| other | `adr-list`, `adr-list-default-verb`, `adr-list-empty`, `adr-list-help-flag` |
+| other | `adr-list`, `adr-list-default-verb`, `adr-list-empty`, `adr-list-help-flag`, `adr-list-non-utf8` |
 
 ## daiku adr show
 
@@ -145,7 +145,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `adr-show-bad-file` |
-| other | `adr-show`, `adr-show-help-flag`, `adr-show-unknown` |
+| other | `adr-show`, `adr-show-help-flag`, `adr-show-non-utf8`, `adr-show-unknown` |
 
 ## daiku build new
 
@@ -189,7 +189,7 @@ The classes:
 | order | `gate-architecture-no-diagrams`, `gate-build-out-of-order`, `gate-build-repo-held`, `gate-build-repo-held-forced`, `gate-build-repo-held-prompt`, `gate-build-skip-out-of-order`, `gate-out-of-order-auto`, `gate-out-of-order-blocked`, `gate-out-of-order-forced`, `gate-out-of-order-global-overridden`, `gate-out-of-order-global-prompt`, `gate-out-of-order-prompt`, `gate-publish-complete-unpublished`, `gate-spec-artifact-forced`, `gate-spec-artifact-problems`, `gate-violations-listed-together` |
 | unsafe | `gate-log-through-symlink`, `gate-through-symlink` |
 | corrupt | `gate-corrupt-state`, `gate-out-of-order-invalid-global`, `gate-out-of-order-invalid-project` |
-| other | `gate-breakdown-approved`, `gate-build-implement-complete`, `gate-build-plan-phase`, `gate-build-ship-complete`, `gate-build-ticket-approved`, `gate-git-breakdown`, `gate-git-build-implement`, `gate-git-intake`, `gate-git-refused-commits-nothing`, `gate-git-ship-complete`, `gate-git-spec`, `gate-help-flag`, `gate-intake-approved`, `gate-intake-await-approval`, `gate-publish-in-progress`, `gate-research-skipped`, `gate-spec-approved` |
+| other | `gate-breakdown-approved`, `gate-build-implement-complete`, `gate-build-plan-phase`, `gate-build-ship-complete`, `gate-build-ticket-approved`, `gate-git-breakdown`, `gate-git-build-implement`, `gate-git-intake`, `gate-git-refused-commits-nothing`, `gate-git-ship-complete`, `gate-git-spec`, `gate-help-flag`, `gate-intake-approved`, `gate-intake-await-approval`, `gate-publish-in-progress`, `gate-refresh-keeps-non-utf8`, `gate-research-skipped`, `gate-spec-approved` |
 
 ## daiku reopen
 
@@ -299,7 +299,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | `overview-through-symlink` |
 | corrupt | `overview-corrupt-state` |
-| other | `overview`, `overview-check-current`, `overview-check-stale`, `overview-help-flag`, `overview-manual-setting`, `overview-named-change`, `overview-stdout`, `overview-unknown-change`, `overview-up-to-date` |
+| other | `overview`, `overview-check-current`, `overview-check-non-utf8`, `overview-check-stale`, `overview-help-flag`, `overview-keeps-non-utf8`, `overview-manual-setting`, `overview-named-change`, `overview-stdout`, `overview-stdout-non-utf8`, `overview-unknown-change`, `overview-up-to-date` |
 
 ## daiku idea new
 
@@ -321,7 +321,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `idea-list-corrupt-summary` |
-| other | `idea-list`, `idea-list-empty`, `idea-list-help-flag` |
+| other | `idea-list`, `idea-list-empty`, `idea-list-help-flag`, `idea-list-non-utf8` |
 
 ## daiku idea show
 
@@ -332,7 +332,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `idea-show-corrupt-summary` |
-| other | `idea-show`, `idea-show-help-flag`, `idea-show-unknown` |
+| other | `idea-show`, `idea-show-help-flag`, `idea-show-non-utf8`, `idea-show-unknown` |
 
 ## daiku idea park
 
@@ -343,7 +343,7 @@ The classes:
 | order | `idea-park-already-parked` |
 | unsafe | `idea-park-through-symlink` |
 | corrupt | `idea-park-corrupt-summary` |
-| other | `idea-park`, `idea-park-help-flag`, `idea-park-unknown` |
+| other | `idea-park`, `idea-park-help-flag`, `idea-park-non-utf8`, `idea-park-unknown` |
 
 ## daiku idea drop
 
@@ -376,7 +376,7 @@ The classes:
 | order | `idea-promote-parked` |
 | unsafe | `idea-promote-through-symlink` |
 | corrupt | `idea-promote-corrupt-state`, `idea-promote-corrupt-summary` |
-| other | `idea-promote`, `idea-promote-help-flag`, `idea-promote-unknown`, `idea-promote-with-repo` |
+| other | `idea-promote`, `idea-promote-help-flag`, `idea-promote-non-utf8`, `idea-promote-unknown`, `idea-promote-with-repo` |
 
 ## daiku references check
 

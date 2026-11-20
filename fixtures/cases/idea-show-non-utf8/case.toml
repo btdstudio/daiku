@@ -1,0 +1,30 @@
+args = ["idea", "show", "1"]
+workspace = "ideas"
+
+[expect]
+exit = 0
+stdout_bytes = '''
+---
+id: 1
+title: Faster sync
+owner: Ren\xe9e
+status: open
+reason:
+updated: 2026-01-15
+changes:
+---
+
+## Problem
+
+Slow, caf\xe9 \xff.
+
+## Options considered
+
+## Cuts and no-gos
+
+## Open questions
+
+## References cited
+
+## Resulting changes
+'''

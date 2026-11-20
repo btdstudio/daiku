@@ -1,0 +1,9 @@
+args = ["overview", "1-auth-flow"]
+workspace = "plan-intake-draft"
+
+[expect]
+exit = 0
+stdout = "wrote plan/specs/1-auth-flow/README.md\n"
+changes = [
+  "~ f plan/specs/1-auth-flow/README.md",
+]

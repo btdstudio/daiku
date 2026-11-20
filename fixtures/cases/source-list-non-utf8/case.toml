@@ -1,0 +1,10 @@
+args = ["source", "list"]
+workspace = "adrs"
+
+[expect]
+exit = 0
+stdout_bytes = '''
+#1 [issue] Auth flow
+#2 [issue] Customer interviews, caf\xe9
+#3 [repo:../app-\xe9] The app, r\xe9vision
+'''

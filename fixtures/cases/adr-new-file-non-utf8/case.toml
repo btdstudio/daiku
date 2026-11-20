@@ -1,0 +1,9 @@
+args = ["adr", "new", "--title", "From a file", "--file", "notes/d.md"]
+workspace = "adrs"
+
+[expect]
+exit = 0
+stdout = "created 0003 From a file\n"
+changes = [
+  "+ f plan/04_architecture/adr/0003-from-a-file.md",
+]
