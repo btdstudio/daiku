@@ -61,6 +61,7 @@ fn dirs() -> Dirs {
             .filter(|h| !h.is_empty())
             .map(Into::into),
         xdg_config_home: std::env::var_os("XDG_CONFIG_HOME"),
+        cwd: std::env::current_dir().ok(),
     }
 }
 

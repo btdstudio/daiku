@@ -93,15 +93,48 @@ impl Output {
     }
 }
 
+/// How Go words a failed `exec.Cmd.Run` or `Output`: `exit status 1`,
+/// `signal: killed`, or, for a program that isn't there,
+/// `exec: "git": executable file not found in $PATH`.
+pub(crate) fn run_failure(program: &str, result: &std::io::Result<Output>) -> Option<String> {
+    match result {
+        Ok(out) => match out.code {
+            Some(0) => None,
+            Some(c) => Some(format!("exit status {c}")),
+            None => Some("signal: killed".to_string()),
+        },
+        Err(e) => Some(spawn_failure(program, e)),
+    }
+}
+
+/// The text for a program that couldn't start.
+pub(crate) fn spawn_failure(program: &str, e: &std::io::Error) -> String {
+    if e.kind() == std::io::ErrorKind::NotFound {
+        let path = if cfg!(windows) { "%PATH%" } else { "$PATH" };
+        format!("exec: \"{program}\": executable file not found in {path}")
+    } else {
+        e.to_string()
+    }
+}
+
 /// Where core reports progress while an operation runs.
 pub trait Events {
     fn emit(&self, event: Event);
 }
 
 /// Progress from an operation. Variants arrive with the operations that report them.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 #[non_exhaustive]
-pub enum Event {}
+pub enum Event {
+    /// `repo doctor --clone` is about to clone `repo` into `dest`.
+    CloneStarted { repo: String, dest: String },
+    /// That clone finished; `error` is why it failed, if it did.
+    CloneFinished {
+        repo: String,
+        dest: String,
+        error: Option<String>,
+    },
+}
 
 /// The user's home and config folders, as the client found them.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -110,4 +143,7 @@ pub struct Dirs {
     pub home: Option<PathBuf>,
     /// `$XDG_CONFIG_HOME` as set, even when empty.
     pub xdg_config_home: Option<OsString>,
+    /// The folder the client runs in, for making a relative path absolute as Go's
+    /// `filepath.Abs` does. Core never reads the process's own.
+    pub cwd: Option<PathBuf>,
 }

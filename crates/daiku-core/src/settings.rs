@@ -241,6 +241,7 @@ mod tests {
         Dirs {
             home: None,
             xdg_config_home: Some(t.0.clone().into_os_string()),
+            cwd: None,
         }
     }
 
@@ -371,6 +372,7 @@ mod tests {
         let home = |h: &str, x: Option<&str>| Dirs {
             home: Some(h.into()),
             xdg_config_home: x.map(Into::into),
+            cwd: None,
         };
         assert_eq!(
             global_path(&home("/h", None)),
@@ -441,6 +443,7 @@ mod tests {
         let dirs = Dirs {
             home: Some(home.0.clone()),
             xdg_config_home: None,
+            cwd: None,
         };
         assert_eq!(load(&root.0, &dirs).unwrap().effective.gates, "auto");
     }

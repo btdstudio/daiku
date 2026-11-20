@@ -199,6 +199,104 @@ pub enum Error {
     #[error("$HOME is not defined")]
     NoHome,
 
+    /// Go's `os.Getwd` failing, for a client that gave core no current folder.
+    #[error("getwd: the current folder is unknown")]
+    NoCwd,
+
+    #[error("daiku: invalid repo name {} (use lowercase letters, digits, '.', '_' and '-')", gofmt::quote(.name))]
+    InvalidRepoName { name: String },
+
+    #[error("daiku: repo {} is already registered", gofmt::quote(.name))]
+    RepoExists { name: String },
+
+    #[error("daiku: a remote is required")]
+    RemoteRequired,
+
+    #[error("daiku: invalid remote {}", gofmt::quote(.remote))]
+    InvalidRemote { remote: String },
+
+    #[error("daiku: remote helpers aren't allowed: {}", gofmt::quote(.remote))]
+    RemoteHelper { remote: String },
+
+    #[error("daiku: remote has credentials in it, and REPOS.json is committed — remove them")]
+    RemoteCredentials,
+
+    #[error("daiku: a path is required")]
+    PathRequired,
+
+    #[error("daiku: {path} already exists")]
+    CloneExists { path: String },
+
+    #[error("daiku: {} isn't a ticket id", gofmt::quote(.arg))]
+    NotATicketId { arg: String },
+
+    #[error("daiku: {id} is already a change — run `daiku switch {id}`")]
+    BuildExists { id: String },
+
+    #[error("daiku: no ticket {id} in plan/specs/*/tickets/ or build/tickets/")]
+    NoBuildTicket { id: String },
+
+    #[error("daiku: ticket {id} is in more than one place: {places}")]
+    TicketInManyPlaces { id: String, places: String },
+
+    #[error(
+        "daiku: {id} is a planned ticket in the inbox — planned tickets live under plan/specs/"
+    )]
+    PlannedInInbox { id: String },
+
+    #[error("daiku: {rel}: {cause}")]
+    BuildTicketParse { rel: String, cause: String },
+
+    #[error("daiku: {rel} holds ticket {}, not {id}", gofmt::quote(.found))]
+    TicketIdMismatch {
+        rel: String,
+        found: String,
+        id: String,
+    },
+
+    #[error("daiku: invalid ticket: {problem}")]
+    InvalidBuildTicket { problem: String },
+
+    #[error("daiku: commit and pr need an active build — run `daiku build new <ticket-id>`")]
+    NoActiveBuild,
+
+    #[error("daiku: {repo} has no usable local path ({dir}) — run `daiku repo path {repo} <dir>`")]
+    NoUsablePath { repo: String, dir: String },
+
+    #[error(
+        "daiku: {repo}'s local path {dir} isn't a git checkout — run `daiku repo path {repo} <dir>`"
+    )]
+    NotACheckout { repo: String, dir: String },
+
+    #[error(
+        "daiku commit: nothing staged — stage one logical change with `git add`, then commit it"
+    )]
+    NothingStaged,
+
+    /// A program run with the terminal attached failed, worded as Go's
+    /// `exec.Cmd.Run` error (`exit status 1`).
+    #[error("{text}")]
+    ShipRun { text: String },
+
+    #[error("daiku: {id} is {status}; only a ready or published planned ticket can be built")]
+    NotBuildable { id: String, status: String },
+
+    #[error("daiku: {id} has no repo — a build needs one")]
+    NoBuildRepo { id: String },
+
+    #[error("daiku: {id}'s repo {} isn't registered — run `daiku repo add {repo} <remote>`", gofmt::quote(.repo))]
+    BuildRepoNotRegistered { id: String, repo: String },
+
+    #[error("daiku: cloning {name}: {cause}: {output}")]
+    CloneFailed {
+        name: String,
+        cause: String,
+        output: String,
+    },
+
+    #[error("daiku: repo {} is missing on disk: {path} — run `daiku repo doctor`", gofmt::quote(.name))]
+    RepoMissingOnDisk { name: String, path: String },
+
     #[error(
         "daiku: {repo} is locked by {holder} ({phase} {status}) — finish, close or reopen it to tasks"
     )]

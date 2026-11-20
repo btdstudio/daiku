@@ -65,6 +65,7 @@ fn workspace(name: &str) -> (Temp, Workspace) {
     let env = Env::fake(Dirs {
         home: Some(t.p("home")),
         xdg_config_home: None,
+        cwd: None,
     });
     let ws = Workspace::open(t.p("ws"), env);
     (t, ws)

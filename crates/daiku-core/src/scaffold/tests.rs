@@ -46,6 +46,7 @@ fn ws(root: &Path, config: &Temp) -> Workspace {
     let mut env = Env::fake(Dirs {
         home: None,
         xdg_config_home: Some(config.0.clone().into_os_string()),
+        cwd: None,
     });
     let process = ScriptedProcess::default();
     for _ in 0..4 {
@@ -260,6 +261,7 @@ fn init_vcs_reads_the_global_setting() {
     let dirs = Dirs {
         home: None,
         xdg_config_home: Some(c.0.clone().into_os_string()),
+        cwd: None,
     };
     assert_eq!(init_vcs(true, &dirs).unwrap(), "none");
     assert_eq!(init_vcs(false, &dirs).unwrap(), "git");
@@ -411,6 +413,7 @@ fn update_refuses_a_non_workspace_and_a_corrupt_manifest() {
         Env::fake(Dirs {
             home: None,
             xdg_config_home: Some(c.0.clone().into_os_string()),
+            cwd: None,
         }),
     );
     drop(w);

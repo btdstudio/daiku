@@ -99,6 +99,7 @@ pub fn env(t: &Temp, process: Box<dyn crate::env::Process>) -> crate::Env {
     let mut e = crate::Env::fake(crate::env::Dirs {
         home: Some(t.p("home")),
         xdg_config_home: None,
+        cwd: Some(t.path().to_path_buf()),
     });
     e.clock = Box::new(crate::fake::FixedClock(
         UNIX_EPOCH + Duration::from_millis(1_794_013_323_004),

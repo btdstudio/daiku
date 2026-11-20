@@ -48,6 +48,8 @@ impl Clock for FixedClock {
 pub struct ScriptedProcess {
     pub calls: RefCell<Vec<Cmd>>,
     pub replies: RefCell<VecDeque<Output>>,
+    /// The indexes in `calls` that were made with `run_attached`.
+    pub attached: RefCell<Vec<usize>>,
 }
 
 impl ScriptedProcess {
@@ -72,6 +74,7 @@ impl Process for ScriptedProcess {
     }
 
     fn run_attached(&self, cmd: &Cmd) -> std::io::Result<i32> {
+        self.attached.borrow_mut().push(self.calls.borrow().len());
         self.next(cmd).map(|o| o.code.unwrap_or(-1))
     }
 }
@@ -125,9 +128,31 @@ mod tests {
         let dirs = Dirs {
             home: Some("/h".into()),
             xdg_config_home: None,
+            cwd: None,
         };
         let env = Env::fake(dirs.clone());
         assert_eq!(env.dirs, dirs);
         assert_eq!(env.clock.now(), SystemTime::UNIX_EPOCH);
+    }
+
+    #[test]
+    fn clone_events_are_recorded_and_serialise() {
+        let events = RecordingEvents::default();
+        let started = Event::CloneStarted {
+            repo: "api".into(),
+            dest: "/w/api".into(),
+        };
+        let finished = Event::CloneFinished {
+            repo: "api".into(),
+            dest: "/w/api".into(),
+            error: Some("boom".into()),
+        };
+        events.emit(started.clone());
+        events.emit(finished.clone());
+        assert_eq!(events.0.borrow().as_slice(), [started, finished.clone()]);
+        assert_eq!(
+            serde_json::to_string(&finished).unwrap(),
+            r#"{"CloneFinished":{"repo":"api","dest":"/w/api","error":"boom"}}"#
+        );
     }
 }
