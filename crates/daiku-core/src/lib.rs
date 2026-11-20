@@ -13,6 +13,7 @@ pub mod fake;
 pub mod frontmatter;
 pub mod gofmt;
 pub mod gojson;
+pub mod inbox;
 pub mod json;
 pub mod lock;
 pub mod markdown;
