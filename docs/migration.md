@@ -10,10 +10,11 @@ hashes match Go's byte for byte, so no ticket needs re-marking.
 
 Until the code merges into the public `btdstudio/daiku`, this repository is private. The
 install scripts attached to each release (`curl … | sh`, `irm … | iex`) download without
-logging in, so the one-liners don't work yet. (dist's installers can send a GitHub token
-read from `DAIKU_CLI_GITHUB_TOKEN` for a private repository; that hasn't been tried against
-this one.) What has been tried is to download the archive for your platform with the GitHub
-CLI (`gh auth status` should show you logged in with access to `btdstudio/daiku-next`).
+logging in, so the one-liners don't work yet. The installers do accept a token in
+`DAIKU_CLI_GITHUB_TOKEN`, but it doesn't help on a private repository: tried against this
+release, the download URL they use still answers 404 with a valid token. So download the
+archive for your platform with the GitHub CLI (`gh auth status` should show you logged in
+with access to `btdstudio/daiku-next`).
 
 | Platform | `target` |
 |---|---|
@@ -53,7 +54,7 @@ if ((Get-FileHash "daiku-dl\daiku-cli-$target.zip" -Algorithm SHA256).Hash -ne $
 Expand-Archive "daiku-dl\daiku-cli-$target.zip" -DestinationPath daiku-dl
 
 New-Item -ItemType Directory -Force "$HOME\.local\bin" | Out-Null
-Copy-Item "daiku-dl\daiku-cli-$target\daiku.exe" "$HOME\.local\bin\daiku.exe"
+Copy-Item "daiku-dl\daiku.exe" "$HOME\.local\bin\daiku.exe"      # the zip holds daiku.exe at its top level
 [Environment]::SetEnvironmentVariable("Path", "$HOME\.local\bin;" + [Environment]::GetEnvironmentVariable("Path", "User"), "User")
 ```
 

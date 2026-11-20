@@ -267,8 +267,8 @@ version makes a prerelease.
   `main`. A tag creates a public release, so ask the owner first.
 - Release builds set `DAIKU_RELEASE=1`, so `daiku version` prints `v<version>`; any
   other build prints `dev`.
-- The install scripts download from `repository` in `Cargo.toml` without logging in
-  (unless given `DAIKU_CLI_GITHUB_TOKEN`), and the repo is private until it merges into
-  `btdstudio/daiku`, so until then a release is installed from its archives
+- The install scripts download from `repository` in `Cargo.toml` without logging in, and
+  a token doesn't help on a private repo (tried: the URL answers 404), so until the repo
+  merges into the public `btdstudio/daiku` a release is installed from its archives
   (`docs/migration.md`). After the merge, set `repository` to
   `https://github.com/btdstudio/daiku` and run `dist generate`.

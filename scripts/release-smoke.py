@@ -85,9 +85,13 @@ def main():
                     t.extractall(tmp, filter="data")
                 else:
                     t.extractall(tmp)
-        binary = tmp / f"daiku-cli-{target}" / ("daiku.exe" if windows else "daiku")
-        if not binary.is_file():
-            fail(f"the archive holds no {binary.name} at daiku-cli-{target}/")
+        # The Unix archives unpack into a folder named for the target; the Windows zip
+        # holds its files at the top level.
+        exe = "daiku.exe" if windows else "daiku"
+        found = [p for p in (tmp / f"daiku-cli-{target}" / exe, tmp / exe) if p.is_file()]
+        if not found:
+            fail(f"the archive holds no {exe}, in daiku-cli-{target}/ or at its top level")
+        binary = found[0]
         binary.chmod(0o755)
         print(f"ok   unpacked {binary.name}")
 
