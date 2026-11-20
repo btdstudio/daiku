@@ -378,7 +378,9 @@ mod tests {
         );
     }
 
-    /// An index that's a folder is Go's read error, not a finding.
+    /// An index that's a folder is Go's read error, not a finding. Unix only, as
+    /// `idea::tests::a_summary_that_is_a_folder_is_a_read_error`.
+    #[cfg(unix)]
     #[test]
     fn an_index_that_is_a_folder_is_a_read_error() {
         let t = Temp::new();

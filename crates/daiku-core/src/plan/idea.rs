@@ -875,7 +875,9 @@ mod tests {
     }
 
     /// A summary that's a folder reads as Go's `os.ReadFile` fails: the open
-    /// succeeds and the read doesn't.
+    /// succeeds and the read doesn't. Unix only: on Windows opening a folder
+    /// fails at the open (`permission denied`), and Go's fixtures don't run there.
+    #[cfg(unix)]
     #[test]
     fn a_summary_that_is_a_folder_is_a_read_error() {
         let t = Temp::new();
