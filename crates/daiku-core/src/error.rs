@@ -209,6 +209,63 @@ pub enum Error {
         status: String,
     },
 
+    // Ideas (Go's `internal/plan/idea` and `ideaPromote`).
+    #[error("daiku: an idea needs a title")]
+    IdeaTitleRequired,
+    #[error("daiku: a reason is required")]
+    ReasonRequired,
+    #[error("daiku: idea id out of range: the highest idea id leaves no next id")]
+    IdeaIdOutOfRange,
+    /// `name` is `ideas/<n>-<slug>`.
+    #[error("daiku: {name} already exists")]
+    IdeaExists { name: String },
+    #[error("daiku: idea {id} not found")]
+    IdeaNotFound { id: i64 },
+    #[error("daiku: idea {id} is ambiguous: more than one folder in ideas/ starts with {id}-")]
+    IdeaAmbiguous { id: i64 },
+    #[error("daiku: cannot read {name}/summary.md: {cause}")]
+    IdeaUnreadable { name: String, cause: String },
+    /// Reading: the summary parsed to no frontmatter.
+    #[error("daiku: {name}/summary.md has no frontmatter")]
+    IdeaNoFrontmatter { name: String },
+    /// Writing: the summary has no frontmatter block to edit.
+    #[error("daiku: {name}/summary.md: it has no frontmatter")]
+    IdeaFrontmatter { name: String },
+    #[error("daiku: idea {id} has an unknown status {}", gofmt::quote(.status))]
+    IdeaUnknownStatus { id: i64, status: String },
+    /// A status change the idea's status doesn't allow; `rule` says what does.
+    #[error("daiku: idea {id} is {status}: {rule}")]
+    IdeaWrongStatus {
+        id: i64,
+        status: String,
+        rule: String,
+    },
+    #[error("daiku: idea {id} is now {status}, but its log couldn't be updated: {cause}")]
+    IdeaLogFailed {
+        id: i64,
+        status: String,
+        cause: String,
+    },
+    #[error("daiku: a change name is required")]
+    IdeaChangeNameRequired,
+    /// `idea promote` created the change, then couldn't record it on the idea.
+    #[error(
+        "daiku: created change {change}, but couldn't update idea {id}: {cause}; add the change to its changes line by hand"
+    )]
+    IdeaNotMarked {
+        change: String,
+        id: i64,
+        cause: String,
+    },
+
+    // Overview (Go's `buildOverview` and `requirePlan`).
+    #[error("daiku: no active change — name one, or run `daiku switch <change>` first")]
+    NoActiveOverview,
+    #[error("daiku: {name} is a build change — {verb} works on plan changes")]
+    BuildChange { name: String, verb: &'static str },
+    #[error("daiku: no change named {}", gofmt::quote(.name))]
+    NoChangeNamed { name: String },
+
     // Sources.
     #[error("daiku: source {id} not found at {path}")]
     SourceNotFound { id: i64, path: String },
@@ -218,6 +275,13 @@ pub enum Error {
 
     #[error("daiku: intake id out of range: the highest intake id ({highest}) leaves no next id")]
     IntakeIdExhausted { highest: i64 },
+
+    // ADRs.
+    #[error("daiku: adr {name} already exists; not overwriting")]
+    AdrExists { name: String },
+
+    #[error("daiku: adr {number:04} not found")]
+    AdrNotFound { number: i64 },
 
     /// A file error worded as Go's `*PathError` (`open x: permission denied`).
     #[error("{text}")]

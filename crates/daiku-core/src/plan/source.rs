@@ -1,6 +1,5 @@
 //! Intake sources: the store under the `sourceDir` setting, one `<id>.md` each. A
-//! port of the parts of Go's `internal/plan/source` that `change new` needs; the
-//! `source` commands arrive in S-0006.
+//! port of Go's `internal/plan/source`.
 
 use std::path::Path;
 use std::sync::LazyLock;
@@ -174,6 +173,35 @@ pub fn max_recorded_id(source_dir: &str, recorded: &[String]) -> i64 {
         }
     }
     max
+}
+
+/// Go's `ListSources`: every `<n>.md` in the folder, by id. A file that can't be
+/// read is skipped; a missing folder is empty.
+pub fn list(root: &Path, source_dir: &str) -> Vec<Source> {
+    let dir = dir_rel(source_dir);
+    let Ok(entries) = std::fs::read_dir(at(root, dir)) else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    for e in entries.flatten() {
+        let name = e.file_name().to_string_lossy().into_owned();
+        let Some(m) = SOURCE_FILE_RE.captures(&name) else {
+            continue;
+        };
+        // Go's Atoi: a number too large for an id reads as 0.
+        let id: i64 = m[1].parse().unwrap_or(0);
+        let rel = format!("{dir}/{name}");
+        let path = shown(root, &rel);
+        let raw = match read_file(&at(root, &rel)) {
+            Ok(Some(r)) => r,
+            _ => continue,
+        };
+        let mut s = parse_source(&String::from_utf8_lossy(&raw), id);
+        s.path = path;
+        out.push(s);
+    }
+    out.sort_by_key(|s| s.id);
+    out
 }
 
 /// Go's `ReadSource`.
@@ -350,5 +378,38 @@ mod tests {
         let (fm, body) = parse_frontmatter("---\n---\nx");
         assert!(fm.is_empty());
         assert_eq!(body, "---\n---\nx");
+    }
+
+    /// Go's `ListSources`: every `<n>.md` by id, skipping other names; a missing
+    /// folder is empty.
+    #[test]
+    fn list_orders_by_id_and_skips_other_files() {
+        let t = Temp::new();
+        assert!(list(t.path(), "").is_empty());
+        t.write(
+            "plan/00_intake/10.md",
+            "---\ntitle: Ten\nsource: issue\n---\n",
+        );
+        t.write(
+            "plan/00_intake/2.md",
+            "---\ntitle: Two\nsource: repo\nrepo: ../app\n---\n",
+        );
+        t.write("plan/00_intake/context.md", "the guide");
+        t.write("plan/00_intake/3.txt", "not a source");
+        let got: Vec<(i64, String, String)> = list(t.path(), "")
+            .into_iter()
+            .map(|s| (s.id, s.title, s.source))
+            .collect();
+        assert_eq!(
+            got,
+            [
+                (2, "Two".into(), REPO.into()),
+                (10, "Ten".into(), ISSUE.into())
+            ]
+        );
+        assert_eq!(
+            list(t.path(), "")[0].path,
+            shown(t.path(), "plan/00_intake/2.md")
+        );
     }
 }
