@@ -517,4 +517,58 @@ mod tests {
         );
         assert!(res.marked.unwrap().is_ok());
     }
+
+    /// N-0001 AC6: the types holding bytes that aren't valid UTF-8 serialise to
+    /// valid JSON, with U+FFFD for each invalid byte, as Go's `encoding/json`
+    /// writes such strings.
+    #[test]
+    fn ac6_bytes_serialise_to_valid_json() {
+        let bad = |b: &[u8]| crate::text::Text::from(b);
+        let idea = idea::Idea {
+            title: bad(b"Caf\xe9"),
+            reason: bad(b"apr\xe8s"),
+            body: bad(b"Body \xff"),
+            ..idea::Idea::default()
+        };
+        let record = adr::Record {
+            title: bad(b"D\xe9"),
+            deciders: bad(b"Ren\xe9e"),
+            raw: b"# 0001 \xff".to_vec(),
+            ..adr::Record::default()
+        };
+        let doc = OverviewDoc {
+            rel: "plan/specs/1-x/README.md".into(),
+            merged: bad(b"# T \xe9\n"),
+            up_to_date: false,
+            written: true,
+        };
+        for (name, json, want) in [
+            (
+                "idea",
+                serde_json::to_string(&idea).unwrap(),
+                ["Caf\u{fffd}", "apr\u{fffd}s", "Body \u{fffd}"],
+            ),
+            (
+                "adr",
+                serde_json::to_string(&record).unwrap(),
+                ["D\u{fffd}", "Ren\u{fffd}e", "# 0001 \u{fffd}"],
+            ),
+            (
+                "overview",
+                serde_json::to_string(&doc).unwrap(),
+                ["# T \u{fffd}\n", "plan/specs/1-x/README.md", "true"],
+            ),
+        ] {
+            let v: serde_json::Value =
+                serde_json::from_str(&json).unwrap_or_else(|e| panic!("{name}: {e}"));
+            let text = v.to_string();
+            for w in want {
+                let w = serde_json::to_string(w).unwrap();
+                assert!(
+                    text.contains(w.trim_matches('"')),
+                    "{name}: {text} lacks {w}"
+                );
+            }
+        }
+    }
 }
