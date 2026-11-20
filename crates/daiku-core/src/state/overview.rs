@@ -145,13 +145,14 @@ pub fn build_rows(
         .collect())
 }
 
-/// Go's `Overview`: the plan's README with its generated region rendered, the
-/// README as it was (`None` when missing), and its path.
+/// Go's `Overview`: the plan's README with its generated region rendered, and the
+/// README as it was (`None` when missing), both as bytes: text outside the region
+/// is the user's and is kept as it is, valid UTF-8 or not (N-0001).
 pub fn overview(
     store: &Store,
     change: &str,
     settings: &Loaded,
-) -> Result<(String, Option<String>), Error> {
+) -> Result<(Vec<u8>, Option<Vec<u8>>), Error> {
     let root = store.root;
     let adr_dir = &settings.effective.adr_dir;
     let m = model::load(root, change, adr_dir)?;
@@ -163,10 +164,10 @@ pub fn overview(
     };
     let reg = repos::load(root)?;
     let rel = overview_path(change);
-    let existing = read_file(&at(root, &rel))
-        .map_err(|text| Error::PathError { text })?
-        .map(|d| String::from_utf8_lossy(&d).into_owned());
-    let base = existing.clone().unwrap_or_else(|| markers::stub(&m.title));
+    let existing = read_file(&at(root, &rel)).map_err(|text| Error::PathError { text })?;
+    let base = existing
+        .clone()
+        .unwrap_or_else(|| markers::stub(&m.title).into_bytes());
     let narrative = markers::narrative(&base).map_err(|text| Error::PathError { text })?;
     let builds = build_rows(root, change, &changes)?;
     let region = render(&Input {
@@ -193,10 +194,10 @@ pub fn refresh(store: &Store, plan: &str, settings: &Loaded) -> Result<Vec<Strin
     let rel = overview_path(plan);
     let (merged, existing) =
         overview(store, plan, settings).map_err(|e| overview_error(&rel, &e.to_string()))?;
-    if existing.as_deref() == Some(merged.as_str()) {
+    if existing.as_deref() == Some(merged.as_slice()) {
         return Ok(Vec::new());
     }
-    write::write_file(root, &at(root, &rel), merged.as_bytes())
+    write::write_file(root, &at(root, &rel), &merged)
         .map_err(|e| overview_error(&rel, &e.to_string()))?;
     Ok(vec![rel])
 }

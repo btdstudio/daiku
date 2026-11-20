@@ -497,7 +497,7 @@ fn cells_stay_on_one_line() {
         assert!(!l.starts_with("<!--"), "{l:?}\n{out}");
     }
     assert!(!out.contains(['\r', '\u{2028}']));
-    let merged = merge(&stub("T"), &out).unwrap();
+    let merged = merge(stub("T").as_bytes(), &out).unwrap();
     narrative(&merged).unwrap();
 }
 

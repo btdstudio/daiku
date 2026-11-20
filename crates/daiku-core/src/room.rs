@@ -13,6 +13,7 @@ use crate::plan::{adr, idea, reference, source};
 use crate::state::overview::{self as state_overview, overview_error, overview_path};
 use crate::state::store::at;
 use crate::state::{BUILD_LOOP, Change, Store};
+use crate::text::Text;
 use crate::{Error, Outcome, Workspace, date, settings, write};
 
 /// What `source new` takes. The kind is `repo` when `repo` is set.
@@ -59,7 +60,8 @@ pub struct IdeaPromoteResult {
 pub struct OverviewDoc {
     /// Relative to the root, slash-separated.
     pub rel: String,
-    pub merged: String,
+    /// The README's bytes: the user's text outside the region kept as it is.
+    pub merged: Text,
     pub up_to_date: bool,
     pub written: bool,
 }
@@ -245,14 +247,14 @@ impl Workspace {
         let (merged, existing) = settings::load(self.root(), &self.env().dirs)
             .and_then(|loaded| state_overview::overview(&store, &name, &loaded))
             .map_err(|e| overview_error(&rel, &e.to_string()))?;
-        let up_to_date = existing.as_deref() == Some(merged.as_str());
+        let up_to_date = existing.as_deref() == Some(merged.as_slice());
         let written = write && !up_to_date;
         if written {
-            write::write_file(self.root(), &at(self.root(), &rel), merged.as_bytes())?;
+            write::write_file(self.root(), &at(self.root(), &rel), &merged)?;
         }
         Ok(Outcome::new(OverviewDoc {
             rel,
-            merged,
+            merged: merged.into(),
             up_to_date,
             written,
         }))
@@ -419,7 +421,7 @@ mod tests {
         std::fs::remove_file(t.p(rel)).ok();
         let first = ws.overview(Some("1-auth"), true).unwrap().value;
         assert_eq!((first.rel.as_str(), first.written), (rel, true));
-        assert_eq!(t.read(rel), first.merged);
+        assert_eq!(std::fs::read(t.p(rel)).unwrap(), first.merged.as_bytes());
         let again = ws.overview(None, true).unwrap().value;
         assert!(again.up_to_date && !again.written);
 
@@ -438,5 +440,46 @@ mod tests {
         std::fs::remove_file(t.p(".daiku/active")).unwrap();
         let e = ws.overview(None, false).unwrap_err().to_string();
         assert!(e.starts_with("daiku: no active change — name one"), "{e}");
+    }
+
+    fn find(hay: &[u8], needle: &[u8]) -> Option<usize> {
+        hay.windows(needle.len()).position(|w| w == needle)
+    }
+
+    /// N-0001 AC1: a README with bytes that aren't valid UTF-8 outside the region
+    /// is rewritten with those bytes kept, then reads as up to date; a check
+    /// compares bytes.
+    #[test]
+    fn overview_keeps_bytes_outside_the_region() {
+        let (t, ws) = plan_workspace();
+        let rel = "plan/specs/1-auth/README.md";
+        ws.overview(None, true).unwrap();
+        let fresh = std::fs::read(t.p(rel)).unwrap();
+        let mut edited = fresh.clone();
+        let at = edited
+            .windows(23)
+            .position(|w| w == b"<!-- /daiku:narrative -")
+            .unwrap();
+        edited.splice(at..at, b"Caf\xe9 by hand.\n".iter().copied());
+        edited.extend_from_slice(b"\nAfter \xff.\n");
+        let gen_end = edited
+            .windows(23)
+            .position(|w| w == b"<!-- /daiku:generated -")
+            .unwrap();
+        edited.splice(gen_end..gen_end, b"stale\n".iter().copied());
+        std::fs::write(t.p(rel), &edited).unwrap();
+
+        let doc = ws.overview(None, true).unwrap().value;
+        assert!(doc.written && !doc.up_to_date);
+        let got = std::fs::read(t.p(rel)).unwrap();
+        assert_eq!(got, doc.merged.as_bytes());
+        assert!(
+            find(&got, b"Caf\xe9 by hand.\n").is_some(),
+            "narrative kept"
+        );
+        assert!(got.ends_with(b"\nAfter \xff.\n"), "trailing text kept");
+        assert!(find(&got, b"stale\n").is_none(), "region refreshed");
+        let again = ws.overview(None, false).unwrap().value;
+        assert!(again.up_to_date && !again.written);
     }
 }

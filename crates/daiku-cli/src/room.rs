@@ -462,7 +462,7 @@ pub fn overview(args: &[String], stdout: &mut impl Write, stderr: &mut impl Writ
         }
     };
     if to_stdout {
-        let _ = write!(stdout, "{}", doc.merged);
+        let _ = stdout.write_all(doc.merged.as_bytes());
     } else if doc.written {
         let _ = writeln!(stdout, "wrote {}", doc.rel);
     } else if doc.up_to_date {
