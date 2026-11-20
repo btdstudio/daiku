@@ -20,6 +20,7 @@ pub mod outcome;
 pub mod placeholder;
 pub mod plan;
 pub mod repos;
+pub mod room;
 pub mod scaffold;
 pub mod settings;
 pub mod state;

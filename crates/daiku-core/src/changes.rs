@@ -41,6 +41,8 @@ pub struct ChangeNewOptions {
     pub repos: Vec<String>,
     pub rev: String,
     pub body: String,
+    /// The idea it's promoted from, 0 for none; recorded in the intake.
+    pub idea: i64,
     /// The version the CLI reports, for the room's manifest.
     pub version: String,
 }
@@ -274,7 +276,7 @@ impl crate::Workspace {
                 repo: repo.clone(),
                 rev: opts.rev.clone(),
                 body: opts.body.clone(),
-                idea: 0,
+                idea: opts.idea,
                 after: floor,
             },
         )?;

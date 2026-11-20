@@ -19,7 +19,7 @@ pub fn overview_path(change: &str) -> String {
 }
 
 /// Go's `overviewError`: `daiku: <rel>: <err>` without a doubled prefix.
-fn overview_error(rel: &str, err: &str) -> Error {
+pub(crate) fn overview_error(rel: &str, err: &str) -> Error {
     Error::Overview {
         rel: rel.to_string(),
         detail: err.strip_prefix("daiku: ").unwrap_or(err).to_string(),
