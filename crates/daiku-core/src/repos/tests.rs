@@ -116,6 +116,9 @@ fn registry_with(name: &str) -> Registry {
     r
 }
 
+/// Unix only: the expectations spell paths with `/`, which Windows writes with `\`;
+/// the fixture cases cover Windows.
+#[cfg(unix)]
 #[test]
 fn add_splits_committed_and_local() {
     let t = Temp::new();
@@ -476,6 +479,9 @@ fn doctor_finds_each_problem() {
     );
 }
 
+/// Unix only: the expectations spell paths with `/`, which Windows writes with `\`;
+/// the fixture cases cover Windows.
+#[cfg(unix)]
 #[test]
 fn clone_runs_git_and_records_the_path() {
     let t = Temp::new();

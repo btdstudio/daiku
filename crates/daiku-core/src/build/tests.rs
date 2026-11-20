@@ -82,8 +82,11 @@ fn repo_add_list_and_path() {
     assert_eq!(ws.repo_list().unwrap().value[1].path, None);
     let cwd = t.path().to_string_lossy().into_owned();
     assert_eq!(
-        ws.repo_path("web", "src/web").unwrap().value,
-        format!("{cwd}/src/web")
+        ws.repo_path("web", "src/web")
+            .unwrap()
+            .value
+            .replace('\\', "/"),
+        format!("{cwd}/src/web").replace('\\', "/")
     );
     assert_eq!(
         ws.repo_path("nope", "/x").unwrap_err().to_string(),
@@ -98,6 +101,9 @@ fn repo_add_list_and_path() {
     assert_eq!((t.read("REPOS.json"), t.read(".daiku/paths.json")), before);
 }
 
+/// Unix only: the expectations spell paths with `/`, which Windows writes with `\`;
+/// the fixture cases cover Windows.
+#[cfg(unix)]
 /// AC2: two missing repos, an events sink, a scripted runner: a start and an end
 /// for each clone, in name order, around that repo's `git clone`.
 #[test]
@@ -268,6 +274,9 @@ fn doctor_clone_skips_present_repos_and_says_when_it_cant_place_one() {
     assert!(report.clones.is_empty());
 }
 
+/// Unix only: the expectations spell paths with `/`, which Windows writes with `\`;
+/// the fixture cases cover Windows.
+#[cfg(unix)]
 #[test]
 fn env_lists_the_active_changes_repos() {
     let t = Temp::new();
@@ -663,7 +672,7 @@ fn pr_runs_gh_with_the_body_and_title() {
     assert!(out.warnings.is_empty(), "the branch includes the id");
     let cmd = out.value;
     assert_eq!(cmd.program, "gh");
-    assert_eq!(cmd.dir, t.p("code/api").to_string_lossy());
+    assert_eq!(std::path::Path::new(&cmd.dir), t.p("code/api"));
     assert_eq!(
         cmd.args,
         [
@@ -751,6 +760,8 @@ fn commit_and_pr_need_an_active_build_in_a_usable_checkout() {
     assert!(p.calls.borrow().is_empty());
 }
 
+/// Unix only: the messages embed a path spelled with `/`, which Windows writes with `\`.
+#[cfg(unix)]
 #[test]
 fn repo_dir_must_be_a_folder_inside_a_git_work_tree() {
     let t = Temp::new();

@@ -421,6 +421,7 @@ mod tests {
         let dirs = |h: &str, x: Option<&str>| Dirs {
             home: Some(h.into()),
             xdg_config_home: x.map(Into::into),
+            cwd: None,
         };
         assert_eq!(
             global_path(&dirs(r"C:\Users\me", None)),
