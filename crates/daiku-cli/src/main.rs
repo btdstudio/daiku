@@ -3,6 +3,7 @@
 
 mod env;
 mod room;
+mod tickets;
 mod usage;
 
 use std::io::Write;
@@ -68,6 +69,7 @@ fn run(args: &[String]) -> u8 {
         "reopen" => reopen(&args[1..], &mut stdout, &mut stderr),
         "switch" => switch(&args[1..], &mut stdout, &mut stderr),
         "status" => status(&args[1..], &mut stdout, &mut stderr),
+        "tickets" => tickets::tickets(&args[1..], &mut stdout, &mut stderr),
         c if KNOWN.contains(&c) => {
             let _ = writeln!(stderr, "daiku: {c} isn't implemented yet");
             1
