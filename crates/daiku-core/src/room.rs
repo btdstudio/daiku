@@ -117,7 +117,7 @@ impl Workspace {
             source: kind.into(),
             repo: opts.repo.clone(),
             rev: opts.rev.clone(),
-            body: opts.body.clone(),
+            body: opts.body.as_str().into(),
             idea: 0,
             after: source::max_recorded_id(&dir, &recorded),
         };
@@ -190,7 +190,12 @@ impl Workspace {
             title: opts.title.clone(),
             repos: opts.repos.clone(),
             rev: opts.rev.clone(),
-            body: format!("Promoted from idea `{}/` on {today}.\n\n{}", i.dir, i.body),
+            body: [
+                format!("Promoted from idea `{}/` on {today}.\n\n", i.dir).as_bytes(),
+                i.body.as_bytes(),
+            ]
+            .concat()
+            .into(),
             idea: opts.id,
             version: opts.version.clone(),
         });

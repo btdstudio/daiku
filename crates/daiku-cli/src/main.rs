@@ -297,7 +297,7 @@ fn change(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> 
                 i += 1;
             }
             ("--body", Some(v)) => {
-                opts.body = v.clone();
+                opts.body = v.as_str().into();
                 i += 1;
             }
             _ if a.starts_with('-') => {

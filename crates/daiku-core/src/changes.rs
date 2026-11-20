@@ -40,7 +40,8 @@ pub struct ChangeNewOptions {
     /// `--repo` values: registered names, or one path.
     pub repos: Vec<String>,
     pub rev: String,
-    pub body: String,
+    /// The intake's body, as bytes: a promoted idea's body is copied as it is.
+    pub body: crate::text::Text,
     /// The idea it's promoted from, 0 for none; recorded in the intake.
     pub idea: i64,
     /// The version the CLI reports, for the room's manifest.
