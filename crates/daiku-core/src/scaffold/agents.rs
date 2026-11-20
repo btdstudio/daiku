@@ -33,18 +33,27 @@ pub fn assemble(rooms: &[&str]) -> String {
     format!("{}\n", parts.join("\n\n"))
 }
 
+/// One line, as the file holds it: bytes, valid UTF-8 or not (N-0001).
+type Line = Vec<u8>;
+
 #[derive(Debug, Clone)]
 struct Section {
+    /// Decoded and trimmed, for matching; the lines keep the bytes.
     heading: String,
     /// The heading line through the last non-blank line.
-    body: Vec<String>,
+    body: Vec<Line>,
     /// The blank lines after it.
-    trail: Vec<String>,
+    trail: Vec<Line>,
+}
+
+/// Go's `strings.TrimSpace(line) == ""` on bytes.
+fn blank(line: &[u8]) -> bool {
+    crate::gofmt::trim_space(line).is_empty()
 }
 
 #[derive(Debug, Clone, Default)]
 struct Doc {
-    preamble: Vec<String>,
+    preamble: Vec<Line>,
     sections: Vec<Section>,
     final_newline: bool,
     unclosed_fence: bool,
@@ -52,19 +61,24 @@ struct Doc {
 
 /// Up to three spaces, then three or more backticks or tildes: the character and
 /// run length.
-fn fence_of(line: &str) -> Option<(u8, usize)> {
-    let rest = line.trim_start_matches(' ');
-    let b = rest.as_bytes();
-    if line.len() - rest.len() > 3 || b.len() < 3 || (b[0] != b'`' && b[0] != b'~') {
+fn fence_of(line: &[u8]) -> Option<(u8, usize)> {
+    let b = trim_start(line, b' ');
+    if line.len() - b.len() > 3 || b.len() < 3 || (b[0] != b'`' && b[0] != b'~') {
         return None;
     }
     let n = b.iter().take_while(|&&c| c == b[0]).count();
     (n >= 3).then_some((b[0], n))
 }
 
-fn parse(text: &str) -> Doc {
+/// `b` without leading `c` bytes.
+fn trim_start(b: &[u8], c: u8) -> &[u8] {
+    let n = b.iter().take_while(|&&x| x == c).count();
+    &b[n..]
+}
+
+fn parse(text: &[u8]) -> Doc {
     let mut doc = Doc {
-        final_newline: text.ends_with('\n'),
+        final_newline: text.ends_with(b"\n"),
         ..Doc::default()
     };
     if text.is_empty() {
@@ -75,21 +89,26 @@ fn parse(text: &str) -> Doc {
     let flush = |cur: &mut Option<Section>, doc: &mut Doc| {
         if let Some(mut s) = cur.take() {
             let mut end = s.body.len();
-            while end > 1 && s.body[end - 1].trim().is_empty() {
+            while end > 1 && blank(&s.body[end - 1]) {
                 end -= 1;
             }
             s.trail = s.body.split_off(end);
             doc.sections.push(s);
         }
     };
-    for line in text.strip_suffix('\n').unwrap_or(text).split('\n') {
+    for line in text
+        .strip_suffix(b"\n")
+        .unwrap_or(text)
+        .split(|b| *b == b'\n')
+    {
         if fence.is_none()
-            && let Some(rest) = line.strip_prefix("## ")
+            && let Some(rest) = line.strip_prefix(b"## ")
         {
             flush(&mut cur, &mut doc);
+            let heading = String::from_utf8_lossy(rest);
             cur = Some(Section {
-                heading: rest.trim_end_matches('\r').trim().to_string(),
-                body: vec![line.to_string()],
+                heading: heading.trim_end_matches('\r').trim().to_string(),
+                body: vec![line.to_vec()],
                 trail: Vec::new(),
             });
             continue;
@@ -98,16 +117,16 @@ fn parse(text: &str) -> Doc {
             match fence {
                 None => fence = Some((ch, n)),
                 Some((fc, fl)) => {
-                    let after = line.trim_start_matches(' ').trim_start_matches(ch as char);
-                    if ch == fc && n >= fl && after.trim().is_empty() {
+                    let after = trim_start(trim_start(line, b' '), ch);
+                    if ch == fc && n >= fl && blank(after) {
                         fence = None;
                     }
                 }
             }
         }
         match cur.as_mut() {
-            None => doc.preamble.push(line.to_string()),
-            Some(s) => s.body.push(line.to_string()),
+            None => doc.preamble.push(line.to_vec()),
+            Some(s) => s.body.push(line.to_vec()),
         }
     }
     flush(&mut cur, &mut doc);
@@ -116,15 +135,15 @@ fn parse(text: &str) -> Doc {
 }
 
 impl Doc {
-    fn render(&self) -> String {
-        let mut lines: Vec<&str> = self.preamble.iter().map(String::as_str).collect();
+    fn render(&self) -> Vec<u8> {
+        let mut lines: Vec<&[u8]> = self.preamble.iter().map(Vec::as_slice).collect();
         for s in &self.sections {
-            lines.extend(s.body.iter().map(String::as_str));
-            lines.extend(s.trail.iter().map(String::as_str));
+            lines.extend(s.body.iter().map(Vec::as_slice));
+            lines.extend(s.trail.iter().map(Vec::as_slice));
         }
-        let mut out = lines.join("\n");
+        let mut out = lines.join(&b'\n');
         if self.final_newline {
-            out.push('\n');
+            out.push(b'\n');
         }
         out
     }
@@ -132,18 +151,19 @@ impl Doc {
 
 /// Go's `Merge`: daiku's sections take the scaffold's text, a missing one goes after
 /// its nearest preceding scaffold section, and everything else is kept as written.
-/// `Err(reason)` when it can't merge.
-pub fn merge(user: &str, scaffold: &str) -> Result<String, String> {
+/// `Err(reason)` when it can't merge. The user's lines are kept byte for byte,
+/// valid UTF-8 or not (N-0001).
+pub fn merge(user: &[u8], scaffold: &str) -> Result<Vec<u8>, String> {
     merge_with(user, scaffold, &USER_OWNED, &RETIRED)
 }
 
 fn merge_with(
-    user: &str,
+    user: &[u8],
     scaffold: &str,
     user_owned: &[&str],
     retired: &[&str],
-) -> Result<String, String> {
-    let (u, s) = (parse(user), parse(scaffold));
+) -> Result<Vec<u8>, String> {
+    let (u, s) = (parse(user), parse(scaffold.as_bytes()));
     if u.unclosed_fence {
         return Err("unclosed code fence".into());
     }
@@ -192,14 +212,14 @@ fn merge_with(
             .map_or(0, |k| k + 1);
         let mut ins = sec.clone();
         if at == 0 {
-            if out.preamble.last().is_some_and(|l| !l.trim().is_empty()) {
-                out.preamble.push(String::new());
+            if out.preamble.last().is_some_and(|l| !blank(l)) {
+                out.preamble.push(Vec::new());
             }
         } else if out.sections[at - 1].trail.is_empty() {
-            out.sections[at - 1].trail = vec![String::new()];
+            out.sections[at - 1].trail = vec![Vec::new()];
         }
         if at < out.sections.len() && ins.trail.is_empty() {
-            ins.trail = vec![String::new()];
+            ins.trail = vec![Vec::new()];
         }
         out.sections.insert(at, ins);
     }
@@ -242,7 +262,7 @@ pub fn write_agents(root: &Path, rooms: &[&str], force: bool) -> Result<AgentsRe
         Ok(b) => Some(b),
     };
     let user = match user {
-        Some(b) if !force => String::from_utf8_lossy(&b).into_owned(),
+        Some(b) if !force => b,
         _ => {
             std::fs::write(&path, &assembled).map_err(io("open"))?;
             return Ok(AgentsResult::Written);

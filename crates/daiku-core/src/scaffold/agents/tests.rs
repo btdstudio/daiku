@@ -2,6 +2,25 @@
 
 use super::*;
 
+/// [`merge`] on text, for cases written as strings.
+fn merge_s(user: &str, scaffold: &str) -> Result<String, String> {
+    merge(user.as_bytes(), scaffold).map(|b| String::from_utf8(b).unwrap())
+}
+
+fn merge_with_s(
+    user: &str,
+    scaffold: &str,
+    owned: &[&str],
+    retired: &[&str],
+) -> Result<String, String> {
+    merge_with(user.as_bytes(), scaffold, owned, retired).map(|b| String::from_utf8(b).unwrap())
+}
+
+/// Lines joined by `\n`, as text.
+fn joined(lines: &[Line]) -> String {
+    String::from_utf8(lines.join(&b'\n')).unwrap()
+}
+
 const SCAF: &str = "# T\n\nintro\n\n## A\n\na body\n\n## B\n\nb body\n\n## Tech stack & standards\n\n- <FILL IN>\n\n## C\n\nc body\n";
 
 #[test]
@@ -70,9 +89,9 @@ fn merge_cases() {
         ("an up-to-date file is unchanged", SCAF, SCAF),
     ];
     for (name, user, want) in cases {
-        let got = merge(user, SCAF).unwrap_or_else(|r| panic!("{name}: refused: {r}"));
+        let got = merge_s(user, SCAF).unwrap_or_else(|r| panic!("{name}: refused: {r}"));
         assert_eq!(got, want, "{name}");
-        assert_eq!(merge(&got, SCAF).unwrap(), got, "{name}: not idempotent");
+        assert_eq!(merge_s(&got, SCAF).unwrap(), got, "{name}: not idempotent");
     }
 }
 
@@ -108,10 +127,10 @@ fn merge_refuses() {
             "unclosed code fence",
         ),
     ] {
-        assert_eq!(merge(user, SCAF), Err(reason.to_string()), "{name}");
+        assert_eq!(merge_s(user, SCAF), Err(reason.to_string()), "{name}");
     }
     let user = "# P\n\n## Team notes\n\n1\n\n## Team notes\n\n2\n\n## Tech stack & standards\n\nx\n\n## Tech stack & standards\n\ny\n";
-    let got = merge(user, SCAF).unwrap();
+    let got = merge_s(user, SCAF).unwrap();
     assert!(got.contains("\n1\n") && got.contains("\n2\n") && got.contains("\ny\n"));
 }
 
@@ -119,9 +138,12 @@ fn merge_refuses() {
 fn merge_drops_retired_sections() {
     let user = "# P\n\n## Old\n\nstale\n\n## A\n\nold a\n\n## B\n\nold b\n\n## Tech stack & standards\n\nx\n\n## C\n\nold c\n";
     let want = "# P\n\n## A\n\na body\n\n## B\n\nb body\n\n## Tech stack & standards\n\nx\n\n## C\n\nc body\n";
-    let got = merge_with(user, SCAF, &USER_OWNED, &["Old"]).unwrap();
+    let got = merge_with_s(user, SCAF, &USER_OWNED, &["Old"]).unwrap();
     assert_eq!(got, want);
-    assert_eq!(merge_with(&got, SCAF, &USER_OWNED, &["Old"]).unwrap(), got);
+    assert_eq!(
+        merge_with_s(&got, SCAF, &USER_OWNED, &["Old"]).unwrap(),
+        got
+    );
 }
 
 /// AC6 on the real scaffold: an edited Tech stack and the user's own section are
@@ -129,23 +151,23 @@ fn merge_drops_retired_sections() {
 #[test]
 fn merge_real_scaffold_keeps_owner_sections() {
     let real = assemble(&["plan"]);
-    let doc = parse(&real);
-    let mut user = format!("{}\n", doc.preamble.join("\n"));
+    let doc = parse(real.as_bytes());
+    let mut user = format!("{}\n", joined(&doc.preamble));
     for sec in &doc.sections {
         user += &match sec.heading.as_str() {
             "Tech stack & standards" => {
                 "## Tech stack & standards\n\n- Go 1.22, Postgres\n\n".to_string()
             }
             "Plan routing" => "## Plan routing\n\nstale\n\n".to_string(),
-            _ => format!("{}\n\n", sec.body.join("\n")),
+            _ => format!("{}\n\n", joined(&sec.body)),
         };
     }
     user += "## Team notes\n\nkeep me\n";
-    let got = merge(&user, &real).unwrap();
-    let merged = parse(&got);
+    let got = merge_s(&user, &real).unwrap();
+    let merged = parse(got.as_bytes());
     assert_eq!(merged.sections.len(), doc.sections.len() + 1);
     for sec in &merged.sections {
-        let body = sec.body.join("\n");
+        let body = joined(&sec.body);
         match sec.heading.as_str() {
             "Tech stack & standards" => assert!(body.contains("Go 1.22, Postgres"), "{body}"),
             "Team notes" => assert!(body.contains("keep me"), "{body}"),
@@ -156,13 +178,13 @@ fn merge_real_scaffold_keeps_owner_sections() {
         }
     }
     assert!(got.contains("## Plan routing") && !got.contains("\nstale\n"));
-    assert_eq!(merge(&got, &real).unwrap(), got);
+    assert_eq!(merge_s(&got, &real).unwrap(), got);
 }
 
 #[test]
 fn scaffold_headings_are_unique() {
     for rooms in [&[][..], &["plan"], &["build"], &["plan", "build"]] {
-        let doc = parse(&assemble(rooms));
+        let doc = parse(assemble(rooms).as_bytes());
         let mut seen = std::collections::HashSet::new();
         assert!(!doc.sections.is_empty());
         for s in &doc.sections {
@@ -189,5 +211,52 @@ fn assemble_joins_fragments_in_order() {
             plan.trim_end_matches('\n'),
             build.trim_end_matches('\n')
         )
+    );
+}
+
+/// N-0001 AC5: a user's section with bytes that aren't valid UTF-8 is kept byte
+/// for byte while a stale daiku section is refreshed.
+#[test]
+fn merge_keeps_a_users_bytes() {
+    let user: &[u8] = b"# Caf\xe9\n\n## A\n\nold a\n\n## B\n\nold b\n\n## Tech stack & standards\n\n- Caf\xe9 notes.\n\n## Mine \xff\n\nmy \xfe text\n\n## C\n\nold c\n";
+    let want: &[u8] = b"# Caf\xe9\n\n## A\n\na body\n\n## B\n\nb body\n\n## Tech stack & standards\n\n- Caf\xe9 notes.\n\n## Mine \xff\n\nmy \xfe text\n\n## C\n\nc body\n";
+    let got = merge(user, SCAF).unwrap();
+    assert_eq!(got, want);
+    assert_eq!(merge(&got, SCAF).unwrap(), got, "idempotent");
+}
+
+/// N-0001 AC5: a current file with bytes that aren't valid UTF-8 is unchanged:
+/// the comparison is on bytes, so nothing is rewritten.
+#[test]
+fn a_current_file_with_invalid_bytes_is_unchanged() {
+    let t = crate::testutil::Temp::new();
+    let current = assemble(&["plan"]);
+    let mut user = current.clone().into_bytes();
+    let at = user.len();
+    user.splice(at..at, b"\n## Mine\n\nCaf\xe9\n".iter().copied());
+    std::fs::write(t.p("AGENTS.md"), &user).unwrap();
+    assert_eq!(
+        write_agents(t.path(), &["plan"], false).unwrap(),
+        AgentsResult::Unchanged
+    );
+    assert_eq!(std::fs::read(t.p("AGENTS.md")).unwrap(), user);
+
+    let routing = b"## Plan routing\n";
+    let i = user
+        .windows(routing.len())
+        .position(|w| w == routing)
+        .unwrap()
+        + routing.len();
+    let mut stale = user.clone();
+    stale.splice(i..i, b"\nstale\n".iter().copied());
+    std::fs::write(t.p("AGENTS.md"), &stale).unwrap();
+    assert_eq!(
+        write_agents(t.path(), &["plan"], false).unwrap(),
+        AgentsResult::Merged
+    );
+    assert_eq!(
+        std::fs::read(t.p("AGENTS.md")).unwrap(),
+        user,
+        "refreshed, bytes kept"
     );
 }
