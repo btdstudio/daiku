@@ -368,6 +368,7 @@ fn failed(code: i32, stderr: &str) -> Output {
     }
 }
 
+#[cfg(unix)]
 fn calls(p: &ScriptedProcess) -> Vec<Vec<String>> {
     p.calls.borrow().iter().map(|c| c.args.clone()).collect()
 }
