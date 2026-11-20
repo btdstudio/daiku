@@ -14,6 +14,7 @@ use regex::Regex;
 use serde::Serialize;
 
 use crate::state::store::{at, read_all, shown};
+use crate::text::Text;
 use crate::{Error, plan::source, scaffold, state, write};
 
 /// The ideas room, relative to the workspace root.
@@ -38,17 +39,18 @@ static FOLDER_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(\d+)-").expe
 pub struct Idea {
     pub id: i64,
     pub slug: String,
-    pub title: String,
+    /// As the summary holds it (`idea list` prints it).
+    pub title: Text,
     pub status: String,
-    pub reason: String,
+    pub reason: Text,
     /// `YYYY-MM-DD`.
     pub updated: String,
     /// The changes promoted from it, in order.
     pub changes: Vec<String>,
     /// `ideas/<n>-<slug>`, slash-separated, relative to the root.
     pub dir: String,
-    /// `summary.md` below its frontmatter.
-    pub body: String,
+    /// `summary.md` below its frontmatter, as bytes (`idea promote` copies it).
+    pub body: Text,
 }
 
 impl Idea {
@@ -221,12 +223,13 @@ fn load_folder(root: &Path, f: &Folder) -> Result<Idea, Error> {
         name: room_rel(f),
         cause: e.to_string(),
     })?;
-    let (fm, body) = source::parse_frontmatter(&String::from_utf8_lossy(&raw));
+    let (fm, body) = source::parse_frontmatter_bytes(&raw);
     if fm.is_empty() {
         return Err(Error::IdeaNoFrontmatter { name: room_rel(f) });
     }
     let get = |k: &str| fm.get(k).cloned().unwrap_or_default();
-    let changes = get("changes")
+    let text = |k: &str| get(k).to_string_lossy().into_owned();
+    let changes = text("changes")
         .split(',')
         .map(str::trim)
         .filter(|c| !c.is_empty())
@@ -236,9 +239,9 @@ fn load_folder(root: &Path, f: &Folder) -> Result<Idea, Error> {
         id: f.id,
         slug: FOLDER_RE.replace(&f.name, "").into_owned(),
         title: get("title"),
-        status: get("status"),
+        status: text("status"),
         reason: get("reason"),
-        updated: get("updated"),
+        updated: text("updated"),
         changes,
         dir: room_rel(f),
         body,
@@ -496,7 +499,7 @@ mod tests {
             (1, "faster-imports", "ideas/1-faster-imports", OPEN)
         );
         assert_eq!(
-            (i.title.as_str(), i.updated.as_str()),
+            (&*i.title.to_string_lossy(), i.updated.as_str()),
             ("Faster imports", DAY1)
         );
         let summary = t.read("ideas/1-faster-imports/summary.md");
@@ -568,7 +571,10 @@ mod tests {
     fn new_edge_cases() {
         let t = Temp::new();
         let i = new_idea(&t, "!!!");
-        assert_eq!((i.dir.as_str(), i.title.as_str()), ("ideas/1-idea", "!!!"));
+        assert_eq!(
+            (i.dir.as_str(), &*i.title.to_string_lossy()),
+            ("ideas/1-idea", "!!!")
+        );
         for title in ["", "  \n\t "] {
             assert!(err(new(t.path(), title, DAY1)).contains("needs a title"));
         }
@@ -609,7 +615,10 @@ mod tests {
 
             let got = op(t.path(), 1, "later", DAY2).unwrap();
             assert_eq!(got.status, status, "{name}");
-            assert_eq!((got.reason.as_str(), got.updated.as_str()), ("later", DAY2));
+            assert_eq!(
+                (&*got.reason.to_string_lossy(), got.updated.as_str()),
+                ("later", DAY2)
+            );
             let raw = t.read(&summary);
             for want in [
                 format!("status: {status}"),
@@ -661,7 +670,10 @@ mod tests {
             assert!(err(reopen(t.path(), 1, "", DAY3)).contains("reason is required"));
             let got = reopen(t.path(), 1, "it matters again", DAY3).unwrap();
             let raw = t.read(&summary);
-            assert_eq!((got.status.as_str(), got.reason.as_str()), (OPEN, ""));
+            assert_eq!(
+                (got.status.as_str(), &*got.reason.to_string_lossy()),
+                (OPEN, "")
+            );
             assert_eq!(got.updated, DAY3);
             assert!(raw.contains("\nreason:\n"), "{raw}");
             assert_eq!(body_of(&raw), body);
@@ -717,7 +729,11 @@ mod tests {
         t.write("ideas/1-hand-made/log.md", "# Log\n\n- no final newline");
         let got = park(t.path(), 1, "waiting", DAY2).unwrap();
         assert_eq!(
-            (got.title.as_str(), got.status.as_str(), got.slug.as_str()),
+            (
+                &*got.title.to_string_lossy(),
+                got.status.as_str(),
+                got.slug.as_str()
+            ),
             ("Hand made", PARKED, "hand-made")
         );
         assert_eq!(
@@ -936,5 +952,22 @@ mod tests {
             "<b>Bx<a"
         );
         assert_eq!(fill("é<a>ü", &[("<a>", "1")]), "é1ü");
+    }
+
+    /// N-0001: a title, reason and body that aren't valid UTF-8 load as bytes.
+    #[test]
+    fn load_keeps_bytes() {
+        let t = Temp::new();
+        std::fs::create_dir_all(t.p("ideas/1-x")).unwrap();
+        std::fs::write(
+            t.p("ideas/1-x/summary.md"),
+            b"---\ntitle: Id\xe9e\nstatus: parked\nreason: apr\xe8s\n---\n\nBody \xff.\n",
+        )
+        .unwrap();
+        let i = load(t.path(), 1).unwrap();
+        assert_eq!(i.title.as_bytes(), b"Id\xe9e");
+        assert_eq!(i.reason.as_bytes(), b"apr\xe8s");
+        assert_eq!(i.body.as_bytes(), b"Body \xff.");
+        assert_eq!(i.status, PARKED);
     }
 }

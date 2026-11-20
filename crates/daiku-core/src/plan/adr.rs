@@ -7,6 +7,7 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use crate::state::store::{at, shown};
+use crate::text::Text;
 use crate::{Error, gofmt, write};
 
 /// One decision record.
@@ -14,10 +15,11 @@ use crate::{Error, gofmt, write};
 pub struct Record {
     pub number: i64,
     pub slug: String,
-    pub title: String,
+    /// As the file holds it (`adr list` prints it).
+    pub title: Text,
     pub status: String,
     pub date: String,
-    pub deciders: String,
+    pub deciders: Text,
     /// As shown: the root joined with the ADR folder and file name.
     pub path: String,
     /// The file's name.
@@ -55,22 +57,23 @@ fn parse(raw: &[u8], number: i64, slug: &str) -> Record {
         raw: raw.to_vec(),
         ..Record::default()
     };
-    for line in String::from_utf8_lossy(raw).split('\n') {
-        let t = line.trim();
-        if let Some(title) = t.strip_prefix("# ") {
-            rec.title = match title.find(' ') {
-                Some(i) => title[i + 1..]
-                    .trim()
-                    .trim_start_matches(['—', '-', '\t', ' '])
-                    .to_string(),
-                None => title.to_string(),
+    let lossy = |b: &[u8]| String::from_utf8_lossy(gofmt::trim_space(b)).into_owned();
+    for line in raw.split(|b| *b == b'\n') {
+        let t = gofmt::trim_space(line);
+        if let Some(title) = t.strip_prefix(b"# ") {
+            rec.title = match title.iter().position(|b| *b == b' ') {
+                Some(i) => {
+                    gofmt::trim_left(gofmt::trim_space(&title[i + 1..]), &['—', '-', '\t', ' '])
+                        .into()
+                }
+                None => title.into(),
             };
-        } else if let Some(v) = t.strip_prefix("- Status:") {
-            rec.status = v.trim().to_string();
-        } else if let Some(v) = t.strip_prefix("- Date:") {
-            rec.date = v.trim().to_string();
-        } else if let Some(v) = t.strip_prefix("- Deciders:") {
-            rec.deciders = v.trim().to_string();
+        } else if let Some(v) = t.strip_prefix(b"- Status:") {
+            rec.status = lossy(v);
+        } else if let Some(v) = t.strip_prefix(b"- Date:") {
+            rec.date = lossy(v);
+        } else if let Some(v) = t.strip_prefix(b"- Deciders:") {
+            rec.deciders = gofmt::trim_space(v).into();
         }
     }
     rec
@@ -174,10 +177,10 @@ pub fn create(root: &Path, adr_dir: &str, opts: &Options, date: &str) -> Result<
     Ok(Record {
         number: n,
         slug,
-        title: opts.title.clone(),
+        title: opts.title.as_str().into(),
         status: "proposed".into(),
         date: date.to_string(),
-        deciders: opts.deciders.clone(),
+        deciders: opts.deciders.as_str().into(),
         path: shown(root, &file_rel),
         file: name,
         raw: text,
@@ -311,7 +314,7 @@ mod tests {
             (
                 rec.status.as_str(),
                 rec.date.as_str(),
-                rec.deciders.as_str()
+                &*rec.deciders.to_string_lossy()
             ),
             ("accepted", "2026-01-02", "architect")
         );
@@ -413,5 +416,27 @@ mod tests {
             "{written:?}"
         );
         assert_eq!(show(t.path(), "", 1).unwrap().raw, written);
+    }
+
+    /// N-0001: a title and deciders that aren't valid UTF-8 keep their bytes;
+    /// the title's leading dashes go, as Go's `TrimLeft` takes them.
+    #[test]
+    fn parse_keeps_bytes() {
+        let rec = parse(
+            b"# 0004 \xe2\x80\x94 Caf\xe9 choice\n\n- Status: accepted\n- Deciders: Ren\xe9e\n",
+            4,
+            "x",
+        );
+        assert_eq!(rec.title.as_bytes(), b"Caf\xe9 choice");
+        assert_eq!(rec.deciders.as_bytes(), b"Ren\xe9e");
+        assert_eq!(rec.status, "accepted");
+        let t = Temp::new();
+        t.write("plan/04_architecture/adr/0001-x.md", "");
+        std::fs::write(
+            t.p("plan/04_architecture/adr/0001-x.md"),
+            b"# 0001 - D\xe9\n",
+        )
+        .unwrap();
+        assert_eq!(list(t.path(), "")[0].title.as_bytes(), b"D\xe9");
     }
 }

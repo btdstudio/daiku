@@ -470,7 +470,8 @@ impl<'a> Renderer<'a> {
                         crate::gofmt::to_slash(self.input.adr_dir),
                         base(&rec.path)
                     ),
-                    cell(&rec.title),
+                    // The generated region is daiku's text: lossy, as decided (N-0001).
+                    cell(&rec.title.to_string_lossy()),
                     cell(&rec.status),
                 ),
                 None => (cell(a), "not found".to_string(), String::new()),

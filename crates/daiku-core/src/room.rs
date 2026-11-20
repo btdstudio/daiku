@@ -487,4 +487,34 @@ mod tests {
         let again = ws.overview(None, false).unwrap().value;
         assert!(again.up_to_date && !again.written);
     }
+
+    /// N-0001 AC3: promote copies the idea's body bytes into the intake.
+    #[test]
+    fn promote_copies_the_bodys_bytes() {
+        let t = Temp::new();
+        let ws = workspace(&t, FixedClock(late_evening()));
+        std::fs::create_dir_all(t.p("ideas/1-x")).unwrap();
+        std::fs::write(
+            t.p("ideas/1-x/summary.md"),
+            b"---\ntitle: X\nstatus: open\n---\n\nBody \xff by hand.\n",
+        )
+        .unwrap();
+        t.write("ideas/1-x/log.md", "# Log\n");
+        let res = ws.idea_promote(&IdeaPromoteOptions {
+            id: 1,
+            title: "Promoted".into(),
+            version: "test".into(),
+            ..IdeaPromoteOptions::default()
+        });
+        let created = res.change.unwrap().value;
+        let intake =
+            std::fs::read(t.p(&format!("plan/00_intake/{}.md", created.source_id))).unwrap();
+        assert!(
+            intake.ends_with(
+                b"Promoted from idea `ideas/1-x/` on 2001-02-03.\n\nBody \xff by hand.\n"
+            ),
+            "{intake:?}"
+        );
+        assert!(res.marked.unwrap().is_ok());
+    }
 }
