@@ -7,7 +7,7 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use crate::state::store::{at, shown};
-use crate::{Error, write};
+use crate::{Error, gofmt, write};
 
 /// One decision record.
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize)]
@@ -142,7 +142,7 @@ pub fn render(n: i64, opts: &Options, date: &str) -> Vec<u8> {
     );
     if !opts.body.is_empty() {
         let mut out = header.into_bytes();
-        out.extend_from_slice(trim_space(&opts.body));
+        out.extend_from_slice(gofmt::trim_space(&opts.body));
         out.push(b'\n');
         return out;
     }
@@ -151,36 +151,6 @@ pub fn render(n: i64, opts: &Options, date: &str) -> Vec<u8> {
         header, opts.context, opts.decision, opts.consequences
     )
     .into_bytes()
-}
-
-/// Go's `strings.TrimSpace` on bytes: Unicode white space is trimmed from both
-/// ends, and trimming stops at a byte that isn't valid UTF-8, as Go's does.
-fn trim_space(b: &[u8]) -> &[u8] {
-    // The first (or last) char of `b`, if it starts (or ends) with a valid one.
-    let first = |b: &[u8]| {
-        (1..=b.len().min(4)).find_map(|n| {
-            std::str::from_utf8(&b[..n])
-                .ok()
-                .and_then(|s| s.chars().next())
-                .map(|c| (c, n))
-        })
-    };
-    let last = |b: &[u8]| {
-        (1..=b.len().min(4)).find_map(|n| {
-            std::str::from_utf8(&b[b.len() - n..])
-                .ok()
-                .and_then(|s| s.chars().next())
-                .map(|c| (c, n))
-        })
-    };
-    let mut b = b;
-    while let Some((_, n)) = first(b).filter(|(c, _)| c.is_whitespace()) {
-        b = &b[n..];
-    }
-    while let Some((_, n)) = last(b).filter(|(c, _)| c.is_whitespace()) {
-        b = &b[..b.len() - n];
-    }
-    b
 }
 
 /// Go's `Create`: the next number, status proposed, dated `date`. It never
@@ -443,21 +413,5 @@ mod tests {
             "{written:?}"
         );
         assert_eq!(show(t.path(), "", 1).unwrap().raw, written);
-    }
-
-    // Go's strings.TrimSpace: Unicode space at either end, stopping at an
-    // invalid byte.
-    #[test]
-    fn trim_space_matches_go() {
-        for (input, want) in [
-            (&b"  x  "[..], &b"x"[..]),
-            (b"\xc2\x85\xc2\xa0x\xe3\x80\x80", b"x"),
-            (b"\xff x \xff", b"\xff x \xff"),
-            (b" \xff ", b"\xff"),
-            (b"\t\r\n", b""),
-            (b"", b""),
-        ] {
-            assert_eq!(trim_space(input), want, "{input:?}");
-        }
     }
 }

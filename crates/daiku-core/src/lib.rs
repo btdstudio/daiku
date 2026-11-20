@@ -26,6 +26,7 @@ pub mod settings;
 pub mod state;
 #[cfg(test)]
 pub(crate) mod testutil;
+pub mod text;
 pub mod ticket;
 pub mod workspace;
 pub mod write;

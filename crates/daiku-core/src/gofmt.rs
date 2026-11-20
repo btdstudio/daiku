@@ -296,6 +296,49 @@ pub fn io_error_text(e: &std::io::Error) -> String {
     }
 }
 
+/// Go's `strings.TrimSpace` on bytes: Unicode white space is trimmed from both
+/// ends, and trimming stops at a byte that isn't valid UTF-8, as Go's does.
+pub fn trim_space(b: &[u8]) -> &[u8] {
+    let mut b = b;
+    while let Some((_, n)) = first_char(b).filter(|(c, _)| c.is_whitespace()) {
+        b = &b[n..];
+    }
+    while let Some((_, n)) = last_char(b).filter(|(c, _)| c.is_whitespace()) {
+        b = &b[..b.len() - n];
+    }
+    b
+}
+
+/// Go's `strings.TrimLeft` on bytes: leading chars in `cutset` are removed,
+/// stopping at a byte that isn't valid UTF-8, as Go's does.
+pub fn trim_left<'a>(b: &'a [u8], cutset: &[char]) -> &'a [u8] {
+    let mut b = b;
+    while let Some((_, n)) = first_char(b).filter(|(c, _)| cutset.contains(c)) {
+        b = &b[n..];
+    }
+    b
+}
+
+/// The first char of `b` and its length, when `b` starts with a valid one.
+fn first_char(b: &[u8]) -> Option<(char, usize)> {
+    (1..=b.len().min(4)).find_map(|n| {
+        std::str::from_utf8(&b[..n])
+            .ok()
+            .and_then(|s| s.chars().next())
+            .map(|c| (c, n))
+    })
+}
+
+/// The last char of `b` and its length, when `b` ends with a valid one.
+fn last_char(b: &[u8]) -> Option<(char, usize)> {
+    (1..=b.len().min(4)).find_map(|n| {
+        std::str::from_utf8(&b[b.len() - n..])
+            .ok()
+            .and_then(|s| s.chars().next())
+            .map(|c| (c, n))
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -519,5 +562,33 @@ mod tests {
         ] {
             assert_eq!(windows_is_local(input), want, "{input:?}");
         }
+    }
+
+    // Go's strings.TrimSpace: Unicode space at either end, stopping at an
+    // invalid byte.
+    #[test]
+    fn trim_space_matches_go() {
+        for (input, want) in [
+            (&b"  x  "[..], &b"x"[..]),
+            (b"\xc2\x85\xc2\xa0x\xe3\x80\x80", b"x"),
+            (b"\xff x \xff", b"\xff x \xff"),
+            (b" \xff ", b"\xff"),
+            (b"\t\r\n", b""),
+            (b"", b""),
+        ] {
+            assert_eq!(trim_space(input), want, "{input:?}");
+        }
+    }
+
+    #[test]
+    fn trim_left_matches_go() {
+        let cut = ['—', '-', '\t', ' '];
+        assert_eq!(
+            trim_left("— -\tTitle — x".as_bytes(), &cut),
+            "Title — x".as_bytes()
+        );
+        assert_eq!(trim_left(b"\xff- x", &cut), b"\xff- x");
+        assert_eq!(trim_left(b"--", &cut), b"");
+        assert_eq!(trim_left(b"", &cut), b"");
     }
 }
