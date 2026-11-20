@@ -66,6 +66,21 @@ pub fn read_file(path: &Path) -> Result<Option<Vec<u8>>, String> {
     Ok(Some(data))
 }
 
+/// Go's `os.ReadFile` where a missing file is an error too: `open <path>: …` when
+/// it can't be opened, `read <path>: …` when it can but not read (a folder).
+pub fn read_all(path: &Path) -> Result<Vec<u8>, Error> {
+    match read_file(path) {
+        Ok(Some(data)) => Ok(data),
+        Ok(None) => Err(Error::PathError {
+            text: format!(
+                "open {}: no such file or directory",
+                gofmt::to_slash(&path.to_string_lossy())
+            ),
+        }),
+        Err(text) => Err(Error::PathError { text }),
+    }
+}
+
 /// Go's `realDir`: a folder that isn't a symlink.
 pub fn real_dir(p: &Path) -> bool {
     std::fs::symlink_metadata(p).is_ok_and(|m| m.is_dir())
@@ -395,6 +410,15 @@ impl<'a> Store<'a> {
         self.check_state_files()?;
         self.write(c)?;
         self.write_active(&c.name)
+    }
+
+    /// Go's `PlanChanges`: `known()` filtered to the plan loop.
+    pub fn plan_changes(&self) -> Result<Vec<Known>, Error> {
+        Ok(self
+            .known()?
+            .into_iter()
+            .filter(|k| k.loop_ == PLAN_LOOP)
+            .collect())
     }
 
     /// Go's `Known`: build changes by name, then plan folders by number.

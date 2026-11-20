@@ -4,9 +4,11 @@
 pub mod adr;
 pub mod check;
 pub mod diagrams;
+pub mod idea;
 pub mod model;
 pub mod overview;
 pub mod problems;
+pub mod reference;
 pub mod source;
 pub mod spec;
 

@@ -25,6 +25,12 @@ pub(crate) fn tree(name: &str) -> &'static Dir<'static> {
         .unwrap_or_else(|| panic!("scaffold tree {name} is embedded"))
 }
 
+/// An embedded scaffold file by its path under `scaffold/`, such as
+/// `root/ideas/templates/summary.md` (Go's `fs.ReadFile(daiku.ScaffoldFS, …)`).
+pub(crate) fn template(path: &str) -> Option<&'static str> {
+    SCAFFOLD.get_file(path).and_then(|f| f.contents_utf8())
+}
+
 /// A file of the `agents` tree.
 pub(crate) fn agents_file(name: &str) -> Option<&'static str> {
     tree("agents")

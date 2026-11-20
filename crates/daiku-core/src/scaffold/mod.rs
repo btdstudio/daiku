@@ -8,6 +8,7 @@ pub(crate) mod lint;
 use std::path::Path;
 
 pub use engine::Manifest;
+pub(crate) use engine::template;
 
 use crate::env::{Dirs, Env};
 use crate::{Error, settings};
