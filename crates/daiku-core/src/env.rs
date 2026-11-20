@@ -19,6 +19,18 @@ pub struct Env {
 /// The current time.
 pub trait Clock {
     fn now(&self) -> SystemTime;
+    /// The local zone's offset from UTC at `at`, in seconds east, for the dates
+    /// daiku writes (`date::today`).
+    fn utc_offset(&self, at: SystemTime) -> i32;
+}
+
+/// The system zone's UTC offset at `at`, in seconds east, or 0 (UTC) when the
+/// zone can't be read, as Go falls back. A helper for clients' clocks: core's
+/// operations never call it, so they read no zone of their own (ADR-0003).
+pub fn system_utc_offset(at: SystemTime) -> i32 {
+    jiff::Timestamp::try_from(at)
+        .map(|ts| jiff::tz::TimeZone::system().to_offset(ts).seconds())
+        .unwrap_or(0)
 }
 
 /// Runs external programs (git, gh).

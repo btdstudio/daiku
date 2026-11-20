@@ -8,12 +8,37 @@ use std::time::SystemTime;
 
 use crate::env::{Clock, Cmd, Dirs, Env, Event, Events, Output, Process};
 
-/// A clock that always returns the same time.
+/// A clock that always returns the same time, in UTC.
 pub struct FixedClock(pub SystemTime);
+
+impl FixedClock {
+    /// A fixed clock in a zone `offset` seconds east of UTC.
+    pub fn zoned(t: SystemTime, offset: i32) -> FixedClockZoned {
+        FixedClockZoned { time: t, offset }
+    }
+}
+
+/// A fixed clock with a fixed UTC offset; see [`FixedClock::zoned`].
+pub struct FixedClockZoned {
+    time: SystemTime,
+    offset: i32,
+}
+
+impl Clock for FixedClockZoned {
+    fn now(&self) -> SystemTime {
+        self.time
+    }
+    fn utc_offset(&self, _at: SystemTime) -> i32 {
+        self.offset
+    }
+}
 
 impl Clock for FixedClock {
     fn now(&self) -> SystemTime {
         self.0
+    }
+    fn utc_offset(&self, _at: SystemTime) -> i32 {
+        0
     }
 }
 

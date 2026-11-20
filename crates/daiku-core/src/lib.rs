@@ -6,6 +6,7 @@
 //! `Result<Outcome<T>, Error>`; an [`Error`]'s `Display` is the Go CLI's message.
 
 pub mod changes;
+pub mod date;
 pub mod env;
 pub mod error;
 pub mod fake;

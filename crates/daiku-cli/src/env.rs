@@ -12,6 +12,9 @@ impl Clock for SystemClock {
     fn now(&self) -> SystemTime {
         SystemTime::now()
     }
+    fn utc_offset(&self, at: SystemTime) -> i32 {
+        daiku_core::env::system_utc_offset(at)
+    }
 }
 
 struct ChildProcess;
