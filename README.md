@@ -9,8 +9,16 @@ the Go code in `btdstudio/daiku`.
 | Crate | What it is |
 |---|---|
 | `crates/daiku-core` | The library: workspaces, changes, gates, tickets. It returns data and never prints, so any client (the CLI, a desktop app) can use it. |
-| `crates/daiku-cli` | The `daiku` binary. Today it only prints "not implemented". |
+| `crates/daiku-cli` | The `daiku` binary: argument parsing, calling core and printing, for every Go command. |
 | `crates/daiku-fixtures` | A test tool, not released. It runs any `daiku` binary against golden fixture cases captured from the Go CLI. |
+
+## Install
+
+Prereleases are published on this repository's Releases page, built by
+[dist](https://github.com/axodotdev/cargo-dist) when a `v*` tag is pushed. The
+repository is private until it merges into `btdstudio/daiku`, so download an archive with
+`gh release download`. [`docs/migration.md`](docs/migration.md) walks through it, and
+through moving from the Go binary.
 
 ## Build and test
 
