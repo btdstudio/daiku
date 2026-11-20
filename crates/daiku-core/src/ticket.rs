@@ -1,6 +1,6 @@
-//! Tickets: the read side of Go's `internal/core/ticket` (D8): parsing, loading a
-//! folder, validation, dependency order, and the freeze and readiness hashes.
-//! Writes and id allocation arrive with the `tickets` commands (S-0007).
+//! Tickets: Go's `internal/core/ticket` (D8): parsing, loading a folder,
+//! validation, dependency order, and the freeze and readiness hashes. The write
+//! side (creation, the readiness and publish marks, ids) is in `write.rs` (S-0007).
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::Path;
@@ -26,8 +26,10 @@ pub const STATUS_PUBLISHED: &str = "published";
 /// Native tickets only.
 pub const STATUS_CLOSED: &str = "closed";
 
-const NATIVE_PREFIX: &str = "N";
-const PULLED_PREFIX: &str = "X";
+/// Marks a ticket created in the build room, so its id can't collide with a planned one.
+pub const NATIVE_PREFIX: &str = "N";
+/// Marks a ticket pulled from a PM tool.
+pub const PULLED_PREFIX: &str = "X";
 
 /// A type's rank: an epic holds features, a feature stories, a story tasks.
 fn rank(typ: &str) -> Option<u8> {
@@ -102,10 +104,16 @@ pub struct Ticket {
     doc: Document,
     /// Fields whose bytes in the file weren't valid UTF-8.
     invalid_utf8: Vec<String>,
+    /// The file's bytes after the frontmatter, kept so a write doesn't replace a
+    /// body byte that isn't UTF-8 (S-0007 D2). `None` for a ticket built in memory,
+    /// or one whose frontmatter isn't valid UTF-8, which can't be written.
+    raw_body: Option<Vec<u8>>,
+    /// The frontmatter wasn't valid UTF-8, so writing it back would change it.
+    lossy_frontmatter: bool,
 }
 
 /// One thing wrong with a ticket.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct Problem {
     /// The ticket, or its path if the id isn't usable.
     pub id: String,
@@ -115,7 +123,7 @@ pub struct Problem {
 }
 
 impl Problem {
-    fn new(id: &str, message: String) -> Problem {
+    pub fn new(id: &str, message: String) -> Problem {
         Problem {
             id: id.to_string(),
             message,
@@ -131,10 +139,10 @@ impl std::fmt::Display for Problem {
 }
 
 impl Ticket {
-    /// Go's `Parse`. `data` may hold bytes that aren't UTF-8: each is read as
-    /// U+FFFD, as Go's JSON encoding of the hashed fields writes it, and the fields
-    /// they were in are remembered for validation. (Go hashes such a body's raw
-    /// bytes; here the body hashes as replaced.)
+    /// Go's `Parse`. `data` may hold bytes that aren't UTF-8: in the frontmatter
+    /// each is read as U+FFFD, as Go's JSON encoding of the hashed fields writes
+    /// it, and the fields they were in are remembered for validation. The body's
+    /// own bytes are kept, so it hashes as Go's does and is written back as read.
     pub fn parse(data: &[u8]) -> Result<Ticket, Error> {
         let (text, lossy) = match std::str::from_utf8(data) {
             Ok(s) => (s.to_string(), false),
@@ -163,6 +171,11 @@ impl Ticket {
         } else {
             Vec::new()
         };
+        // The frontmatter is the same bytes in `data` and `text` exactly when it
+        // held nothing invalid; then the body starts at the same offset in both.
+        let start = text.len() - doc.body.len();
+        let lossy_frontmatter = lossy && data.get(..start) != Some(&text.as_bytes()[..start]);
+        let raw_body = (!lossy_frontmatter).then(|| data[start..].to_vec());
         Ok(Ticket {
             schema,
             id: doc.get("id"),
@@ -187,7 +200,15 @@ impl Ticket {
             path: String::new(),
             doc,
             invalid_utf8,
+            raw_body,
+            lossy_frontmatter,
         })
+    }
+
+    /// The body as the file holds it: its bytes when they were read from a file,
+    /// even those that aren't UTF-8 (S-0007 D2).
+    pub fn body_bytes(&self) -> &[u8] {
+        self.raw_body.as_deref().unwrap_or(self.body.as_bytes())
     }
 
     /// Frozen at publish: it has a `published_hash`.
@@ -203,7 +224,7 @@ impl Ticket {
             return (false, false);
         }
         if !self.published_hash.starts_with(V2_PREFIX) {
-            return (hash(&self.body) != self.published_hash, false);
+            return (hash_bytes(self.body_bytes()) != self.published_hash, false);
         }
         compare_v2(&self.published_hash, self).unwrap_or((true, true))
     }
@@ -246,9 +267,26 @@ const V2_PREFIX: &str = "v2:";
 /// Go's `Hash`: SHA-256 of the body with CRLF as LF and exactly one trailing
 /// newline, in hex.
 pub fn hash(body: &str) -> String {
-    let normalized = body.replace("\r\n", "\n");
-    let normalized = format!("{}\n", normalized.trim_end_matches('\n'));
-    hex(&Sha256::digest(normalized.as_bytes()))
+    hash_bytes(body.as_bytes())
+}
+
+/// [`hash`] over bytes, as Go's string hash sees a body that isn't UTF-8.
+pub fn hash_bytes(body: &[u8]) -> String {
+    let mut normalized = Vec::with_capacity(body.len() + 1);
+    let mut i = 0;
+    while i < body.len() {
+        if body[i] == b'\r' && body.get(i + 1) == Some(&b'\n') {
+            i += 1;
+            continue;
+        }
+        normalized.push(body[i]);
+        i += 1;
+    }
+    while normalized.last() == Some(&b'\n') {
+        normalized.pop();
+    }
+    normalized.push(b'\n');
+    hex(&Sha256::digest(&normalized))
 }
 
 fn hex(bytes: &[u8]) -> String {
@@ -258,7 +296,11 @@ fn hex(bytes: &[u8]) -> String {
 /// Go's `ContentHash`: `v2:<body hash[:32]>.<frontmatter hash[:32]>`.
 pub fn content_hash(t: &Ticket) -> String {
     let fm = hex(&Sha256::digest(canonical_frontmatter(&t.doc).as_bytes()));
-    format!("{V2_PREFIX}{}.{}", &hash(&t.body)[..32], &fm[..32])
+    format!(
+        "{V2_PREFIX}{}.{}",
+        &hash_bytes(t.body_bytes())[..32],
+        &fm[..32]
+    )
 }
 
 /// Go's `canonicalFrontmatter`: the hashed fields sorted by key, empty values
@@ -696,6 +738,9 @@ pub fn load_dir(dir: &Path, shown: &str) -> Result<(Vec<Ticket>, Vec<Problem>), 
     }
     Ok((tickets, problems))
 }
+
+mod write;
+pub use write::*;
 
 #[cfg(test)]
 mod tests;

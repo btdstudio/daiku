@@ -301,6 +301,72 @@ pub enum Error {
     #[error("daiku: {name} isn't a plan change in this workspace{}", if *.build { " (it's a build — bare daiku status lists it)" } else { "" })]
     NotAPlan { name: String, build: bool },
 
+    /// A ticket model refusal, worded as Go's `ticket` package (`ticket S-0001: …`).
+    #[error("{message}")]
+    Ticket { message: String },
+
+    /// A ticket model refusal that Go's handler wraps with `daiku: %v`.
+    #[error("daiku: {message}")]
+    TicketRefused { message: String },
+
+    /// A write to a ticket whose frontmatter isn't valid UTF-8, which would change
+    /// it (S-0007 D2; Go writes the bytes back).
+    #[error("daiku: ticket {id}: its frontmatter isn't valid UTF-8 — fix the file first")]
+    TicketNotUtf8 { id: String },
+
+    #[error("daiku: no ticket {id}")]
+    TicketNotFound { id: String },
+
+    #[error("daiku: more than one ticket has id {id}")]
+    TicketAmbiguous { id: String },
+
+    #[error("daiku: a {typ} needs --repo <name>")]
+    TicketNeedsRepo { typ: String },
+
+    #[error("daiku: repo {} isn't registered — run `daiku repo add`", gofmt::quote(.repo))]
+    TicketRepoNotRegistered { repo: String },
+
+    #[error("daiku tickets new: {}", .problems.join("; "))]
+    UnknownRequirements { problems: Vec<String> },
+
+    #[error("daiku: can't allocate an id while a ticket is unreadable: {problem}")]
+    IdUnallocatable { problem: String },
+
+    #[error("daiku: unreadable ticket: {problem}")]
+    UnreadableTicket { problem: String },
+
+    #[error("daiku: {message}")]
+    TicketOrder { message: String },
+
+    #[error(
+        "daiku: an inbox ticket has no --parent, --depends or --requirements; those belong to a plan change"
+    )]
+    InboxPlanFields,
+
+    #[error("daiku: an inbox ticket is a task, not a {typ}")]
+    InboxNotTask { typ: String },
+
+    #[error("daiku: an inbox ticket needs a repo (--repo <name>)")]
+    InboxNeedsRepo,
+
+    #[error("daiku: repo {} isn't registered — run `daiku repo add {repo} <remote>`", gofmt::quote(.repo))]
+    InboxRepoNotRegistered { repo: String },
+
+    #[error("daiku: cannot read {file}: {cause}")]
+    PullUnreadable { file: String, cause: String },
+
+    #[error("daiku: draft: {cause}")]
+    PullDraft { cause: String },
+
+    #[error("daiku: a pulled ticket needs exactly one external id, the draft has {n}")]
+    PullExternalCount { n: usize },
+
+    #[error("daiku: {id}: {cause}")]
+    PullParse { id: String, cause: String },
+
+    #[error("daiku: invalid ticket: {problem}")]
+    PullInvalid { problem: String },
+
     /// A file operation failed, worded as Go's `*os.PathError` (`open x: no such
     /// file or directory`).
     #[error("{op} {path}: {}", gofmt::io_error_text(.source))]

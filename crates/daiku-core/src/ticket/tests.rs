@@ -515,3 +515,466 @@ fn id_patterns_match_go() {
         assert!(!ID_RE.is_match(id), "{id}");
     }
 }
+
+// ---- The write side (S-0007): Go's write-side tests, and the byte rules. ----
+
+fn new_ticket(f: NewTicket) -> Ticket {
+    let mut f = f;
+    if f.title.is_empty() {
+        f.title = "A ticket".into();
+    }
+    if f.typ.is_empty() {
+        f.typ = STORY.into();
+    }
+    if f.repo.is_empty() && (f.typ == STORY || f.typ == TASK) {
+        f.repo = "app".into();
+    }
+    let ready = f.status == STATUS_READY;
+    let mut t = Ticket::new(f).unwrap();
+    if ready {
+        t.mark_ready().unwrap();
+    }
+    t
+}
+
+fn reparse(t: &Ticket) -> Ticket {
+    Ticket::parse(&t.to_bytes()).unwrap()
+}
+
+fn draft_text(criteria: &str) -> String {
+    format!(
+        "---\nschema: 1\nid: S-0001\ntype: story\ntitle: A ticket\nrepo: a\nlabels: [x]\nstatus: draft\n---\n\
+         \n## Context\nWhy.\n\n## Acceptance criteria\n{criteria}\n## Notes\nNone.\n"
+    )
+}
+
+const FREEZE_FIXTURE: &str = "---\nschema: 1\nid: S-0001\ntype: story\ntitle: A ticket\nparent: F-0001\nrepo: a\n\
+    depends_on: [S-0002, S-0003]\nlabels: [x, y]\nx: keep\nmeta:\n  k: v\nstatus: ready\n---\n\
+    \n## Acceptance criteria\n- [ ] AC1: Given x When y Then z\n";
+
+#[test]
+fn new_round_trips() {
+    let t = new_ticket(NewTicket {
+        id: "S-0001".into(),
+        title: "Fix: a thing".into(),
+        parent: "F-0002".into(),
+        depends_on: vec!["S-0003".into()],
+        labels: vec!["ci".into()],
+        estimate: "S".into(),
+        body: READY_BODY.into(),
+        ..NewTicket::default()
+    });
+    let again = reparse(&t);
+    assert_eq!(again.title, "Fix: a thing");
+    assert_eq!(again.status, STATUS_DRAFT);
+    assert_eq!(again.schema, SCHEMA);
+    assert_eq!(again.parent, "F-0002");
+    assert_eq!(again.body, READY_BODY);
+    assert!(
+        Ticket::new(NewTicket {
+            id: "S-0001".into(),
+            title: "a\nstatus: published".into(),
+            ..NewTicket::default()
+        })
+        .is_err(),
+        "a newline in a title must not inject a field"
+    );
+}
+
+#[test]
+fn new_writes_requirements_after_adrs() {
+    let base = NewTicket {
+        id: "S-0001".into(),
+        adrs: vec!["ADR-0001".into()],
+        labels: vec!["ci".into()],
+        ..NewTicket::default()
+    };
+    let with = NewTicket {
+        requirements: vec!["R3".into(), "N1".into()],
+        ..base.clone()
+    };
+    let text = String::from_utf8(new_ticket(with).to_bytes()).unwrap();
+    let adrs = text.find("\nadrs: [ADR-0001]\n").unwrap();
+    let reqs = text.find("\nrequirements: [R3, N1]\n").unwrap();
+    let labels = text.find("\nlabels: [ci]\n").unwrap();
+    assert!(adrs < reqs && reqs < labels, "{text}");
+    let want = new_ticket(base.clone()).to_bytes();
+    let got = new_ticket(NewTicket {
+        requirements: Vec::new(),
+        ..base
+    })
+    .to_bytes();
+    assert_eq!(got, want);
+    assert!(
+        Ticket::new(NewTicket {
+            id: "S-0001".into(),
+            typ: STORY.into(),
+            title: "A ticket".into(),
+            repo: "app".into(),
+            requirements: vec!["R1\nstatus: published".into()],
+            ..NewTicket::default()
+        })
+        .is_err()
+    );
+}
+
+#[test]
+fn publish_freeze_drift_unfreeze() {
+    let mut t = new_ticket(NewTicket {
+        id: "S-0001".into(),
+        status: STATUS_READY.into(),
+        body: READY_BODY.into(),
+        ..NewTicket::default()
+    });
+    assert!(!t.frozen());
+    assert!(t.unfreeze().is_err());
+    assert!(t.mark_published("", "1").is_err());
+    t.mark_published("ado", "48213").unwrap();
+    assert!(t.frozen());
+    assert_eq!(t.status, STATUS_PUBLISHED);
+    assert_eq!(t.external["ado"], "48213");
+    let mut frozen = reparse(&t);
+    assert_eq!(messages(&validate_file(&frozen)), "");
+
+    frozen.mark_published("github", "org/repo#7").unwrap();
+    frozen.mark_published("ado", "48213").unwrap();
+    let err = frozen.mark_published("ado", "999").unwrap_err().to_string();
+    assert!(err.contains("can't change"), "{err}");
+
+    let text = String::from_utf8(frozen.to_bytes()).unwrap();
+    let mut drifted = Ticket::parse(text.replacen("AC1", "AC9", 1).as_bytes()).unwrap();
+    assert!(drifted.drifted());
+    assert!(messages(&validate_file(&drifted)).contains("drifted: body changed since"));
+    let err = drifted
+        .mark_published("jira", "X-1")
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("changed since"), "{err}");
+
+    let mut retagged =
+        Ticket::parse(text.replacen("labels: []", "labels: [late]", 1).as_bytes()).unwrap();
+    assert!(retagged.drifted());
+    assert!(messages(&validate_file(&retagged)).contains("drifted: frontmatter changed since"));
+    let err = retagged
+        .mark_published("jira", "X-1")
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("frontmatter changed since"), "{err}");
+
+    drifted.unfreeze().unwrap();
+    let mut after = reparse(&drifted);
+    assert!(!after.frozen());
+    assert_eq!(after.external["ado"], "48213");
+    assert_eq!(after.status, STATUS_PUBLISHED);
+    assert_eq!(messages(&validate_file(&after)), "");
+    after.mark_published("ado", "48213").unwrap();
+    assert!(after.frozen() && !after.drifted());
+}
+
+#[test]
+fn mark_published_keeps_other_fields_byte_stable() {
+    let mut t = Ticket::parse(EXAMPLE.as_bytes()).unwrap();
+    t.mark_published("ado", "1").unwrap();
+    let got = String::from_utf8(t.to_bytes()).unwrap();
+    for line in [
+        "id: S-0014                 # type prefix + workspace-global sequence: E, F, S, T",
+        "repo: platform-actions     # logical name from REPOS.json; required for story/task",
+        "Constraints, risks, out of scope.",
+    ] {
+        assert!(got.contains(line), "lost {line:?}:\n{got}");
+    }
+}
+
+#[test]
+fn next_ids() {
+    let s = new_ticket(NewTicket {
+        id: "S-0014".into(),
+        ..NewTicket::default()
+    });
+    let f = new_ticket(NewTicket {
+        id: "F-0003".into(),
+        typ: FEATURE.into(),
+        ..NewTicket::default()
+    });
+    let tickets = [&s, &f];
+    assert_eq!(next_id(&tickets, TASK).unwrap(), "T-0015");
+    assert_eq!(next_id(&[], EPIC).unwrap(), "E-0001");
+    assert_eq!(
+        next_id(&[], "bug").unwrap_err().to_string(),
+        "ticket: unknown type \"bug\""
+    );
+    assert_eq!(next_native_id(&tickets), "N-0015");
+    let pulled = Ticket::parse(
+        b"---\nschema: 1\nid: X-9999\ntype: story\ntitle: t\nrepo: app\nexternal:\n  jira: PROJ-9999\nstatus: draft\n---\n",
+    )
+    .unwrap();
+    let s3 = new_ticket(NewTicket {
+        id: "S-0003".into(),
+        ..NewTicket::default()
+    });
+    assert_eq!(next_native_id(&[&s3, &pulled]), "N-0004");
+}
+
+#[test]
+fn freeze_survives_round_trips() {
+    let mut t = Ticket::parse(FREEZE_FIXTURE.as_bytes()).unwrap();
+    t.mark_published("ado", "1").unwrap();
+    let again = reparse(&t);
+    assert!(!again.drifted());
+    assert_eq!(content_hash(&again), t.published_hash);
+    let mut built = new_ticket(NewTicket {
+        id: "S-0009".into(),
+        status: STATUS_READY.into(),
+        body: READY_BODY.into(),
+        depends_on: vec!["S-0002".into(), "S-0001".into()],
+        labels: vec!["b".into(), "a".into()],
+        ..NewTicket::default()
+    });
+    built.mark_published("ado", "9").unwrap();
+    assert_eq!(messages(&validate_file(&reparse(&built))), "");
+}
+
+#[test]
+fn mark_ready_is_byte_stable() {
+    let draft = draft_text("- [ ] AC1: Given a repo When a tag lands Then a release is cut\n");
+    let mut t = Ticket::parse(draft.as_bytes()).unwrap();
+    t.mark_ready().unwrap();
+    assert_eq!(t.status, STATUS_READY);
+    assert_eq!(t.ready_hash, content_hash(&t));
+    assert_eq!(messages(&validate_file(&t)), "");
+    let got = String::from_utf8(t.to_bytes()).unwrap();
+    let want = draft.replacen(
+        "status: draft\n",
+        &format!("status: ready\nready_hash: \"{}\"\n", t.ready_hash),
+        1,
+    );
+    assert_eq!(got, want);
+    let again = reparse(&t);
+    assert_eq!(again.ready_hash, t.ready_hash);
+    assert_eq!(messages(&validate_file(&again)), "");
+}
+
+#[test]
+fn mark_ready_refuses_other_statuses() {
+    let mut published =
+        Ticket::parse(draft_text("- [ ] AC1: Given x When y Then z\n").as_bytes()).unwrap();
+    published.mark_published("ado", "1").unwrap();
+    let mut closed = new_ticket(NewTicket {
+        id: "N-0001".into(),
+        typ: TASK.into(),
+        status: STATUS_CLOSED.into(),
+        ..NewTicket::default()
+    });
+    for t in [&mut published, &mut closed] {
+        let before = t.to_bytes();
+        let err = t.mark_ready().unwrap_err().to_string();
+        assert!(
+            err.contains("only a draft or ready ticket can be readied"),
+            "{err}"
+        );
+        assert_eq!(t.to_bytes(), before);
+    }
+}
+
+#[test]
+fn mark_published_removes_the_readiness_mark() {
+    let mut t = Ticket::parse(draft_text("- [ ] AC1: Given x When y Then z\n").as_bytes()).unwrap();
+    t.mark_ready().unwrap();
+    t.mark_published("ado", "1").unwrap();
+    assert!(t.ready_hash.is_empty());
+    assert!(
+        !String::from_utf8(t.to_bytes())
+            .unwrap()
+            .contains("ready_hash")
+    );
+    let again = reparse(&t);
+    assert_eq!(messages(&validate_file(&again)), "");
+    assert_eq!(again.published_hash, content_hash(&again));
+}
+
+#[test]
+fn pulled_ids() {
+    for (input, want) in [
+        ("X-1234", "X-1234"),
+        ("X-PROJ-123", "X-PROJ-123"),
+        ("X-#12", "X-12"),
+        ("#1234", "X-1234"),
+        ("1234", "X-1234"),
+        ("PROJ-123", "X-PROJ-123"),
+        (" #77 ", "X-77"),
+        ("a--b", "X-a-b"),
+        ("-a-", "X-a"),
+        ("../x", "X-x"),
+        ("x-12", "X-12"),
+        ("x-PROJ-1", "X-PROJ-1"),
+    ] {
+        let got = pulled_id(input).unwrap();
+        assert_eq!(got, want, "{input:?}");
+        assert!(ID_RE.is_match(&got), "{got}");
+    }
+    for input in ["", "#", "X-", "X-#", "--", "/"] {
+        assert!(pulled_id(input).is_err(), "{input:?}");
+    }
+    assert_eq!(
+        pulled_id("#").unwrap_err().to_string(),
+        "ticket: PM id \"#\" has no letters or digits"
+    );
+    assert_eq!(pm_id("org/app#1234"), "1234");
+    assert_eq!(pm_id("#1234"), "1234");
+    assert_eq!(pm_id("PROJ-123"), "PROJ-123");
+}
+
+#[test]
+fn a_written_ticket_keeps_body_bytes_that_arent_utf8() {
+    let mut data = b"---\nschema: 1\nid: S-0001\ntype: story\ntitle: A ticket\nrepo: a\nstatus: draft\n---\n\n## Acceptance criteria\n- [ ] AC1: Given x\xff When y Then z\n".to_vec();
+    let t = Ticket::parse(&data).unwrap();
+    assert_eq!(
+        t.to_bytes(),
+        data,
+        "unchanged, it round-trips byte for byte"
+    );
+    let mut t = t;
+    t.mark_ready().unwrap();
+    let out = t.to_bytes();
+    let body_at = data.windows(4).position(|w| w == b"---\n").unwrap();
+    let body_at = body_at
+        + 4
+        + data[body_at + 4..]
+            .windows(4)
+            .position(|w| w == b"---\n")
+            .unwrap()
+        + 4;
+    assert!(out.ends_with(&data[body_at..]), "the body's bytes are kept");
+    // A frontmatter byte that isn't UTF-8 makes the ticket unwritable.
+    let at = data.windows(5).position(|w| w == b"story").unwrap();
+    data[at + 2] = 0xfe;
+    let t = Ticket::parse(&data).unwrap();
+    assert_eq!(
+        t.check_writable().unwrap_err().to_string(),
+        "daiku: ticket S-0001: its frontmatter isn't valid UTF-8 — fix the file first"
+    );
+    // Unfreeze, which validates nothing, refuses rather than write U+FFFD (D2).
+    let mut text = data.clone();
+    let at = text
+        .windows(14)
+        .position(|w| w == b"status: draft\n")
+        .unwrap();
+    text.splice(
+        at..at + 14,
+        b"status: published\nexternal:\n  ado: 1\npublished_hash: v2:x\n"
+            .iter()
+            .copied(),
+    );
+    let mut t = Ticket::parse(&text).unwrap();
+    assert!(matches!(t.unfreeze(), Err(Error::TicketNotUtf8 { .. })));
+}
+
+#[test]
+fn unchanged_tickets_round_trip_exactly() {
+    for text in [
+        EXAMPLE.to_string(),
+        EXAMPLE.replace('\n', "\r\n"),
+        "---\nschema: 1\n# a comment\n\nid: \"S-0001\"\ntype: story\n---".to_string(),
+    ] {
+        let t = Ticket::parse(text.as_bytes()).unwrap();
+        assert_eq!(String::from_utf8(t.to_bytes()).unwrap(), {
+            let mut want = text.clone();
+            if !want.ends_with('\n') {
+                want.push('\n');
+            }
+            want
+        });
+    }
+}
+
+/// AC4: ready, publish and unfreeze change only the lines daiku owns.
+#[test]
+fn writes_touch_only_owned_lines() {
+    let text = "---\r\nschema: 1\r\n# planned in the kickoff\r\nid: S-0001   # keep\r\ntype: story\r\ntitle: \"A ticket: quoted\"\r\n\r\nrepo: a\r\nlabels: [x,   y]\r\nzeta: unknown\r\nstatus: draft   # owned\r\n---\r\n\r\n## Acceptance criteria\r\n- [ ] AC1: Given x When y Then z\r\n";
+    let lines = |b: &[u8]| -> Vec<String> {
+        String::from_utf8(b.to_vec())
+            .unwrap()
+            .split("\r\n")
+            .map(str::to_string)
+            .collect()
+    };
+    let diff = |a: &[String], b: &[String]| -> Vec<String> {
+        let mut out: Vec<String> = a
+            .iter()
+            .filter(|l| !b.contains(l))
+            .map(|l| format!("-{l}"))
+            .collect();
+        out.extend(b.iter().filter(|l| !a.contains(l)).map(|l| format!("+{l}")));
+        out.iter()
+            .map(|l| l.split(':').next().unwrap().to_string())
+            .collect()
+    };
+    let mut t = Ticket::parse(text.as_bytes()).unwrap();
+    let before = lines(text.as_bytes());
+    t.mark_ready().unwrap();
+    let ready = lines(&t.to_bytes());
+    assert_eq!(diff(&before, &ready), ["-status", "+status", "+ready_hash"]);
+    t.mark_published("ado", "7").unwrap();
+    let published = lines(&t.to_bytes());
+    let mut d = diff(&ready, &published);
+    d.sort();
+    assert_eq!(
+        d,
+        [
+            "+  ado",
+            "+external",
+            "+published_hash",
+            "+status",
+            "-ready_hash",
+            "-status"
+        ]
+    );
+    t.unfreeze().unwrap();
+    let unfrozen = lines(&t.to_bytes());
+    assert_eq!(diff(&published, &unfrozen), ["-published_hash"]);
+}
+
+/// AC2: the Go CLI's own readied and published files, with `<`, `>` and `&` in
+/// the title and labels, carry hashes the port computes byte for byte (ADR-0006
+/// amendment). Both files come from Go captures, not from this code.
+#[test]
+fn go_captured_hashes_match() {
+    let cases = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/cases/");
+    let rel = "plan/specs/1-auth-flow/tickets/S-0003.md";
+    let readied = std::fs::read(format!("{cases}tickets-ready-html-title/expect/{rel}")).unwrap();
+    let t = Ticket::parse(&readied).unwrap();
+    assert!(
+        t.title.contains('&') && t.title.contains('<'),
+        "{}",
+        t.title
+    );
+    assert_eq!(content_hash(&t), t.ready_hash);
+    let published = std::fs::read(format!(
+        "{cases}tickets-check-go-published-html/before/{rel}"
+    ))
+    .unwrap();
+    let t = Ticket::parse(&published).unwrap();
+    assert!(!t.published_hash.is_empty());
+    assert_eq!(content_hash(&t), t.published_hash);
+    assert!(!t.drifted());
+}
+
+/// A body that isn't UTF-8 hashes over its bytes, as Go's string hash does. The
+/// expected mark is what the Go CLI at 5aa7a78 wrote for this file (S-0007
+/// test-phase differential, `non-utf8-body-ready`).
+#[test]
+fn a_non_utf8_body_hashes_as_go() {
+    let data = b"---\nschema: 1\nid: S-0004\ntype: story\ntitle: Bytes\nrepo: api\nchange: 1-auth-flow\nstatus: draft\n---\n\n## Acceptance criteria\n- [ ] AC1: Given caf\xe9, When y, Then z\n";
+    let mut t = Ticket::parse(data).unwrap();
+    t.mark_ready().unwrap();
+    assert_eq!(
+        t.ready_hash,
+        "v2:4673d3c401f8ceafe6d9ac20303175a2.04e0cd98cffb241bab6928657c21d1bd"
+    );
+    // CRLF and trailing newlines still don't count, on bytes as on text.
+    assert_eq!(hash_bytes(b"a\xff\r\nb\n\n"), hash_bytes(b"a\xff\nb"));
+    assert_eq!(hash_bytes(b"a\r\nb"), hash("a\nb"));
+    // Read back, the Go-made mark holds: no drift since readied.
+    let again = Ticket::parse(&t.to_bytes()).unwrap();
+    assert_eq!(messages(&validate_file(&again)), "");
+}
