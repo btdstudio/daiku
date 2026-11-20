@@ -254,7 +254,7 @@ impl Ticket {
 }
 
 /// Go's `strconv.Atoi`: an optional sign and decimal digits that fit.
-fn go_atoi(s: &str) -> Option<i64> {
+pub(crate) fn go_atoi(s: &str) -> Option<i64> {
     let digits = s.strip_prefix(['+', '-']).unwrap_or(s);
     if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
         return None;

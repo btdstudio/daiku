@@ -5,6 +5,7 @@
 //! and the home and config folders (ADR-0003). Operations return
 //! `Result<Outcome<T>, Error>`; an [`Error`]'s `Display` is the Go CLI's message.
 
+pub mod build;
 pub mod changes;
 pub mod date;
 pub mod env;
