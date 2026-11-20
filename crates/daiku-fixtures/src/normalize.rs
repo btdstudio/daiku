@@ -49,6 +49,11 @@ pub(crate) struct Normalizer {
     /// (text, token), longest text first.
     paths: Vec<(String, &'static str)>,
     commits: Vec<String>,
+    /// A path after a token, to write with `/`: Windows prints `{ROOT}\web`, where
+    /// the cases were captured from Go on Unix (spec open question: Windows
+    /// fixtures may normalise path separators).
+    tokened_path: Regex,
+    unify_separators: bool,
 }
 
 impl Normalizer {
@@ -94,6 +99,11 @@ impl Normalizer {
             dates,
             paths,
             commits,
+            // A token, then segments each led by a backslash, or by two when the
+            // text is JSON-escaped.
+            tokened_path: Regex::new(r#"\{(?:ROOT|HOME|CONFIG)\}(?:(?:\\\\|\\)[^\s"'\\{}<>|]+)+"#)
+                .expect("tokened path pattern"),
+            unify_separators: cfg!(windows),
         }
     }
 
@@ -121,6 +131,16 @@ impl Normalizer {
         }
         for (p, token) in &self.paths {
             s = s.replace(p.as_str(), token);
+        }
+        if self.unify_separators {
+            s = self
+                .tokened_path
+                .replace_all(&s, |c: &regex::Captures| {
+                    let m = &c[0];
+                    let (token, rest) = m.split_at(m.find('}').map_or(0, |i| i + 1));
+                    format!("{token}{}", rest.replace("\\\\", "/").replace('\\', "/"))
+                })
+                .into_owned();
         }
         if self.commits.is_empty() {
             return s;
@@ -179,6 +199,36 @@ mod tests {
             vec!["2026-11-18".into(), "2026-11-19".into()],
             commits.iter().map(|c| c.to_string()).collect(),
         )
+    }
+
+    /// On Windows a path after a token is written with `/`, plain or JSON-escaped,
+    /// and nothing else changes.
+    #[test]
+    fn separators_after_a_token_are_unified_when_asked() {
+        let mut n = n(&[]);
+        n.unify_separators = true;
+        assert_eq!(
+            n.apply(r"cloned self to {HOME}\clones\self"),
+            "cloned self to {HOME}/clones/self"
+        );
+        assert_eq!(
+            n.apply(r#"  "web": "{ROOT}\\web\\sub""#),
+            r#"  "web": "{ROOT}/web/sub""#
+        );
+        assert_eq!(
+            n.apply(r"api: {ROOT}\elsewhere ok C:\keep"),
+            r"api: {ROOT}/elsewhere ok C:\keep"
+        );
+        assert_eq!(n.apply("{ROOT} alone"), "{ROOT} alone");
+        assert_eq!(n.apply(r"no token a\b"), r"no token a\b");
+        // Off (every platform but Windows): untouched.
+        let n = super::tests::n(&[]);
+        let expected_off = if cfg!(windows) {
+            "{ROOT}/x"
+        } else {
+            r"{ROOT}\x"
+        };
+        assert_eq!(n.apply(r"{ROOT}\x"), expected_off);
     }
 
     /// Tokens next to bytes that aren't valid UTF-8 are normalised, and the bytes
