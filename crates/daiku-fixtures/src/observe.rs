@@ -10,8 +10,9 @@ use crate::run::{RawRun, git};
 /// What a run produced, normalised by `run_case`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Observation {
-    pub stdout: String,
-    pub stderr: String,
+    /// As the binary wrote them: bytes, valid UTF-8 or not.
+    pub stdout: Vec<u8>,
+    pub stderr: Vec<u8>,
     pub exit: i32,
     /// Every path in the workspace, sorted: `d path`, `f path` or `l path -> target`,
     /// with forward slashes. `.git/` is left out.
@@ -109,8 +110,8 @@ pub(crate) fn observe(
     };
 
     Ok(Observation {
-        stdout: String::from_utf8_lossy(&raw.stdout).into_owned(),
-        stderr: String::from_utf8_lossy(&raw.stderr).into_owned(),
+        stdout: raw.stdout,
+        stderr: raw.stderr,
         exit: raw.exit,
         manifest,
         files,
@@ -164,15 +165,23 @@ pub(crate) fn walk(
 impl Observation {
     /// Applies the normaliser to every text output (R6).
     pub(crate) fn normalized(mut self, n: &Normalizer) -> Observation {
-        self.stdout = n.apply(&self.stdout);
-        self.stderr = n.apply(&self.stderr);
+        self.stdout = n.apply_bytes(&self.stdout);
+        self.stderr = n.apply_bytes(&self.stderr);
         self.git_log = self.git_log.map(|l| n.apply(&l));
         for bytes in self.files.values_mut() {
-            if let Ok(text) = std::str::from_utf8(bytes) {
-                *bytes = n.apply(text).into_bytes();
-            }
+            *bytes = n.apply_bytes(bytes);
         }
         self
+    }
+
+    /// stdout as text, lossily, for messages and tests.
+    pub fn stdout_text(&self) -> String {
+        String::from_utf8_lossy(&self.stdout).into_owned()
+    }
+
+    /// stderr as text, lossily, for messages and tests.
+    pub fn stderr_text(&self) -> String {
+        String::from_utf8_lossy(&self.stderr).into_owned()
     }
 }
 

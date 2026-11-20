@@ -97,6 +97,18 @@ impl Normalizer {
         }
     }
 
+    /// [`Normalizer::apply`] on bytes that may not be valid UTF-8: each valid run
+    /// is normalised and every other byte kept. Exact, because every token (a date,
+    /// timestamp, path or commit id) is ASCII and so lies inside one valid run.
+    pub(crate) fn apply_bytes(&self, b: &[u8]) -> Vec<u8> {
+        let mut out = Vec::with_capacity(b.len());
+        for chunk in b.utf8_chunks() {
+            out.extend_from_slice(self.apply(chunk.valid()).as_bytes());
+            out.extend_from_slice(chunk.invalid());
+        }
+        out
+    }
+
     pub(crate) fn apply(&self, s: &str) -> String {
         let (stamp, today) = if self.fixed {
             (FIXED_TIMESTAMP, FIXED_DATE)
@@ -167,6 +179,16 @@ mod tests {
             vec!["2026-11-18".into(), "2026-11-19".into()],
             commits.iter().map(|c| c.to_string()).collect(),
         )
+    }
+
+    /// Tokens next to bytes that aren't valid UTF-8 are normalised, and the bytes
+    /// are kept.
+    #[test]
+    fn bytes_keep_invalid_runs() {
+        let n = n(&[]);
+        let got = n.apply_bytes(b"\xff2026-11-19\xfe /var/T/fx-root-abc/x\xe9\n");
+        assert_eq!(got, b"\xff{TODAY}\xfe {ROOT}/x\xe9\n");
+        assert_eq!(n.apply_bytes(b"plain 2026-11-18"), b"plain {TODAY}");
     }
 
     #[test]

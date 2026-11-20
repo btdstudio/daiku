@@ -80,12 +80,40 @@ pub struct Expect {
     pub stdout: String,
     #[serde(default)]
     pub stderr: String,
+    /// stdout when it isn't valid UTF-8, in the escaped form (`\\`, `\xNN`);
+    /// then `stdout` is empty.
+    #[serde(default)]
+    pub stdout_bytes: String,
+    /// stderr when it isn't valid UTF-8, as `stdout_bytes`.
+    #[serde(default)]
+    pub stderr_bytes: String,
     /// What the run changed in the workspace; see `Observation::changes`.
     #[serde(default)]
     pub changes: Vec<String>,
     /// For git cases: the log of the commits the run made.
     #[serde(default)]
     pub git_log: String,
+}
+
+impl Expect {
+    /// The expected stdout's bytes, from whichever form is stored.
+    pub fn stdout_bytes(&self) -> Result<Vec<u8>, String> {
+        either(&self.stdout, &self.stdout_bytes, "stdout")
+    }
+
+    /// The expected stderr's bytes, from whichever form is stored.
+    pub fn stderr_bytes(&self) -> Result<Vec<u8>, String> {
+        either(&self.stderr, &self.stderr_bytes, "stderr")
+    }
+}
+
+/// `text`, or the bytes `escaped` stands for; never both.
+fn either(text: &str, escaped: &str, name: &str) -> Result<Vec<u8>, String> {
+    match (text.is_empty(), escaped.is_empty()) {
+        (_, true) => Ok(text.as_bytes().to_vec()),
+        (true, false) => crate::unescape(escaped).map_err(|e| format!("{name}_bytes: {e}")),
+        (false, false) => Err(format!("set {name} or {name}_bytes, not both")),
+    }
 }
 
 /// The line that starts a case's expectation in `case.toml`.
@@ -159,6 +187,10 @@ impl Case {
         let text = std::fs::read_to_string(&file).map_err(|e| Error::at(&file, e))?;
         let spec: CaseSpec = toml::from_str(&text).map_err(|e| Error::at(&file, e))?;
         let inputs = split_inputs(&text).map_err(|e| Error::at(&file, e))?;
+        if let Some(e) = &spec.expect {
+            e.stdout_bytes().map_err(|m| Error::at(&file, m))?;
+            e.stderr_bytes().map_err(|m| Error::at(&file, m))?;
+        }
         for sub in ["before", "expect", "config", "stage"] {
             folder_or_none(&dir.join(sub))?;
         }

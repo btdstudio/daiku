@@ -10,6 +10,7 @@
 mod case;
 mod compare;
 mod coverage;
+mod escape;
 mod normalize;
 mod observe;
 mod recipe;
@@ -20,6 +21,7 @@ mod stored;
 pub use case::{Case, CaseSpec, EXPECT_HEADER, Expect, Os, load_cases};
 pub use compare::{Difference, compare, write_expect};
 pub use coverage::{uncovered, usage_entries};
+pub use escape::{escape, unescape};
 #[doc(hidden)]
 pub use normalize::civil;
 pub use normalize::{FIXED_DATE, FIXED_TIMESTAMP};

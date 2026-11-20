@@ -2,7 +2,9 @@
 //!
 //! Usage: `daiku-fixtures-stub STEP [ARG]... [; STEP [ARG]...]...`
 //!
-//! Steps run in order: `print TEXT`, `eprint TEXT`, `write PATH TEXT`, `mkdir PATH`,
+//! Steps run in order: `print TEXT`, `eprint TEXT`, `printx TEXT` (TEXT in the
+//! `stdout_bytes` escapes, printed as bytes), `write PATH TEXT`, `writex PATH TEXT`
+//! (likewise), `mkdir PATH`,
 //! `cat PATH` (prints the file), `stamp PATH` (writes today's date and the time to
 //! the file), `now`, `today`, `pwd`, `env`, `commit SUBJECT` (prints the new commit
 //! id), `staged` (prints the staged paths), `sleep MS`, `exit CODE`. With no `exit`, the stub exits 0.
@@ -48,6 +50,18 @@ fn run(step: &[String]) -> Result<Option<u8>, String> {
         "eprint" => {
             want(1)?;
             eprintln!("{}", rest[0]);
+        }
+        "printx" => {
+            want(1)?;
+            let mut bytes = daiku_fixtures::unescape(&rest[0])?;
+            bytes.push(b'\n');
+            std::io::Write::write_all(&mut std::io::stdout(), &bytes)
+                .map_err(|e| format!("printx: {e}"))?;
+        }
+        "writex" => {
+            want(2)?;
+            let bytes = daiku_fixtures::unescape(&rest[1])?;
+            std::fs::write(&rest[0], bytes).map_err(|e| format!("writex: {e}"))?;
         }
         "write" => {
             want(2)?;

@@ -110,7 +110,7 @@ fn environment_is_sealed() {
     let dir = tempfile::tempdir().unwrap();
     let toml = script(&[&["env"], &["pwd"]]) + "env = { EXTRA = \"{ROOT}/x\" }\n";
     let obs = run(&case(dir.path(), "env", &toml));
-    assert_eq!(obs.exit, 0, "{}", obs.stderr);
+    assert_eq!(obs.exit, 0, "{}", obs.stderr_text());
 
     let mut allowed = vec![
         "PATH",
@@ -126,7 +126,8 @@ fn environment_is_sealed() {
     if cfg!(windows) {
         allowed.extend(["USERPROFILE", "SystemRoot"]);
     }
-    let lines: Vec<&str> = obs.stdout.lines().collect();
+    let stdout = obs.stdout_text();
+    let lines: Vec<&str> = stdout.lines().collect();
     let (vars, pwd) = lines.split_at(lines.len() - 1);
     for line in vars {
         let key = line.split('=').next().unwrap();
@@ -163,7 +164,7 @@ fn args_expand_path_tokens() {
         "expand",
         &script(&[&["write", "{ROOT}/out.txt", "{HOME}|{CONFIG}"]]),
     ));
-    assert_eq!(obs.exit, 0, "{}", obs.stderr);
+    assert_eq!(obs.exit, 0, "{}", obs.stderr_text());
     assert_eq!(obs.files["out.txt"], b"{HOME}|{CONFIG}");
 }
 
@@ -184,7 +185,7 @@ fn exit_code_and_stderr_are_kept() {
         &script(&[&["eprint", "bad"], &["exit", "7"]]),
     ));
     assert_eq!(obs.exit, 7);
-    assert_eq!(obs.stderr.replace("\r\n", "\n"), "bad\n");
+    assert_eq!(obs.stderr_text().replace("\r\n", "\n"), "bad\n");
 }
 
 // ---- T5: observation ----
@@ -200,7 +201,7 @@ fn git_case_records_tree_and_log() {
         &["commit", "two"],
     ]) + "git = true\n";
     let obs = run(&case(dir.path(), "git", &toml));
-    assert_eq!(obs.exit, 0, "{}", obs.stderr);
+    assert_eq!(obs.exit, 0, "{}", obs.stderr_text());
     assert_eq!(obs.manifest, ["f a.txt", "d b", "f b/c.txt", "d empty"]);
     let log = obs.git_log.unwrap();
     assert_eq!(log, "one\n\nA\ta.txt\ntwo\n\nA\tb/c.txt\n", "{log:?}");
@@ -228,9 +229,9 @@ fn run_output_normalises_to_tokens() {
         &["commit", "x"],
     ]) + "git = true\n";
     let obs = run(&case(dir.path(), "norm", &toml));
-    assert_eq!(obs.exit, 0, "{}", obs.stderr);
+    assert_eq!(obs.exit, 0, "{}", obs.stderr_text());
     assert_eq!(
-        obs.stdout.replace("\r\n", "\n"),
+        obs.stdout_text().replace("\r\n", "\n"),
         "{TIMESTAMP}\n{TODAY}\n{ROOT}\n{COMMIT}\n"
     );
     assert_eq!(obs.files["note.txt"], b"{ROOT}");
@@ -323,6 +324,86 @@ fn stdout_difference_names_the_line() {
         "{}",
         p[0].1
     );
+}
+
+/// Output that isn't valid UTF-8 is stored as `stdout_bytes` and checks.
+#[test]
+fn non_utf8_output_round_trips() {
+    let dir = tempfile::tempdir().unwrap();
+    let c = case(
+        dir.path(),
+        "bytes",
+        &script(&[
+            &["printx", r"Caf\xe9 \\ \xff"],
+            &["today"],
+            &["pwd"],
+            &["writex", "f.bin", r"\xfe ok"],
+        ]),
+    );
+    write_expect(&c, &run(&c)).unwrap();
+    let c = Case::load(&c.dir).unwrap();
+    let want = c.spec.expect.as_ref().unwrap();
+    assert_eq!(want.stdout, "", "valid UTF-8 only goes in stdout");
+    assert_eq!(
+        want.stdout_bytes,
+        r"Caf\xe9 \\ \xff".to_string() + "\n{TODAY}\n{ROOT}\n"
+    );
+    assert_eq!(
+        std::fs::read(c.expect_dir().join("f.bin")).unwrap(),
+        b"\xfe ok"
+    );
+    assert_eq!(parts(&c), []);
+    let toml = std::fs::read_to_string(c.dir.join("case.toml")).unwrap();
+    assert!(toml.contains("stdout_bytes = "), "{toml}");
+}
+
+/// One changed byte that isn't valid UTF-8 is a named difference, in stdout
+/// and in a file.
+#[test]
+fn non_utf8_difference_names_the_byte() {
+    let dir = tempfile::tempdir().unwrap();
+    let c = case(
+        dir.path(),
+        "byte",
+        &script(&[&["printx", r"a\xe9"], &["writex", "f.bin", r"\xe9"]]),
+    );
+    let c = captured_then(
+        &c,
+        &script(&[&["printx", r"a\xe8"], &["writex", "f.bin", r"\xe8"]]),
+    );
+    let p = parts(&c);
+    assert_eq!(p.len(), 2, "{p:?}");
+    assert_eq!(p[0].0, "stdout");
+    assert!(
+        p[0].1.contains(r"-a\xe9") && p[0].1.contains(r"+a\xe8"),
+        "{}",
+        p[0].1
+    );
+    assert_eq!(p[1].0, "expect/f.bin");
+    assert!(
+        p[1].1.contains(r"\xe9") && p[1].1.contains(r"\xe8"),
+        "{}",
+        p[1].1
+    );
+}
+
+/// A case may store stdout one way, not both, and only known escapes.
+#[test]
+fn stored_bytes_must_be_one_form_and_decode() {
+    let dir = tempfile::tempdir().unwrap();
+    for (name, expect) in [
+        ("both", "stdout = \"x\"\nstdout_bytes = \"y\"\n"),
+        ("bad-escape", "stdout_bytes = \"\\\\q\"\n"),
+        ("both-err", "stderr = \"x\"\nstderr_bytes = \"\\\\xff\"\n"),
+    ] {
+        let d = dir.path().join(name);
+        write(
+            &d.join("case.toml"),
+            &format!("args = [\"x\"]\n\n[expect]\nexit = 0\n{expect}"),
+        );
+        let e = Case::load(&d).unwrap_err().to_string();
+        assert!(e.contains("_bytes"), "{name}: {e}");
+    }
 }
 
 #[test]

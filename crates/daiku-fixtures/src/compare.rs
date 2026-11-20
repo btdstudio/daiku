@@ -40,13 +40,18 @@ pub fn compare(case: &Case, obs: &Observation) -> Vec<Difference> {
             format!("expected {}, got {}", want.exit, obs.exit),
         ));
     }
-    let (mut stdout, mut got) = (lf(&want.stdout), lf(&obs.stdout));
+    // Load refuses a case whose stored forms don't decode, so these hold.
+    let (mut stdout, mut got) = (
+        lf_bytes(&want.stdout_bytes().unwrap_or_default()),
+        lf_bytes(&obs.stdout),
+    );
     if case.spec.unordered_stdout {
-        stdout = sorted_lines(&stdout);
-        got = sorted_lines(&got);
+        stdout = sorted_byte_lines(&stdout);
+        got = sorted_byte_lines(&got);
     }
-    text_diff("stdout", &stdout, &got, &mut out);
-    text_diff("stderr", &lf(&want.stderr), &lf(&obs.stderr), &mut out);
+    bytes_diff("stdout", &stdout, &got, &mut out);
+    let want_err = lf_bytes(&want.stderr_bytes().unwrap_or_default());
+    bytes_diff("stderr", &want_err, &lf_bytes(&obs.stderr), &mut out);
     compare_changes(&case.expect_dir(), &want.changes, obs, &mut out);
     if case.spec.git {
         let got = obs.git_log.as_deref().unwrap_or("");
@@ -106,9 +111,43 @@ fn compare_file(part: &str, path: &str, want: &[u8], got: &[u8], out: &mut Vec<D
     }
     match (std::str::from_utf8(want), std::str::from_utf8(got)) {
         (Ok(w), Ok(g)) => text_diff(part, &lf(w), &lf(g), out),
-        _ if want != got => out.push(diff(part, "binary content differs")),
-        _ => {}
+        _ => bytes_diff(part, &lf_bytes(want), &lf_bytes(got), out),
     }
+}
+
+/// A line diff of two outputs or files that may not be valid UTF-8: as text when
+/// both are, else of their escaped forms (`\xNN`), so one changed byte shows.
+fn bytes_diff(part: &str, want: &[u8], got: &[u8], out: &mut Vec<Difference>) {
+    if want == got {
+        return;
+    }
+    match (std::str::from_utf8(want), std::str::from_utf8(got)) {
+        (Ok(w), Ok(g)) => text_diff(part, w, g, out),
+        _ => text_diff(part, &crate::escape(want), &crate::escape(got), out),
+    }
+}
+
+fn lf_bytes(b: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'\r' && b.get(i + 1) == Some(&b'\n') {
+            i += 1;
+            continue;
+        }
+        out.push(b[i]);
+        i += 1;
+    }
+    out
+}
+
+fn sorted_byte_lines(b: &[u8]) -> Vec<u8> {
+    let mut lines: Vec<&[u8]> = b.split(|c| *c == b'\n').collect();
+    if lines.last().is_some_and(|l| l.is_empty()) {
+        lines.pop();
+    }
+    lines.sort_unstable();
+    lines.iter().flat_map(|l| [*l, b"\n"].concat()).collect()
 }
 
 fn text_diff(part: &str, want: &str, got: &str, out: &mut Vec<Difference>) {
@@ -151,21 +190,24 @@ fn lf(s: &str) -> String {
     s.replace("\r\n", "\n")
 }
 
-fn sorted_lines(s: &str) -> String {
-    let mut lines: Vec<&str> = s.lines().collect();
-    lines.sort_unstable();
-    lines.iter().map(|l| format!("{l}\n")).collect()
-}
-
 /// Writes the case's expectation from the observation: `case.toml`'s `[expect]`
 /// table (the inputs above it are kept as written) and a fresh `expect/` holding the
 /// files the run added or changed. Fails, writing nothing, if the new `case.toml`
 /// wouldn't read back as the same inputs and expectation.
 pub fn write_expect(case: &Case, obs: &Observation) -> Result<(), Error> {
+    // Valid UTF-8 is stored as text; anything else in the escaped form.
+    let stored = |b: &[u8]| match std::str::from_utf8(b) {
+        Ok(text) => (text.to_string(), String::new()),
+        Err(_) => (String::new(), crate::escape(b)),
+    };
+    let ((stdout, stdout_bytes), (stderr, stderr_bytes)) =
+        (stored(&obs.stdout), stored(&obs.stderr));
     let expect = Expect {
         exit: obs.exit,
-        stdout: obs.stdout.clone(),
-        stderr: obs.stderr.clone(),
+        stdout,
+        stderr,
+        stdout_bytes,
+        stderr_bytes,
         changes: obs.changes.clone(),
         git_log: if case.spec.git {
             obs.git_log.clone().unwrap_or_default()
@@ -214,6 +256,8 @@ fn expect_table(e: &Expect) -> String {
     for (key, value) in [
         ("stdout", &e.stdout),
         ("stderr", &e.stderr),
+        ("stdout_bytes", &e.stdout_bytes),
+        ("stderr_bytes", &e.stderr_bytes),
         ("git_log", &e.git_log),
     ] {
         if !value.is_empty() {

@@ -88,7 +88,11 @@ changes = [
 ```
 
 `[expect]` holds `exit` and, when not empty, `stdout`, `stderr`, `changes` and
-`git_log` (git cases). It must be the last table: `capture` replaces everything from
+`git_log` (git cases). Output that isn't valid UTF-8 is stored as `stdout_bytes` or
+`stderr_bytes` instead: the text as it is, with `\` written `\\` and each byte that
+isn't part of valid UTF-8 written `\xNN`. A case sets one form or the other, never
+both. Normalisation (`{ROOT}`, `{TODAY}` and the rest) applies to the valid UTF-8 runs
+of output and files alike, and files that aren't valid UTF-8 compare byte for byte. It must be the last table: `capture` replaces everything from
 its header on, keeps the lines above it exactly as written, and refuses if the
 result wouldn't read back the same.
 

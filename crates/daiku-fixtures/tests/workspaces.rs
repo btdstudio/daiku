@@ -79,7 +79,7 @@ impl Fx {
 
 fn run(c: &Case) -> Observation {
     let obs = run_case(stub(), c).unwrap();
-    assert_eq!(obs.exit, 0, "{}", obs.stderr);
+    assert_eq!(obs.exit, 0, "{}", obs.stderr_text());
     obs
 }
 
@@ -198,7 +198,7 @@ fn config_reaches_the_global_config_folder() {
         "{\"gates\": \"auto\"}\n",
     );
     let obs = run(&fx.load("cfg"));
-    assert_eq!(obs.stdout, "{\"gates\": \"auto\"}\nws\n");
+    assert_eq!(obs.stdout_text(), "{\"gates\": \"auto\"}\nws\n");
     // The config folder isn't part of the workspace tree.
     assert_eq!(obs.manifest, ["f .keep-me"]);
 }
@@ -211,7 +211,7 @@ fn tokens_in_starting_files_expand_and_normalise_back() {
     let bin: Vec<u8> = vec![0xff, 0xfe, b'{', b'R', b'O', b'O', b'T', b'}'];
     std::fs::write(d.join("before/blob.bin"), &bin).unwrap();
     let obs = run(&fx.load("tok"));
-    assert_eq!(obs.stdout, "{ROOT}|{HOME}|{CONFIG}\n{ROOT}\n");
+    assert_eq!(obs.stdout_text(), "{ROOT}|{HOME}|{CONFIG}\n{ROOT}\n");
     assert_eq!(obs.files["paths.txt"], b"{ROOT}|{HOME}|{CONFIG}\n");
     assert_eq!(obs.files["blob.bin"], bin, "binary files are copied as is");
 }
@@ -247,7 +247,7 @@ fn symlinks_may_not_escape_config_or_the_workspace() {
     std::fs::create_dir_all(d.join("before")).unwrap();
     std::os::unix::fs::symlink("real/STATE.json", d.join("before/STATE.json")).unwrap();
     let obs = run(&fx.load("link-over-file"));
-    assert_eq!(obs.stdout, "{\"real\": true}");
+    assert_eq!(obs.stdout_text(), "{\"real\": true}");
     assert!(
         obs.manifest
             .contains(&"l STATE.json -> real/STATE.json".to_string())
@@ -270,7 +270,7 @@ fn symlinks_may_not_escape_config_or_the_workspace() {
     );
     std::fs::create_dir_all(d.join("before")).unwrap();
     std::os::unix::fs::symlink("target.txt", d.join("before/link.txt")).unwrap();
-    assert_eq!(run(&fx.load("ws-link-ok")).stdout, "t");
+    assert_eq!(run(&fx.load("ws-link-ok")).stdout_text(), "t");
 }
 
 // ---- T3: tools ----
@@ -285,14 +285,18 @@ fn tools_limit_path_to_one_folder() {
             + "git = true\ntools = [\"git\"]\n"),
     );
     let obs = run(&fx.load("tools"));
-    let path = obs
-        .stdout
+    let stdout = obs.stdout_text();
+    let path = stdout
         .lines()
         .find_map(|l| l.strip_prefix("PATH="))
         .unwrap();
     assert!(!path.contains(':'), "one folder: {path}");
     assert!(path.starts_with("{HOME}/"), "{path}");
-    assert!(obs.stdout.contains("{COMMIT}"), "{}", obs.stdout);
+    assert!(
+        obs.stdout_text().contains("{COMMIT}"),
+        "{}",
+        obs.stdout_text()
+    );
     assert_eq!(obs.manifest, ["f f.txt"], "bin/ is outside the workspace");
     assert_eq!(obs.git_log.as_deref(), Some("second\n\nA\tf.txt\n"));
 }
@@ -390,7 +394,7 @@ fn recipes_build_parents_first_with_fixed_values() {
             + "workspace = \"child\"\n"),
     );
     let obs = run(&fx.load("use"));
-    assert_eq!(obs.stdout, "parent at {ROOT}{\"gates\": \"prompt\"}");
+    assert_eq!(obs.stdout_text(), "parent at {ROOT}{\"gates\": \"prompt\"}");
 }
 
 #[test]
@@ -482,7 +486,7 @@ fn stage_files_are_staged_after_the_base_commit() {
     write(&d.join("stage/kept.txt"), "changed in {ROOT}");
     write(&d.join("stage/new/added.txt"), "new");
     let obs = run(&fx.load("staged"));
-    assert_eq!(obs.stdout, "kept.txt\nnew/added.txt\n");
+    assert_eq!(obs.stdout_text(), "kept.txt\nnew/added.txt\n");
     assert_eq!(obs.files["kept.txt"], b"changed in {ROOT}");
     assert_eq!(obs.git_log.as_deref(), Some(""), "stage/ makes no commit");
 }
@@ -676,7 +680,7 @@ fn git_files_are_stored_under_another_name() {
     write(&d.join("before/.gitignore.fixture"), "ignored\n");
     let c = fx.load("named");
     let obs = run(&c);
-    assert_eq!(obs.stdout, "ignored\n");
+    assert_eq!(obs.stdout_text(), "ignored\n");
     assert!(obs.manifest.contains(&"f .gitignore".to_string()));
     assert_eq!(obs.changes, ["+ d sub", "+ f sub/.gitattributes"]);
     daiku_fixtures::write_expect(&c, &obs).unwrap();
