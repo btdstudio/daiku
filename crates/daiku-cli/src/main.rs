@@ -2,6 +2,7 @@
 //! printed as their `Display` and nothing else (R12).
 
 mod env;
+mod room;
 mod usage;
 
 use std::io::Write;
@@ -57,6 +58,11 @@ fn run(args: &[String]) -> u8 {
         "init" => init(&args[1..], &mut stdout, &mut stderr),
         "update" => update(&mut stdout, &mut stderr),
         "check" => check(&mut stdout, &mut stderr),
+        "source" => room::source(&args[1..], &mut stdout, &mut stderr),
+        "adr" => room::adr(&args[1..], &mut stdout, &mut stderr),
+        "idea" => room::idea(&args[1..], &mut stdout, &mut stderr),
+        "overview" => room::overview(&args[1..], &mut stdout, &mut stderr),
+        "references" => room::references(&args[1..], &mut stdout, &mut stderr),
         "change" => change(&args[1..], &mut stdout, &mut stderr),
         "gate" => gate(&args[1..], &mut stdout, &mut stderr),
         "reopen" => reopen(&args[1..], &mut stdout, &mut stderr),
@@ -322,18 +328,22 @@ fn change(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> 
     if res.room_created {
         let _ = writeln!(stdout, "created room plan/");
     }
-    finish(res.result, stderr, |n| {
-        let _ = writeln!(
-            stdout,
-            "created change {} (source #{})",
-            n.change.name, n.source_id
-        );
-        for phase in ["explore", "synthesis"] {
-            if n.change.gate(phase) == "skipped" {
-                let _ = writeln!(stdout, "{phase} skipped");
-            }
+    finish(res.result, stderr, |n| print_created_change(stdout, n))
+}
+
+/// Go's `printCreatedChange`: the change and its intake, then the phases it
+/// skipped. `change new` and `idea promote` print it.
+fn print_created_change(stdout: &mut impl Write, n: &daiku_core::changes::NewChange) {
+    let _ = writeln!(
+        stdout,
+        "created change {} (source #{})",
+        n.change.name, n.source_id
+    );
+    for phase in ["explore", "synthesis"] {
+        if n.change.gate(phase) == "skipped" {
+            let _ = writeln!(stdout, "{phase} skipped");
         }
-    })
+    }
 }
 
 /// Go's `runChangeClose`.
