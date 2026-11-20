@@ -233,7 +233,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `tickets-check-corrupt-front-matter` |
-| other | `tickets-check-clean`, `tickets-check-drafts`, `tickets-check-help-flag`, `tickets-check-no-tickets`, `tickets-check-problems` |
+| other | `tickets-check-clean`, `tickets-check-drafts`, `tickets-check-go-published-html`, `tickets-check-help-flag`, `tickets-check-no-tickets`, `tickets-check-problems` |
 
 ## daiku tickets status
 
@@ -266,7 +266,7 @@ The classes:
 | order | `tickets-ready-already-ready`, `tickets-ready-before-breakdown`, `tickets-ready-before-breakdown-forced` |
 | unsafe | `tickets-ready-through-symlink` |
 | corrupt | `tickets-ready-corrupt-front-matter`, `tickets-ready-corrupt-state` |
-| other | `tickets-ready-all`, `tickets-ready-help-flag`, `tickets-ready-one`, `tickets-ready-placeholder`, `tickets-ready-unknown` |
+| other | `tickets-ready-all`, `tickets-ready-help-flag`, `tickets-ready-html-title`, `tickets-ready-one`, `tickets-ready-placeholder`, `tickets-ready-unknown` |
 
 ## daiku tickets mark-published
 
@@ -277,7 +277,7 @@ The classes:
 | order | `tickets-mark-published-before-publish`, `tickets-mark-published-draft`, `tickets-mark-published-draft-forced`, `tickets-mark-published-parent-unpublished` |
 | unsafe | `tickets-mark-published-through-symlink` |
 | corrupt | `tickets-mark-published-corrupt-front-matter`, `tickets-mark-published-corrupt-state` |
-| other | `tickets-mark-published`, `tickets-mark-published-again`, `tickets-mark-published-help-flag`, `tickets-mark-published-unknown` |
+| other | `tickets-mark-published`, `tickets-mark-published-again`, `tickets-mark-published-help-flag`, `tickets-mark-published-html-same-id`, `tickets-mark-published-unknown` |
 
 ## daiku tickets unfreeze
 
