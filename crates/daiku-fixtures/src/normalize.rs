@@ -194,11 +194,15 @@ mod tests {
         ] {
             paths.extend(path_forms(Path::new(p)).into_iter().map(|f| (f, t)));
         }
-        Normalizer::from_parts(
+        let mut n = Normalizer::from_parts(
             paths,
             vec!["2026-11-18".into(), "2026-11-19".into()],
             commits.iter().map(|c| c.to_string()).collect(),
-        )
+        );
+        // These tests are about tokens, on every platform: the Windows separator
+        // rule has its own test.
+        n.unify_separators = false;
+        n
     }
 
     /// On Windows a path after a token is written with `/`, plain or JSON-escaped,
@@ -221,14 +225,8 @@ mod tests {
         );
         assert_eq!(n.apply("{ROOT} alone"), "{ROOT} alone");
         assert_eq!(n.apply(r"no token a\b"), r"no token a\b");
-        // Off (every platform but Windows): untouched.
-        let n = super::tests::n(&[]);
-        let expected_off = if cfg!(windows) {
-            "{ROOT}/x"
-        } else {
-            r"{ROOT}\x"
-        };
-        assert_eq!(n.apply(r"{ROOT}\x"), expected_off);
+        // Off: untouched, on every platform.
+        assert_eq!(super::tests::n(&[]).apply(r"{ROOT}\x"), r"{ROOT}\x");
     }
 
     /// Tokens next to bytes that aren't valid UTF-8 are normalised, and the bytes
