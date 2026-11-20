@@ -1,6 +1,7 @@
 //! The `daiku` command: parse arguments, call daiku-core, print. Core errors are
 //! printed as their `Display` and nothing else (R12).
 
+mod build;
 mod env;
 mod room;
 mod tickets;
@@ -70,6 +71,11 @@ fn run(args: &[String]) -> u8 {
         "switch" => switch(&args[1..], &mut stdout, &mut stderr),
         "status" => status(&args[1..], &mut stdout, &mut stderr),
         "tickets" => tickets::tickets(&args[1..], &mut stdout, &mut stderr),
+        "repo" => build::repo(&args[1..], &mut stdout, &mut stderr),
+        "env" => build::env(&mut stdout, &mut stderr),
+        "build" => build::build(&args[1..], &mut stdout, &mut stderr),
+        "commit" => build::commit(&args[1..], &mut stderr),
+        "pr" => build::pr(&args[1..], &mut stderr),
         c if KNOWN.contains(&c) => {
             let _ = writeln!(stderr, "daiku: {c} isn't implemented yet");
             1
