@@ -77,3 +77,18 @@ jobs:
           exe=""
           if [ "$RUNNER_OS" = "Windows" ]; then exe=".exe"; fi
           target/debug/daiku-fixtures$exe check --bin "target/debug/daiku$exe" --list fixtures/ported.txt
+
+  # Keeps the generated release workflow (.github/workflows/release.yml) in step with
+  # dist-workspace.toml, and checks that dist can plan a release (S-0010). The dist
+  # version is the one release.yml installs; `dist generate` pins it in the workflow.
+  dist:
+    name: dist
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dist
+        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.34.0/cargo-dist-installer.sh | sh
+      - name: the release workflow is generated from dist-workspace.toml
+        run: dist generate --check
+      - name: dist can plan a release
+        run: dist plan
