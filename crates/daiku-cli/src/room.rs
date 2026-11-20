@@ -24,6 +24,15 @@ fn with_settings(stderr: &mut impl Write) -> Option<Workspace> {
     }
 }
 
+/// Writes one output line from its parts: text daiku formats, and `Text` read
+/// from a user's file, whose bytes are printed as they are, as Go prints them
+/// (N-0001). One write per line.
+fn line(stdout: &mut impl Write, parts: &[&[u8]]) {
+    let mut out = parts.concat();
+    out.push(b'\n');
+    let _ = stdout.write_all(&out);
+}
+
 /// Go's `runSource`.
 pub fn source(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
     let Some(ws) = with_settings(stderr) else {
@@ -34,11 +43,12 @@ pub fn source(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write)
         "list" => finish(ws.source_list(), stderr, |sources| {
             for s in sources {
                 let label = if s.source == source::REPO {
-                    format!("repo:{}", s.repo)
+                    [b"repo:", s.repo.as_bytes()].concat()
                 } else {
-                    s.source.clone()
+                    s.source.as_bytes().to_vec()
                 };
-                let _ = writeln!(stdout, "#{} [{label}] {}", s.id, s.title);
+                let id = format!("#{} [", s.id);
+                line(stdout, &[id.as_bytes(), &label, b"] ", s.title.as_bytes()]);
             }
         }),
         "show" => {
@@ -51,16 +61,14 @@ pub fn source(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write)
                 return 1;
             };
             finish(ws.source_show(id), stderr, |s| {
-                let extra = if s.source == source::REPO {
-                    format!("\nrepo:     {}\nrev:      {}", s.repo, s.rev)
-                } else {
-                    String::new()
-                };
-                let _ = writeln!(
-                    stdout,
-                    "#{} [{}] {}{extra}\n{}",
-                    s.id, s.source, s.title, s.body
-                );
+                let head = format!("#{} [{}] ", s.id, s.source);
+                let mut parts: Vec<&[u8]> = vec![head.as_bytes(), s.title.as_bytes()];
+                if s.source == source::REPO {
+                    parts.extend([&b"\nrepo:     "[..], s.repo.as_bytes()]);
+                    parts.extend([&b"\nrev:      "[..], s.rev.as_bytes()]);
+                }
+                parts.extend([&b"\n"[..], s.body.as_bytes()]);
+                line(stdout, &parts);
             })
         }
         "new" => {
@@ -104,7 +112,8 @@ pub fn source(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write)
                 return 1;
             }
             finish(ws.source_new(&opts), stderr, |s| {
-                let _ = writeln!(stdout, "created #{} [{}] {}", s.id, s.source, s.title);
+                let head = format!("created #{} [{}] ", s.id, s.source);
+                line(stdout, &[head.as_bytes(), s.title.as_bytes()]);
             })
         }
         v => {
@@ -128,7 +137,8 @@ pub fn adr(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) ->
     match verb {
         "list" => finish(ws.adr_list(), stderr, |records| {
             for r in records {
-                let _ = writeln!(stdout, "{:04} [{}] {}", r.number, r.status, r.title);
+                let head = format!("{:04} [{}] ", r.number, r.status);
+                line(stdout, &[head.as_bytes(), r.title.as_bytes()]);
             }
         }),
         "show" => {
@@ -198,7 +208,8 @@ pub fn adr(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) ->
                 }
             }
             finish(ws.adr_new(&opts), stderr, |r| {
-                let _ = writeln!(stdout, "created {:04} {}", r.number, r.title);
+                let head = format!("created {:04} ", r.number);
+                line(stdout, &[head.as_bytes(), r.title.as_bytes()]);
             })
         }
         v => {
@@ -251,12 +262,13 @@ pub fn idea(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -
         "new" => idea_new(rest, stdout, stderr),
         "list" => finish(workspace().idea_list(), stderr, |ideas| {
             for i in ideas {
-                let mut line = format!("{} [{}] {}", i.id, i.status, i.title);
+                let head = format!("{} [{}] ", i.id, i.status);
+                let mut parts: Vec<&[u8]> = vec![head.as_bytes(), i.title.as_bytes()];
                 let set_aside = i.status == "parked" || i.status == "dropped";
                 if set_aside && !i.reason.is_empty() {
-                    line.push_str(&format!(" — reason: {}", i.reason));
+                    parts.extend([" — reason: ".as_bytes(), i.reason.as_bytes()]);
                 }
-                let _ = writeln!(stdout, "{line}");
+                line(stdout, &parts);
             }
         }),
         "show" => {
@@ -321,7 +333,12 @@ fn idea_new(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -
         return 1;
     }
     finish(workspace().idea_new(title), stderr, |i| {
-        let _ = writeln!(stdout, "created idea {} {} ({}/)", i.id, i.title, i.dir);
+        let head = format!("created idea {} ", i.id);
+        let tail = format!(" ({}/)", i.dir);
+        line(
+            stdout,
+            &[head.as_bytes(), i.title.as_bytes(), tail.as_bytes()],
+        );
     })
 }
 
