@@ -1,0 +1,6 @@
+args = ["adr", "new", "--title", "x"]
+workspace = "init"
+
+[expect]
+exit = 1
+stderr = "daiku: adrDir \"{HOME}/adr\" must be a path inside the workspace\n"

@@ -1,0 +1,4 @@
+args = ["repo", "list"]
+
+[expect]
+exit = 0

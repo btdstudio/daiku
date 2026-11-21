@@ -1,0 +1,10 @@
+args = ["idea", "drop", "1", "--reason", "not needed"]
+workspace = "ideas"
+
+[expect]
+exit = 0
+stdout = "idea 1: dropped\n"
+changes = [
+  "~ f ideas/1-faster-sync/log.md",
+  "~ f ideas/1-faster-sync/summary.md",
+]

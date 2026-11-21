@@ -1,0 +1,7 @@
+args = ["overview"]
+workspace = "plan-intake-draft"
+skip_on = ["windows"]
+
+[expect]
+exit = 1
+stderr = "daiku: won't write plan/specs/1-auth-flow/README.md: plan/specs/1-auth-flow/README.md is a symlink, which could lead outside the workspace\n"

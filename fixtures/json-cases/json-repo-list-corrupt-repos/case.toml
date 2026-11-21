@@ -1,0 +1,14 @@
+args = ["repo", "list", "--json"]
+workspace = "init"
+
+[expect]
+exit = 1
+stdout = '''
+{
+  "schema": 1,
+  "error": {
+    "kind": "StateParse",
+    "message": "daiku: cannot parse REPOS.json: invalid character 'n' looking for beginning of object key string"
+  }
+}
+'''

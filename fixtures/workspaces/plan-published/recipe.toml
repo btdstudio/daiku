@@ -1,0 +1,6 @@
+from = "plan-publish-in-progress"
+steps = [
+  ["tickets", "mark-published", "E-0001", "--external", "github=org/api#11"],
+  ["tickets", "mark-published", "S-0002", "--external", "github=org/api#12"],
+  ["gate", "publish", "complete"],
+]

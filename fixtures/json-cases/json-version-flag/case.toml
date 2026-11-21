@@ -1,0 +1,13 @@
+args = ["--version", "--json"]
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "version": "dev"
+  },
+  "warnings": []
+}
+'''

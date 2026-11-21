@@ -1,0 +1,11 @@
+args = ["reopen", "spec", "--reason", "new requirement"]
+workspace = "plan-architecture-approved"
+
+[expect]
+exit = 0
+stdout = "1-auth-flow: spec = draft\n"
+changes = [
+  "~ f LOG.md",
+  "~ f STATE.json",
+  "~ f plan/specs/1-auth-flow/README.md",
+]

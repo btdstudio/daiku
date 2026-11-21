@@ -1,0 +1,14 @@
+args = ["source", "show", "9", "--json"]
+workspace = "adrs"
+
+[expect]
+exit = 1
+stdout = '''
+{
+  "schema": 1,
+  "error": {
+    "kind": "SourceNotFound",
+    "message": "daiku: source 9 not found at plan/00_intake/9.md"
+  }
+}
+'''

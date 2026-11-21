@@ -1,0 +1,9 @@
+args = ["adr"]
+workspace = "adrs"
+
+[expect]
+exit = 0
+stdout = '''
+0001 [proposed] Use Postgres
+0002 [proposed] Session tokens
+'''

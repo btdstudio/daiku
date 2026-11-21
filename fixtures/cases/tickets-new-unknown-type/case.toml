@@ -1,0 +1,6 @@
+args = ["tickets", "new", "saga", "Accounts"]
+workspace = "plan-spec-ready"
+
+[expect]
+exit = 1
+stderr = "ticket: unknown type \"saga\"\n"

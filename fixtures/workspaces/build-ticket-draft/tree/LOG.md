@@ -1,0 +1,15 @@
+- 2026-01-15T00:00:00.000Z 1-auth-flow: created
+- 2026-01-15T00:00:00.000Z 1-auth-flow: explore → skipped (no repo in the intake)
+- 2026-01-15T00:00:00.000Z 1-auth-flow: synthesis → skipped (fewer than two repos in scope)
+- 2026-01-15T00:00:00.000Z 1-auth-flow: intake → approved
+- 2026-01-15T00:00:00.000Z 1-auth-flow: research → skipped (known domain)
+- 2026-01-15T00:00:00.000Z 1-auth-flow: spec → approved
+- 2026-01-15T00:00:00.000Z 1-auth-flow: architecture → approved
+- 2026-01-15T00:00:00.000Z 1-auth-flow: breakdown → approved
+- 2026-01-15T00:00:00.000Z 1-auth-flow: E-0001 readied
+- 2026-01-15T00:00:00.000Z 1-auth-flow: S-0002 readied
+- 2026-01-15T00:00:00.000Z 1-auth-flow: publish → in-progress
+- 2026-01-15T00:00:00.000Z 1-auth-flow: E-0001 published to github (org/api#11)
+- 2026-01-15T00:00:00.000Z 1-auth-flow: S-0002 published to github (org/api#12)
+- 2026-01-15T00:00:00.000Z 1-auth-flow: publish → complete
+- 2026-01-15T00:00:00.000Z S-0002: created

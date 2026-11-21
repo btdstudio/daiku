@@ -1,0 +1,11 @@
+args = ["tickets", "mark-published", "E-0001", "--external", "github=org/api#11"]
+workspace = "plan-publish-in-progress"
+
+[expect]
+exit = 0
+stdout = "E-0001: published to github (org/api#11)\n"
+changes = [
+  "~ f LOG.md",
+  "~ f plan/specs/1-auth-flow/README.md",
+  "~ f plan/specs/1-auth-flow/tickets/E-0001.md",
+]

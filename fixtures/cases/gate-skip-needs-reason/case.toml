@@ -1,0 +1,6 @@
+args = ["gate", "research", "skipped"]
+workspace = "plan-intake-draft"
+
+[expect]
+exit = 1
+stderr = "daiku: skipping research requires a reason\n"

@@ -1,0 +1,6 @@
+args = ["gate", "security", "skipped", "--reason", "docs only"]
+workspace = "build-implement"
+
+[expect]
+exit = 1
+stderr = "daiku: security requires implement to be complete (currently \"in-progress\") (pass --force to override)\n"

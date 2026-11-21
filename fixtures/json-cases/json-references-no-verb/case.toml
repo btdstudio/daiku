@@ -1,0 +1,14 @@
+args = ["references", "--json"]
+workspace = "init"
+
+[expect]
+exit = 1
+stdout = '''
+{
+  "schema": 1,
+  "error": {
+    "kind": "Usage",
+    "message": "usage:\n  daiku references check                   warn about unindexed references and bad index entries"
+  }
+}
+'''

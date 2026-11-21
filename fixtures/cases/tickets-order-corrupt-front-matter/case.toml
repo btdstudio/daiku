@@ -1,0 +1,6 @@
+args = ["tickets", "order"]
+workspace = "plan-published"
+
+[expect]
+exit = 1
+stderr = "daiku: unreadable ticket: plan/specs/1-auth-flow/tickets/E-0001.md: frontmatter: line 2: unterminated list\n"

@@ -1,0 +1,6 @@
+args = ["tickets", "mark-published", "E-0001", "--external", "github=x"]
+workspace = "plan-publish-in-progress"
+
+[expect]
+exit = 1
+stdout = "✗ plan/specs/1-auth-flow/tickets/S-0002.md: frontmatter: line 2: unterminated list\n"

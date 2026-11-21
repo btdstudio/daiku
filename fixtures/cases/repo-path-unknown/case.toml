@@ -1,0 +1,6 @@
+args = ["repo", "path", "web", "{ROOT}"]
+workspace = "build-implement"
+
+[expect]
+exit = 1
+stderr = "daiku: unknown repo \"web\" — run `daiku repo add`\n"

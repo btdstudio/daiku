@@ -1,0 +1,64 @@
+args = ["help"]
+
+[expect]
+exit = 0
+stdout = '''
+daiku — folder-driven planning workspace
+
+Usage:
+  daiku init [dir] [--no-git] [--force]    scaffold the planning ICM structure
+  daiku update                             refresh managed files
+  daiku status [<plan-change>]             show the active change and the board, or a plan's tickets
+  daiku settings                           show effective settings
+  daiku switch [--all] [<change>]          list changes, or switch the active one
+  daiku source new --title <t> [--repo <path>] [--rev <r>] [--body <b>]
+                                           add an intake source to plan/00_intake/
+  daiku source list                        list intake sources (the default verb)
+  daiku source show <id>                   show an intake source
+  daiku adr new --title <t> [--deciders <d>] [--context <c>] [--decision <d>] [--consequences <c>] [--file <path>]
+                                           create an ADR in plan/04_architecture/adr/
+  daiku adr list                           list ADRs (the default verb)
+  daiku adr show <number>                  show an ADR
+  daiku build new <ticket-id>              build a ticket in its repo; creates build/ the first time
+  daiku change new <title> [--repo <name|path>]... [--rev <r>] [--body <b>]
+                                           create a change + intake + switch
+  daiku change close <change> --reason <r> close a change
+  daiku gate <phase> <status> [--reason <r>] [--force]
+                                           advance the active change's gate
+  daiku reopen <phase> --reason <r> [--force]
+                                           move back to a phase, clearing later approvals
+  daiku tickets new <type> <title> [--parent <id>] [--repo <name>] [--depends <id,id>] [--requirements <id,id>] [--inbox]
+                                           create a ticket in the active plan change, or with --inbox (or no open plan change) an N- task in build/tickets/
+  daiku tickets pull <file>                record a ticket fetched from a PM tool as X-<pm-id> in build/tickets/
+  daiku tickets check                      validate every ticket
+  daiku tickets status                     list tickets by draft, ready, published and drifted
+  daiku tickets order                      list tickets in publish order
+  daiku tickets ready <id>... | --all [--force]
+                                           ready draft tickets once breakdown is approved
+  daiku tickets mark-published <id> --external <tool>=<item-id> [--force]
+                                           record a PM tool's id and freeze the ticket
+  daiku tickets unfreeze <id> --reason <r> clear a ticket's freeze
+  daiku overview [<change>] [--check] [--stdout]
+                                           write or check the change's README overview
+  daiku idea new <title>                   create an idea in ideas/, from the summary template
+  daiku idea list                          list ideas with their status
+  daiku idea show <id>                     print an idea's summary and status
+  daiku idea park <id> --reason <r>        set an open idea aside, with a reason
+  daiku idea drop <id> --reason <r>        drop an open idea, with a reason (the folder stays)
+  daiku idea reopen <id> --reason <r>      reopen a parked or dropped idea, with a reason
+  daiku idea promote <id> --title <t> [--repo <name|path>]... [--rev <r>]
+                                           start a change from an idea
+  daiku references check                   warn about unindexed references and bad index entries
+  daiku repo add <name> <remote> [--path <p>] [--branch <b>]
+                                          register a repo
+  daiku repo list                          list repos and their local paths
+  daiku repo path <name> <path>            set a repo's local path
+  daiku repo doctor [--clone] [--into <dir>]
+                                          check repos; --clone fetches missing ones
+  daiku env                                print harness flags for the active change's repos
+  daiku commit [git commit args]           commit what's staged in the active build's repo
+  daiku pr [title]                         open a pull request from the active build's repo, linking its ticket
+  daiku check                              validate the embedded scaffold
+  daiku version                            print the version
+  daiku help [<command> [<verb>]]          this help, or one command's
+'''

@@ -7,13 +7,10 @@ kind of work, created the first time it's used:
 
 - **plan** — initiatives that take weeks, often span many repos, and need
   research and architecture before anyone writes code. They end in tickets.
-- **build** — one ticket in one repo, from requirements to a pull request
-  (coming in a later version).
+- **build** — one ticket in one repo, from requirements to a pull request.
 
 The filesystem is the architecture; no framework or runtime is required after
-scaffold. daiku replaces [zumen](https://github.com/btdstudio/zumen) (planning),
-[tomo](https://github.com/btdstudio/tomo) (building) and their shared core,
-[kiso](https://github.com/btdstudio/kiso). It doesn't read their workspaces.
+scaffold.
 
 ## Attribution
 
@@ -25,9 +22,26 @@ by:
 
 ## Install
 
+macOS and Linux:
+
 ```sh
-go install github.com/btdstudio/daiku/cmd/daiku@latest
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/btdstudio/daiku/releases/latest/download/daiku-cli-installer.sh | sh
 ```
+
+Windows (PowerShell):
+
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/btdstudio/daiku/releases/latest/download/daiku-cli-installer.ps1 | iex"
+```
+
+The installers put `daiku` in `~/.cargo/bin`, and add that folder to your `PATH`.
+Each [release](https://github.com/btdstudio/daiku/releases) also has an archive per
+platform, with a checksum and a signed build attestation.
+[`docs/migration.md`](docs/migration.md) covers both ways, and moving from the Go CLI.
+
+daiku was written in Go up to `v0.2.0`, and in Rust from `v0.3.0`. `go install …@latest`
+no longer works, but `go install github.com/btdstudio/daiku/cmd/daiku@v0.2.0` still
+installs the last Go release.
 
 ## Getting started
 
@@ -98,6 +112,9 @@ daiku build new N-0001         # creates the build room and a build change
 
 `status`, `switch`, `gate`, `reopen`, `change close` and `env` act on the active
 change, whichever room it's in. `commit` and `pr` act on the active build.
+
+Every read command also accepts `--json`, and then writes one versioned JSON document
+instead of its text, for scripts and tools. [`docs/json.md`](docs/json.md) describes it.
 
 ## The workspace
 
@@ -180,34 +197,34 @@ workspace.
 
 ## Development
 
+daiku is a Cargo workspace:
+
+| Crate | What it is |
+|---|---|
+| `crates/daiku-core` | The library: workspaces, changes, gates, tickets. It returns data and never prints, so any client (the CLI, a desktop app) can use it. |
+| `crates/daiku-cli` | The `daiku` binary: argument parsing, calling core, and printing. |
+| `crates/daiku-fixtures` | A test tool, not released. It runs any `daiku` binary against golden fixture cases captured from the Go CLI. |
+
+The toolchain is pinned in `rust-toolchain.toml`, and rustup installs it on first use.
+
 ```sh
-GOWORK=off go build -o daiku ./cmd/daiku   # build
-GOWORK=off go test ./...                    # all tests
-GOWORK=off go test ./internal/icm -update  # regenerate the scaffold golden
-sh scripts/coldstart.sh                    # the optional cold-start check before a release
+cargo build --workspace
+cargo test --workspace
+cargo fmt --check
+cargo clippy --workspace --all-targets -- -D warnings
 ```
 
-Runtime: Go >= 1.22, standard library only.
+The fixture cases live in `fixtures/cases/` and `fixtures/json-cases/`.
+[`AGENTS.md`](AGENTS.md) has the rules for changing the code, and covers how to check,
+capture and measure the fixtures.
 
 ## Releasing
 
-Pushing a `v*` tag publishes the release. The `release` workflow checks the
-tree as CI does (gofmt, build, vet, test, `daiku check`), then creates the
-GitHub release with generated notes.
+[dist](https://github.com/axodotdev/cargo-dist) builds each release when a `v*` tag is
+pushed: archives for macOS, Linux and Windows, checksums, attestations and the
+installers, with the matching `CHANGELOG.md` section as the notes. A smoke check then
+installs and runs each one. The steps are in [`AGENTS.md`](AGENTS.md#releases).
 
-1. **Optional, recommended for larger changes:** run
-   `sh scripts/coldstart.sh`. It sets up two fresh workspaces and prints a
-   prompt for an agent with no other context in each: "I have a ticket, help
-   me build it", then "Help me plan a password reset flow".
-   - In each agent's shell, first run the `export PATH=…` line it prints, so
-     the agent uses the daiku under test.
-   - Press Enter when the agent stops. Both should print `PASS`.
-2. Tag `main` and push the tag:
-   `git tag -a vX.Y.Z -m vX.Y.Z && git push origin vX.Y.Z`.
-3. Wait for the `release` workflow to publish the release, then edit its notes
-   to summarise the change, if the generated list of PRs isn't enough.
-4. Check the install in a clean `GOPATH`:
-   `GOPATH=$(mktemp -d) GOFLAGS=-modcacherw go install github.com/btdstudio/daiku/cmd/daiku@vX.Y.Z`,
-   then run that `daiku version`, which prints `vX.Y.Z`.
-   - `-modcacherw` keeps the temp `GOPATH` deletable.
-   - If the module proxy hasn't seen the tag yet, set `GOPROXY=direct`.
+## Licence
+
+MIT. See [`LICENSE`](LICENSE).

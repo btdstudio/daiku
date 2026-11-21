@@ -1,0 +1,6 @@
+args = ["change", "new", "Auth", "flow"]
+workspace = "init"
+
+[expect]
+exit = 1
+stderr = "daiku change new: unexpected argument \"flow\" (quote a multi-word title)\n"

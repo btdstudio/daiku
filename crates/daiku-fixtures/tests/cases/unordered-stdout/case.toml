@@ -1,0 +1,10 @@
+args = ["print", "b", ";", "print", "a", ";", "print", "c"]
+unordered_stdout = true
+
+[expect]
+exit = 0
+stdout = '''
+a
+b
+c
+'''

@@ -1,0 +1,6 @@
+args = ["gate", "intake", "approved"]
+workspace = "plan-closed-change"
+
+[expect]
+exit = 1
+stderr = "daiku: 1-auth-flow is closed\n"

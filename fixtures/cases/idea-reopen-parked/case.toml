@@ -1,0 +1,10 @@
+args = ["idea", "reopen", "2", "--reason", "beta shipped"]
+workspace = "ideas"
+
+[expect]
+exit = 0
+stdout = "idea 2: open\n"
+changes = [
+  "~ f ideas/2-dark-mode/log.md",
+  "~ f ideas/2-dark-mode/summary.md",
+]

@@ -1,0 +1,6 @@
+args = ["change", "new"]
+workspace = "init"
+
+[expect]
+exit = 1
+stderr = "usage: daiku change new <title> [--repo <name|path>]... [--rev <r>] [--body <b>]\n"

@@ -1,0 +1,7 @@
+- {TIMESTAMP} 1-auth-flow: created
+- {TIMESTAMP} 1-auth-flow: explore → skipped (no repo in the intake)
+- {TIMESTAMP} 1-auth-flow: synthesis → skipped (fewer than two repos in scope)
+- {TIMESTAMP} 1-auth-flow: intake → approved
+- {TIMESTAMP} 1-auth-flow: research → skipped (known domain)
+- {TIMESTAMP} 1-auth-flow: spec → approved
+- {TIMESTAMP} 1-auth-flow: override: plan/specs/1-auth-flow/functional-spec.md: no R requirements under ## Functional requirements

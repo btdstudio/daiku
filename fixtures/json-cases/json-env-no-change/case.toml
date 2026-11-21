@@ -1,0 +1,14 @@
+args = ["env", "--json"]
+workspace = "init"
+
+[expect]
+exit = 1
+stdout = '''
+{
+  "schema": 1,
+  "error": {
+    "kind": "NoActiveChange",
+    "message": "daiku: no active change — run `daiku switch <change>` first"
+  }
+}
+'''

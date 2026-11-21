@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Loaded",
+  "type": "object",
+  "required": [
+    "effective",
+    "global",
+    "project",
+    "vcs"
+  ],
+  "properties": {
+    "effective": {
+      "$ref": "#/definitions/Settings"
+    },
+    "global": {
+      "description": "The global settings file's contents, unchanged, including keys daiku doesn't use; empty when there's no file.",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "project": {
+      "description": "The project settings file's contents, unchanged, including keys daiku doesn't use; empty when there's no file.",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "vcs": {
+      "type": "string"
+    }
+  },
+  "definitions": {
+    "Settings": {
+      "description": "The effective settings.",
+      "type": "object",
+      "required": [
+        "adrDir",
+        "baseSource",
+        "gates",
+        "overview",
+        "sourceDir",
+        "syncFile"
+      ],
+      "properties": {
+        "adrDir": {
+          "type": "string"
+        },
+        "baseSource": {
+          "type": "string"
+        },
+        "gates": {
+          "type": "string"
+        },
+        "overview": {
+          "type": "string"
+        },
+        "sourceDir": {
+          "type": "string"
+        },
+        "syncFile": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

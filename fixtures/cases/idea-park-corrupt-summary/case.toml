@@ -1,0 +1,6 @@
+args = ["idea", "park", "1", "--reason", "x"]
+workspace = "ideas"
+
+[expect]
+exit = 1
+stderr = "daiku: idea 1 has an unknown status \"\"\n"

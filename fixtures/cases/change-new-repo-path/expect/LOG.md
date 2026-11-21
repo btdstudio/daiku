@@ -1,0 +1,2 @@
+- {TIMESTAMP} 1-api-work: created
+- {TIMESTAMP} 1-api-work: synthesis → skipped (fewer than two repos in scope)

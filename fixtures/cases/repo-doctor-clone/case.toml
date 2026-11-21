@@ -1,0 +1,13 @@
+args = ["repo", "doctor", "--clone", "--into", "{HOME}/clones"]
+workspace = "init"
+git = true
+
+[expect]
+exit = 0
+stdout = '''
+cloned self to {HOME}/clones/self
+1 repos ok
+'''
+changes = [
+  "+ f .daiku/paths.json",
+]

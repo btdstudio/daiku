@@ -1,0 +1,117 @@
+name: Release smoke
+
+# Checks a published release on each target's own runner:
+#   1. downloads the archive, checks its checksum, and runs `daiku version` and
+#      `daiku init` (scripts/release-smoke.py);
+#   2. verifies the archive's build attestation (`gh attestation verify`);
+#   3. installs through the release's own installer, the way docs/migration.md gives
+#      it, anonymously and into a throwaway CARGO_HOME, and checks the installed
+#      `daiku version`.
+#
+# `workflow_run` starts it when the Release workflow (dist's generated release.yml)
+# finishes. The release job can't start it with `on: release`, because GitHub starts no
+# workflow from an event made with the default token. Run it by hand for any tag with
+# `gh workflow run release-smoke.yml -f tag=v0.3.0`.
+
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The release tag to check, such as v0.3.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  # For `gh attestation verify`.
+  attestations: read
+
+jobs:
+  smoke:
+    # By hand always; automatically only after a Release run for a tag push succeeded.
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push') }}
+    name: smoke (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            runner: macos-15
+            archive: tar.xz
+          - target: x86_64-apple-darwin
+            runner: macos-15-intel
+            archive: tar.xz
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-22.04
+            archive: tar.xz
+          - target: x86_64-pc-windows-msvc
+            runner: windows-2022
+            archive: zip
+    env:
+      # For a tag push, a workflow_run's head_branch is the tag's name.
+      TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check the tag
+        run: |
+          case "$TAG" in
+            v[0-9]*) echo "Checking release $TAG for ${{ matrix.target }}" ;;
+            *) echo "::error::'$TAG' isn't a release tag"; exit 1 ;;
+          esac
+      - uses: actions/checkout@v4
+        with:
+          # The job runs the downloaded binary, so nothing here should leave a credential
+          # on disk for it to find.
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Download the archive and its checksum
+        env:
+          # Only this step gets the token. The step that runs the downloaded binary
+          # doesn't, and the script strips credentials from the binary's environment too.
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "$TAG" -R "$GITHUB_REPOSITORY" -D dl -p "daiku-cli-${{ matrix.target }}.${{ matrix.archive }}*"
+      - name: Check, unpack and run it
+        run: python scripts/release-smoke.py dl "$TAG" "${{ matrix.target }}"
+      - name: Verify the archive's build attestation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh attestation verify "dl/daiku-cli-${{ matrix.target }}.${{ matrix.archive }}" --repo "$GITHUB_REPOSITORY"
+      # The installers download without logging in, so these steps get no token. Each
+      # installs into a throwaway CARGO_HOME, leaves PATH and GITHUB_PATH alone, and
+      # checks what it installed.
+      - name: Install with the shell installer
+        if: runner.os != 'Windows'
+        run: |
+          home="$RUNNER_TEMP/installer-home"
+          rm -rf "$home"
+          curl --proto '=https' --tlsv1.2 -LsSf "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/daiku-cli-installer.sh" \
+            | env -u GITHUB_PATH CARGO_HOME="$home" DAIKU_CLI_NO_MODIFY_PATH=1 sh
+          got=$("$home/bin/daiku" version)
+          if [ "$got" != "daiku $TAG" ]; then
+            echo "::error::the installed daiku printed '$got', not 'daiku $TAG'"
+            exit 1
+          fi
+          echo "installed: $got"
+      - name: Install with the PowerShell installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:CARGO_HOME = Join-Path $env:RUNNER_TEMP 'installer-home'
+          $env:DAIKU_CLI_NO_MODIFY_PATH = '1'
+          Remove-Item Env:GITHUB_PATH -ErrorAction SilentlyContinue
+          if (Test-Path $env:CARGO_HOME) { Remove-Item -Recurse -Force $env:CARGO_HOME }
+          $url = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:TAG/daiku-cli-installer.ps1"
+          powershell -ExecutionPolicy Bypass -c "irm $url | iex"
+          if ($LASTEXITCODE -ne 0) { throw "the installer exited with $LASTEXITCODE" }
+          $got = & (Join-Path $env:CARGO_HOME 'bin\daiku.exe') version
+          if ($got -ne "daiku $env:TAG") { throw "the installed daiku printed '$got', not 'daiku $env:TAG'" }
+          Write-Output "installed: $got"

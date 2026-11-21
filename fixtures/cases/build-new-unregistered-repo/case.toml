@@ -1,0 +1,6 @@
+args = ["build", "new", "X-1234"]
+workspace = "init"
+
+[expect]
+exit = 1
+stderr = "daiku: X-1234's repo \"api\" isn't registered — run `daiku repo add api <remote>`\n"

@@ -1,0 +1,14 @@
+args = ["source", "show", "--json"]
+workspace = "adrs"
+
+[expect]
+exit = 1
+stdout = '''
+{
+  "schema": 1,
+  "error": {
+    "kind": "Usage",
+    "message": "usage: daiku source show <id>"
+  }
+}
+'''

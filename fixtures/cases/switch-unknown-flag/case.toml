@@ -1,0 +1,6 @@
+args = ["switch", "--bogus"]
+workspace = "plan-closed-change"
+
+[expect]
+exit = 1
+stderr = "daiku: unknown change \"--bogus\"\n"

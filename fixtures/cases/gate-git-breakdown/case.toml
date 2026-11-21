@@ -1,0 +1,19 @@
+args = ["gate", "breakdown", "approved"]
+workspace = "git-plan-architecture-approved"
+git = true
+
+[expect]
+exit = 0
+stdout = "1-auth-flow: breakdown = approved\n"
+git_log = '''
+daiku: 1-auth-flow: breakdown → approved
+
+M	LOG.md
+M	STATE.json
+M	plan/specs/1-auth-flow/README.md
+'''
+changes = [
+  "~ f LOG.md",
+  "~ f STATE.json",
+  "~ f plan/specs/1-auth-flow/README.md",
+]

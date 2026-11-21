@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "changes": {
+    "1-auth-flow": {
+      "loop": "plan",
+      "phase": "publish",
+      "status": "complete",
+      "gates": {
+        "architecture": "approved",
+        "breakdown": "approved",
+        "explore": "skipped",
+        "intake": "approved",
+        "publish": "complete",
+        "research": "skipped",
+        "spec": "approved",
+        "synthesis": "skipped"
+      },
+      "reasons": {
+        "explore": "no repo in the intake",
+        "research": "known domain",
+        "synthesis": "fewer than two repos in scope"
+      },
+      "sources": [
+        "plan/00_intake/1.md"
+      ],
+      "updatedAt": "{TIMESTAMP}"
+    },
+    "S-0002": {
+      "loop": "build",
+      "phase": "ship",
+      "status": "complete",
+      "gates": {
+        "design": "approved",
+        "implement": "complete",
+        "requirements": "approved",
+        "review": "approved",
+        "security": "approved",
+        "ship": "complete",
+        "tasks": "approved",
+        "test": "approved",
+        "ticket": "approved"
+      },
+      "sources": [
+        "plan/specs/1-auth-flow/tickets/S-0002.md"
+      ],
+      "repos": [
+        "api"
+      ],
+      "updatedAt": "{TIMESTAMP}"
+    }
+  }
+}

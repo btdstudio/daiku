@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Failure",
+  "description": "A failed read command.",
+  "type": "object",
+  "required": [
+    "error",
+    "schema"
+  ],
+  "properties": {
+    "error": {
+      "$ref": "#/definitions/ErrorBody"
+    },
+    "schema": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    }
+  },
+  "definitions": {
+    "ErrorBody": {
+      "description": "The typed error carried in a [`Failure`].",
+      "type": "object",
+      "required": [
+        "kind",
+        "message"
+      ],
+      "properties": {
+        "kind": {
+          "description": "The stable `Error` variant name, or [`USAGE`] when the command's arguments were wrong and it never reached core.",
+          "type": "string"
+        },
+        "message": {
+          "description": "The text the command prints to stderr without `--json`, without its trailing newline: an `Error`'s display text, or the usage or argument message.",
+          "type": "string"
+        }
+      }
+    }
+  }
+}

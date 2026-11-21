@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Entry",
+  "description": "One reference in the index.",
+  "type": "object",
+  "required": [
+    "fields",
+    "line",
+    "path",
+    "title"
+  ],
+  "properties": {
+    "fields": {
+      "description": "`purpose`, `from`, `added`, `summary`.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "line": {
+      "description": "The 1-based line of the entry in the index.",
+      "type": "integer",
+      "format": "uint",
+      "minimum": 0.0
+    },
+    "path": {
+      "description": "Relative to `references/`, cleaned, slash-separated.",
+      "type": "string"
+    },
+    "title": {
+      "description": "Optional.",
+      "type": "string"
+    }
+  }
+}

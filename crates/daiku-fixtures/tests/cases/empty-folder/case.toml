@@ -1,0 +1,8 @@
+args = ["mkdir", "made/empty"]
+
+[expect]
+exit = 0
+changes = [
+  "+ d made",
+  "+ d made/empty",
+]

@@ -1,0 +1,9 @@
+from = "build-implement"
+steps = [
+  ["tickets", "new", "task", "Fix typo", "--inbox", "--repo", "api"],
+  ["build", "new", "N-0001"],
+  ["gate", "ticket", "approved"],
+  ["gate", "requirements", "approved"],
+  ["gate", "design", "approved"],
+  ["gate", "tasks", "approved"],
+]

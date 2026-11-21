@@ -1,0 +1,23 @@
+args = ["write", "a.txt", "1", ";", "commit", "first", ";", "write", "a.txt", "2", ";", "write", "b/c.txt", "c", ";", "commit", "second"]
+git = true
+
+[expect]
+exit = 0
+stdout = '''
+{COMMIT}
+{COMMIT}
+'''
+git_log = '''
+first
+
+A	a.txt
+second
+
+M	a.txt
+A	b/c.txt
+'''
+changes = [
+  "+ f a.txt",
+  "+ d b",
+  "+ f b/c.txt",
+]

@@ -1,0 +1,3 @@
+# Log
+
+- {TODAY} created

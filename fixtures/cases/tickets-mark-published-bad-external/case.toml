@@ -1,0 +1,6 @@
+args = ["tickets", "mark-published", "S-0002", "--external", "org/api#12"]
+workspace = "plan-breakdown-approved"
+
+[expect]
+exit = 1
+stderr = "usage: daiku tickets mark-published <id> --external <tool>=<item-id> [--force]\n"

@@ -1,0 +1,6 @@
+args = ["gate", "intake", "done"]
+workspace = "plan-intake-draft"
+
+[expect]
+exit = 1
+stderr = "unknown gate status: done\n"

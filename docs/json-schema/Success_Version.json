@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Success_for_Version",
+  "description": "A successful read: `data` is the serialised core value the command reads.",
+  "type": "object",
+  "required": [
+    "data",
+    "schema",
+    "warnings"
+  ],
+  "properties": {
+    "data": {
+      "$ref": "#/definitions/Version"
+    },
+    "schema": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "warnings": {
+      "description": "The operation's warnings, in order: what the text form prints to stderr as `warning: <message>`, without the prefix. Always present; empty when there are none.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "definitions": {
+    "Version": {
+      "description": "A read command's version string (`version --json`).",
+      "type": "object",
+      "required": [
+        "version"
+      ],
+      "properties": {
+        "version": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

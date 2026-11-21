@@ -1,0 +1,7 @@
+args = ["switch", "1-auth-flow"]
+workspace = "build-implement"
+skip_on = ["windows"]
+
+[expect]
+exit = 1
+stderr = "daiku: won't write .daiku/active: .daiku/active is a symlink, which could lead outside the workspace\n"

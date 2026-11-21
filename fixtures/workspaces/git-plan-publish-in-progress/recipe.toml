@@ -1,0 +1,5 @@
+from = "git-plan-breakdown-approved"
+git = true
+steps = [
+  ["gate", "publish", "in-progress"],
+]

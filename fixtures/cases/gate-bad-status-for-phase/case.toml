@@ -1,0 +1,6 @@
+args = ["gate", "publish", "approved"]
+workspace = "plan-breakdown-approved"
+
+[expect]
+exit = 1
+stderr = "unknown gate status: approved\n"

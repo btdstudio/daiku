@@ -1,0 +1,6 @@
+args = ["env", "x"]
+workspace = "build-implement"
+
+[expect]
+exit = 0
+stdout = "--add-dir {ROOT}\n"

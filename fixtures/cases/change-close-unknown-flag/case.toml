@@ -1,0 +1,12 @@
+args = ["change", "close", "1-auth-flow", "--reason", "x", "--force"]
+workspace = "plan-intake-draft"
+
+[expect]
+exit = 0
+stdout = "1-auth-flow: closed\n"
+changes = [
+  "- f .daiku/active",
+  "~ f LOG.md",
+  "~ f STATE.json",
+  "+ f plan/specs/1-auth-flow/README.md",
+]

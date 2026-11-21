@@ -1,0 +1,11 @@
+args = ["source", "show", "3"]
+workspace = "adrs"
+
+[expect]
+exit = 0
+stdout_bytes = '''
+#3 [repo] The app, r\xe9vision
+repo:     ../app-\xe9
+rev:      v1-\xff
+Read the code.
+'''

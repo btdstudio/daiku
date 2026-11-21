@@ -1,0 +1,39 @@
+args = ["switch", "--all", "--json"]
+workspace = "plan-closed-change"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": [
+    {
+      "name": "1-auth-flow",
+      "loop": "plan",
+      "id": 1,
+      "phase": "intake",
+      "status": "closed",
+      "gates": {
+        "explore": "skipped",
+        "intake": "draft",
+        "synthesis": "skipped"
+      },
+      "repos": []
+    },
+    {
+      "name": "2-billing",
+      "loop": "plan",
+      "id": 2,
+      "phase": "intake",
+      "status": "draft",
+      "gates": {
+        "explore": "skipped",
+        "intake": "draft",
+        "synthesis": "skipped"
+      },
+      "repos": []
+    }
+  ],
+  "warnings": []
+}
+'''

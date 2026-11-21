@@ -1,0 +1,7 @@
+args = ["source", "new", "--title", "x"]
+workspace = "init"
+skip_on = ["windows"]
+
+[expect]
+exit = 1
+stderr = "daiku: won't write plan/00_intake: plan is a symlink, which could lead outside the workspace\n"

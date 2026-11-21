@@ -1,0 +1,6 @@
+args = ["tickets", "new", "task", "Fix typo"]
+workspace = "plan-spec-ready"
+
+[expect]
+exit = 1
+stderr = "daiku: cannot parse STATE.json: invalid character 'n' looking for beginning of object key string\n"

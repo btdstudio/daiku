@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "StatusReport",
+  "description": "`tickets status`: each bucket in Go's order with its sorted ids, and the files that couldn't be read.",
+  "type": "object",
+  "required": [
+    "buckets",
+    "unreadable"
+  ],
+  "properties": {
+    "buckets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Bucket"
+      }
+    },
+    "unreadable": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Problem"
+      }
+    }
+  },
+  "definitions": {
+    "Bucket": {
+      "type": "object",
+      "required": [
+        "ids",
+        "name"
+      ],
+      "properties": {
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "Problem": {
+      "description": "One thing wrong with a ticket.",
+      "type": "object",
+      "required": [
+        "id",
+        "message",
+        "reference"
+      ],
+      "properties": {
+        "id": {
+          "description": "The ticket, or its path if the id isn't usable.",
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "reference": {
+          "description": "For a missing reference, the id it names.",
+          "type": "string"
+        }
+      }
+    }
+  }
+}

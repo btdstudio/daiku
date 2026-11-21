@@ -1,0 +1,6 @@
+args = ["change", "new", "Billing"]
+workspace = "plan-intake-draft"
+
+[expect]
+exit = 1
+stderr = "daiku: cannot parse settings {CONFIG}/daiku/settings.json: invalid character 'n' looking for beginning of object key string\n"

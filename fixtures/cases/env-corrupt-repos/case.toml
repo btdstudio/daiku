@@ -1,0 +1,6 @@
+args = ["env"]
+workspace = "build-implement"
+
+[expect]
+exit = 1
+stderr = "daiku: cannot parse REPOS.json: invalid character 'n' looking for beginning of object key string\n"

@@ -1,0 +1,6 @@
+args = ["idea", "new"]
+workspace = "ideas"
+
+[expect]
+exit = 1
+stderr = "usage: daiku idea new <title>\n"

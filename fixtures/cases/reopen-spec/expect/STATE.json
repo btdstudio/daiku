@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "changes": {
+    "1-auth-flow": {
+      "loop": "plan",
+      "phase": "spec",
+      "status": "draft",
+      "gates": {
+        "explore": "skipped",
+        "intake": "approved",
+        "research": "skipped",
+        "spec": "draft",
+        "synthesis": "skipped"
+      },
+      "reasons": {
+        "explore": "no repo in the intake",
+        "research": "known domain",
+        "synthesis": "fewer than two repos in scope"
+      },
+      "sources": [
+        "plan/00_intake/1.md"
+      ],
+      "updatedAt": "{TIMESTAMP}"
+    }
+  }
+}

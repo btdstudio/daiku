@@ -1,0 +1,9 @@
+args = ["commit", "--help"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku commit [git commit args]
+
+commit what's staged in the active build's repo
+'''

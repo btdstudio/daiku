@@ -1,0 +1,14 @@
+args = ["status", "9-nope", "--json"]
+workspace = "plan-intake-draft"
+
+[expect]
+exit = 1
+stdout = '''
+{
+  "schema": 1,
+  "error": {
+    "kind": "NotAPlan",
+    "message": "daiku: 9-nope isn't a plan change in this workspace"
+  }
+}
+'''

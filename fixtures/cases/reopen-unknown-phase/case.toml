@@ -1,0 +1,6 @@
+args = ["reopen", "bogus", "--reason", "x"]
+workspace = "plan-spec-ready"
+
+[expect]
+exit = 1
+stderr = "unknown phase: bogus\n"

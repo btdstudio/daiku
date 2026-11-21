@@ -1,0 +1,49 @@
+args = ["status", "1-auth-flow", "--json"]
+workspace = "build-implement"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "plan": {
+      "name": "1-auth-flow",
+      "loop": "plan",
+      "phase": "publish",
+      "status": "complete",
+      "gates": {
+        "architecture": "approved",
+        "breakdown": "approved",
+        "explore": "skipped",
+        "intake": "approved",
+        "publish": "complete",
+        "research": "skipped",
+        "spec": "approved",
+        "synthesis": "skipped"
+      },
+      "reasons": {
+        "explore": "no repo in the intake",
+        "research": "known domain",
+        "synthesis": "fewer than two repos in scope"
+      },
+      "sources": [
+        "plan/00_intake/1.md"
+      ],
+      "repos": [],
+      "updatedAt": "{TIMESTAMP}"
+    },
+    "rows": [
+      {
+        "id": "S-0002",
+        "repo": "api",
+        "phase": "implement",
+        "status": "in-progress",
+        "started": true,
+        "closed": false
+      }
+    ]
+  },
+  "warnings": []
+}
+'''

@@ -1,0 +1,6 @@
+args = ["source", "new", "--title", "x", "stray"]
+workspace = "plan-intake-draft"
+
+[expect]
+exit = 1
+stderr = "daiku source new: unexpected argument \"stray\" (use --title <t>; see daiku source new --help)\n"

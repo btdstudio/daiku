@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "changes": {
+    "1-auth-flow": {
+      "loop": "plan",
+      "phase": "publish",
+      "status": "complete",
+      "gates": {
+        "architecture": "approved",
+        "breakdown": "approved",
+        "explore": "skipped",
+        "intake": "approved",
+        "publish": "complete",
+        "research": "skipped",
+        "spec": "approved",
+        "synthesis": "skipped"
+      },
+      "reasons": {
+        "explore": "no repo in the intake",
+        "research": "known domain",
+        "synthesis": "fewer than two repos in scope"
+      },
+      "sources": [
+        "plan/00_intake/1.md"
+      ],
+      "updatedAt": "2026-01-15T00:00:00.000Z"
+    }
+  }
+}

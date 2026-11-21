@@ -1,0 +1,6 @@
+args = ["update"]
+workspace = "init"
+
+[expect]
+exit = 1
+stderr = "daiku update: invalid character 'n' looking for beginning of object key string\n"

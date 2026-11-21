@@ -1,0 +1,10 @@
+args = ["tickets", "mark-published", "S-0002", "--external", "github=org/api#12", "--force"]
+workspace = "plan-architecture-approved"
+
+[expect]
+exit = 1
+stdout = '''
+✗ S-0002: is a draft — run `daiku tickets ready S-0002` first
+✗ S-0002: parent E-0001 has no github id; publish it first
+'''
+stderr = "warning: daiku: mark-published requires publish in-progress for 1-auth-flow (it's \"unset\")\n"

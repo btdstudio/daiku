@@ -1,0 +1,18 @@
+args = ["status", "--json"]
+workspace = "init"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "vcs": "none",
+    "active": null,
+    "noChanges": true,
+    "plans": [],
+    "builds": []
+  },
+  "warnings": []
+}
+'''

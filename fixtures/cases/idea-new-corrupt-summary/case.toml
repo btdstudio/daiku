@@ -1,0 +1,11 @@
+args = ["idea", "new", "Bulk import"]
+workspace = "ideas"
+
+[expect]
+exit = 0
+stdout = "created idea 4 Bulk import (ideas/4-bulk-import/)\n"
+changes = [
+  "+ d ideas/4-bulk-import",
+  "+ f ideas/4-bulk-import/log.md",
+  "+ f ideas/4-bulk-import/summary.md",
+]

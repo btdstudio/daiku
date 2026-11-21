@@ -1,0 +1,5 @@
+from = "plan-architecture-approved"
+steps = [
+  ["gate", "breakdown", "approved"],
+  ["tickets", "ready", "--all"],
+]

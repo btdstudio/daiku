@@ -1,0 +1,8 @@
+{
+  "repos": {
+    "web": {
+      "remote": "https://example.invalid/web.git",
+      "defaultBranch": "main"
+    }
+  }
+}

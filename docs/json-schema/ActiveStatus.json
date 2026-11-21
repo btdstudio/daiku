@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ActiveStatus",
+  "description": "The active change, as `status` shows it.",
+  "type": "object",
+  "required": [
+    "change",
+    "code",
+    "initiative",
+    "phases"
+  ],
+  "properties": {
+    "change": {
+      "$ref": "#/definitions/Change"
+    },
+    "code": {
+      "description": "Each repo and its local path, `None` when it isn't set.",
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": [
+          {
+            "type": "string"
+          },
+          {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        ],
+        "maxItems": 2,
+        "minItems": 2
+      }
+    },
+    "initiative": {
+      "description": "The plan it belongs to, or a note when that isn't known.",
+      "type": "string"
+    },
+    "phases": {
+      "description": "Its machine's phases, in order.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ticket": {
+      "description": "A build's ticket: id, title, and the branch name for it.",
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "maxItems": 3,
+      "minItems": 3
+    }
+  },
+  "definitions": {
+    "Change": {
+      "description": "One change's progress through its loop. `gates` holds only started phases.",
+      "type": "object",
+      "required": [
+        "gates",
+        "loop",
+        "name",
+        "phase",
+        "reasons",
+        "repos",
+        "sources",
+        "status",
+        "updatedAt"
+      ],
+      "properties": {
+        "gates": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "loop": {
+          "description": "`plan` or `build`; empty for a change that isn't recorded or found.",
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "reasons": {
+          "description": "Why each skipped phase was skipped.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "repos": {
+          "description": "Logical repo names from `REPOS.json`.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

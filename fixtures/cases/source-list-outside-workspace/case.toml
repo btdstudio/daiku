@@ -1,0 +1,4 @@
+args = ["source", "list"]
+
+[expect]
+exit = 0

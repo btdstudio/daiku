@@ -1,0 +1,10 @@
+args = ["source", "new", "--title", "x"]
+
+[expect]
+exit = 0
+stdout = "created #1 [issue] x\n"
+changes = [
+  "+ d plan",
+  "+ d plan/00_intake",
+  "+ f plan/00_intake/1.md",
+]

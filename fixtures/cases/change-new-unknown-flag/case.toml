@@ -1,0 +1,6 @@
+args = ["change", "new", "Auth flow", "--bogus"]
+workspace = "init"
+
+[expect]
+exit = 1
+stderr = "daiku change new: unknown flag \"--bogus\"\n"

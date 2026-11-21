@@ -1,0 +1,11 @@
+args = ["gate", "implement", "in-progress"]
+workspace = "build-two-in-repo"
+
+[expect]
+exit = 0
+stdout = "N-0001: implement = in-progress\n"
+stderr = "warning: daiku: api is locked by S-0002 (implement in-progress) — finish, close or reopen it to tasks\n"
+changes = [
+  "~ f LOG.md",
+  "~ f STATE.json",
+]

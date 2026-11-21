@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Record",
+  "description": "One decision record.",
+  "type": "object",
+  "required": [
+    "date",
+    "deciders",
+    "file",
+    "number",
+    "path",
+    "raw",
+    "slug",
+    "status",
+    "title"
+  ],
+  "properties": {
+    "date": {
+      "type": "string"
+    },
+    "deciders": {
+      "$ref": "#/definitions/Text"
+    },
+    "file": {
+      "description": "The file's name.",
+      "type": "string"
+    },
+    "number": {
+      "type": "integer",
+      "format": "int64"
+    },
+    "path": {
+      "description": "As shown: the root joined with the ADR folder and file name.",
+      "type": "string"
+    },
+    "raw": {
+      "description": "The file's bytes as they are, valid UTF-8 or not (`adr show` prints them). Serialised as a string with U+FFFD for invalid bytes, as Go's `encoding/json` writes its `Raw`.",
+      "type": "string"
+    },
+    "slug": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    },
+    "title": {
+      "description": "As the file holds it (`adr list` prints it).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Text"
+        }
+      ]
+    }
+  },
+  "definitions": {
+    "Text": {
+      "type": "string"
+    }
+  }
+}

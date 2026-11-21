@@ -1,0 +1,4 @@
+from = "plan-published"
+steps = [
+  ["build", "new", "S-0002"],
+]

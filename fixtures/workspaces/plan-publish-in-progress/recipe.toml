@@ -1,0 +1,4 @@
+from = "plan-breakdown-approved"
+steps = [
+  ["gate", "publish", "in-progress"],
+]

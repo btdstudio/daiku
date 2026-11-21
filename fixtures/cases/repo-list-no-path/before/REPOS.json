@@ -1,0 +1,12 @@
+{
+  "repos": {
+    "api": {
+      "remote": "https://example.invalid/api.git",
+      "defaultBranch": "main"
+    },
+    "web": {
+      "remote": "https://example.invalid/web.git",
+      "defaultBranch": "main"
+    }
+  }
+}

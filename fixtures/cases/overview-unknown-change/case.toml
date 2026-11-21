@@ -1,0 +1,6 @@
+args = ["overview", "9-nope"]
+workspace = "plan-published"
+
+[expect]
+exit = 1
+stderr = "daiku: no change named \"9-nope\"\n"

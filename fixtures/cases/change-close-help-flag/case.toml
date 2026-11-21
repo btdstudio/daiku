@@ -1,0 +1,9 @@
+args = ["change", "close", "--help"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku change close <change> --reason <r>
+
+close a change
+'''

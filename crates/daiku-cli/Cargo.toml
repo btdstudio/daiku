@@ -1,0 +1,15 @@
+[package]
+name = "daiku-cli"
+description = "The daiku command-line interface"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "daiku"
+path = "src/main.rs"
+
+[dependencies]
+daiku-core = { path = "../daiku-core" }

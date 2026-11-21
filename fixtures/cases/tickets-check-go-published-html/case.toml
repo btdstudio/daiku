@@ -1,0 +1,8 @@
+# A ticket the Go CLI published with <, > and & in its title and labels shows no
+# drift (S-0007 AC3). before/ holds Go's own published file.
+args = ["tickets", "check"]
+workspace = "plan-publish-in-progress"
+
+[expect]
+exit = 0
+stdout = "3 tickets ok\n"

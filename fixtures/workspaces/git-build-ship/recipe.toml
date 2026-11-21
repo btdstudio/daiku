@@ -1,0 +1,9 @@
+from = "git-build-implement"
+git = true
+steps = [
+  ["gate", "implement", "complete"],
+  ["gate", "test", "approved"],
+  ["gate", "review", "approved"],
+  ["gate", "security", "approved"],
+  ["gate", "ship", "in-progress"],
+]

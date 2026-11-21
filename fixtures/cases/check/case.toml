@@ -1,0 +1,5 @@
+args = ["check"]
+
+[expect]
+exit = 0
+stdout = "scaffold is clean\n"

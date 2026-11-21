@@ -1,0 +1,5 @@
+args = ["idea", "show", "1"]
+
+[expect]
+exit = 1
+stderr = "daiku: idea 1 not found\n"

@@ -1,0 +1,9 @@
+args = ["tickets", "pull", "--help"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku tickets pull <file>
+
+record a ticket fetched from a PM tool as X-<pm-id> in build/tickets/
+'''

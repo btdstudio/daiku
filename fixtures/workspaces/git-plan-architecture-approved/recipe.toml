@@ -1,0 +1,68 @@
+from = "git-plan-spec-ready"
+git = true
+steps = [
+  ["gate", "spec", "approved"],
+  ["gate", "architecture", "approved"],
+  ["repo", "add", "api", "https://example.invalid/api.git", "--path", "{ROOT}"],
+  ["tickets", "new", "epic", "Accounts"],
+  ["tickets", "new", "story", "Sign in", "--parent", "E-0001", "--repo", "api", "--requirements", "R1"],
+]
+
+[[files]]
+path = "plan/specs/1-auth-flow/tickets/E-0001.md"
+text = '''
+---
+schema: 1
+id: E-0001
+type: epic
+title: Accounts
+depends_on: []
+change: 1-auth-flow
+spec: plan/specs/1-auth-flow/functional-spec.md
+adrs: []
+labels: []
+status: draft
+---
+
+## Context
+Why this exists; links to spec sections and ADRs.
+If this repo has more than one story in this change, say why:
+too large to review as one PR, or ships separately.
+
+## Acceptance criteria
+- [ ] AC1: Given a user, When they sign in, Then they see the home page
+
+## Notes
+Constraints, risks, out of scope.
+'''
+
+[[files]]
+path = "plan/specs/1-auth-flow/tickets/S-0002.md"
+text = '''
+---
+schema: 1
+id: S-0002
+type: story
+title: Sign in
+parent: E-0001
+repo: api
+depends_on: []
+change: 1-auth-flow
+spec: plan/specs/1-auth-flow/functional-spec.md
+adrs: []
+requirements: [R1]
+labels: []
+status: draft
+---
+
+## Context
+Why this exists; links to spec sections and ADRs.
+If this repo has more than one story in this change, say why:
+too large to review as one PR, or ships separately.
+
+## Acceptance criteria
+- [ ] AC1: Given a user, When they sign in, Then they see the home page
+
+## Notes
+Constraints, risks, out of scope.
+'''

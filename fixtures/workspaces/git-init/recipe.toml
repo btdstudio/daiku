@@ -1,0 +1,4 @@
+git = true
+steps = [
+  ["init"],
+]

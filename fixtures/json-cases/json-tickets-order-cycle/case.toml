@@ -1,0 +1,14 @@
+args = ["tickets", "order", "--json"]
+workspace = "plan-architecture-approved"
+
+[expect]
+exit = 1
+stdout = '''
+{
+  "schema": 1,
+  "error": {
+    "kind": "TicketOrder",
+    "message": "daiku: dependency cycle among S-0003, S-0004"
+  }
+}
+'''

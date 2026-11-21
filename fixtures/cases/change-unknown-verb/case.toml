@@ -1,0 +1,11 @@
+args = ["change", "bogus"]
+workspace = "init"
+
+[expect]
+exit = 1
+stderr = '''
+usage:
+  daiku change new <title> [--repo <name|path>]... [--rev <r>] [--body <b>]
+                                           create a change + intake + switch
+  daiku change close <change> --reason <r> close a change
+'''

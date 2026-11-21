@@ -1,0 +1,14 @@
+args = ["status", "1-auth-flow", "x", "--json"]
+workspace = "plan-intake-draft"
+
+[expect]
+exit = 1
+stdout = '''
+{
+  "schema": 1,
+  "error": {
+    "kind": "Usage",
+    "message": "usage: daiku status [<plan-change>]"
+  }
+}
+'''

@@ -1,0 +1,7 @@
+args = ["write", "keep.txt", "k", ";", "write", "extra.txt", "e"]
+
+[expect]
+exit = 0
+changes = [
+  "+ f keep.txt",
+]

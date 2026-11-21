@@ -1,0 +1,9 @@
+args = ["help", "reopen"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku reopen <phase> --reason <r> [--force]
+
+move back to a phase, clearing later approvals
+'''

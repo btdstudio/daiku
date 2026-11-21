@@ -1,0 +1,6 @@
+args = ["tickets", "check", "x"]
+workspace = "plan-published"
+
+[expect]
+exit = 0
+stdout = "2 tickets ok\n"

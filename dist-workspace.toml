@@ -1,0 +1,22 @@
+[workspace]
+members = ["cargo:."]
+
+# Config for 'dist' (cargo-dist). release.yml is generated from this file by
+# `dist generate`; never edit it by hand (CI runs `dist generate --check`).
+[dist]
+# The dist version CI installs, and the one `dist generate` writes into the workflow.
+cargo-dist-version = "0.34.0"
+# CI backends to support
+ci = "github"
+# The installers to generate for each app. They download from this repo's GitHub
+# release URLs without logging in (the release smoke check runs them).
+installers = ["shell", "powershell"]
+# Signed build provenance for each release's archives, checked with
+# `gh attestation verify` (S-0012).
+github-attestations = true
+# Target platforms to build apps for (Rust target-triple syntax)
+targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
+# Runs before each build: sets DAIKU_RELEASE=1 so `daiku version` prints v<version>.
+github-build-setup = "../build-setup.yml"
+# The release workflow runs on tag pushes only, not on pull requests.
+pr-run-mode = "skip"

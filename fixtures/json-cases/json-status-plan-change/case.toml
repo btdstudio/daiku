@@ -1,0 +1,73 @@
+args = ["status", "--json"]
+workspace = "plan-intake-draft"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "vcs": "none",
+    "active": {
+      "change": {
+        "name": "1-auth-flow",
+        "loop": "plan",
+        "phase": "intake",
+        "status": "draft",
+        "gates": {
+          "explore": "skipped",
+          "intake": "draft",
+          "synthesis": "skipped"
+        },
+        "reasons": {
+          "explore": "no repo in the intake",
+          "synthesis": "fewer than two repos in scope"
+        },
+        "sources": [
+          "plan/00_intake/1.md"
+        ],
+        "repos": [],
+        "updatedAt": "{TIMESTAMP}"
+      },
+      "phases": [
+        "intake",
+        "research",
+        "explore",
+        "synthesis",
+        "spec",
+        "architecture",
+        "breakdown",
+        "publish"
+      ],
+      "initiative": "1-auth-flow",
+      "code": [],
+      "ticket": null
+    },
+    "noChanges": false,
+    "plans": [
+      {
+        "name": "1-auth-flow",
+        "loop": "plan",
+        "phase": "intake",
+        "status": "draft",
+        "gates": {
+          "explore": "skipped",
+          "intake": "draft",
+          "synthesis": "skipped"
+        },
+        "reasons": {
+          "explore": "no repo in the intake",
+          "synthesis": "fewer than two repos in scope"
+        },
+        "sources": [
+          "plan/00_intake/1.md"
+        ],
+        "repos": [],
+        "updatedAt": "{TIMESTAMP}"
+      }
+    ],
+    "builds": []
+  },
+  "warnings": []
+}
+'''

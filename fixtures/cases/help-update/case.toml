@@ -1,0 +1,9 @@
+args = ["help", "update"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku update
+
+refresh managed files
+'''

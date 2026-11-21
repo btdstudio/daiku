@@ -1,0 +1,30 @@
+repos	7b7d	{"repos":null}
+repos	6e756c6c	{"repos":null}
+repos	5b5d	error: json: cannot unmarshal array into Go value of type struct { Repos map[string]repos.Repo "json:\"repos\"" }
+repos	227822	error: json: cannot unmarshal string into Go value of type struct { Repos map[string]repos.Repo "json:\"repos\"" }
+repos	31	error: json: cannot unmarshal number into Go value of type struct { Repos map[string]repos.Repo "json:\"repos\"" }
+repos	7b227265706f73223a206e756c6c7d	{"repos":null}
+repos	7b227265706f73223a205b5d7d	error: json: cannot unmarshal array into Go struct field .repos of type map[string]repos.Repo
+repos	7b227265706f73223a20317d	error: json: cannot unmarshal number into Go struct field .repos of type map[string]repos.Repo
+repos	7b227265706f73223a207b7d7d	{"repos":{}}
+repos	7b227265706f73223a207b22617069223a206e756c6c7d7d	{"repos":{"api":{"remote":"","defaultBranch":""}}}
+repos	7b227265706f73223a207b22617069223a20317d7d	error: json: cannot unmarshal number into Go struct field .repos of type repos.Repo
+repos	7b227265706f73223a207b22617069223a205b5d7d7d	error: json: cannot unmarshal array into Go struct field .repos of type repos.Repo
+repos	7b227265706f73223a207b22617069223a207b2272656d6f7465223a20317d7d7d	error: json: cannot unmarshal number into Go struct field Repo.repos.remote of type string
+repos	7b227265706f73223a207b22617069223a207b2264656661756c744272616e6368223a20747275657d7d7d	error: json: cannot unmarshal bool into Go struct field Repo.repos.defaultBranch of type string
+repos	7b227265706f73223a207b22617069223a207b2272656d6f7465223a202267697440683a6f2f6170692e676974222c202264656661756c744272616e6368223a20226d61696e222c202278223a205b315d7d7d7d	{"repos":{"api":{"remote":"git@h:o/api.git","defaultBranch":"main"}}}
+repos	7b225245504f53223a207b22617069223a207b2252454d4f5445223a202272222c202244656661756c744272616e6368223a202262227d7d2c20226f74686572223a2031653430307d	{"repos":{"api":{"remote":"r","defaultBranch":"b"}}}
+repos	7b227265706f73223a207b2261223a207b2272656d6f7465223a20227231227d7d2c20227265706f73223a207b2262223a207b2272656d6f7465223a20227232227d7d7d	{"repos":{"a":{"remote":"r1","defaultBranch":""},"b":{"remote":"r2","defaultBranch":""}}}
+repos	7b227265706f73223a207b2261223a207b2272656d6f7465223a20227231222c202272656d6f7465223a206e756c6c7d7d7d	{"repos":{"a":{"remote":"r1","defaultBranch":""}}}
+repos	7b227265706f73223a207b2261223a207b2272656d6f7465223a20227231227d2c202261223a207b2264656661756c744272616e6368223a202264227d7d7d	{"repos":{"a":{"remote":"","defaultBranch":"d"}}}
+paths	7b7d	{}
+paths	6e756c6c	null
+paths	5b5d	error: json: cannot unmarshal array into Go value of type map[string]string
+paths	227822	error: json: cannot unmarshal string into Go value of type map[string]string
+paths	31	error: json: cannot unmarshal number into Go value of type map[string]string
+paths	7b22617069223a20222f7372632f617069227d	{"api":"/src/api"}
+paths	7b22617069223a20317d	error: json: cannot unmarshal number into Go value of type string
+paths	7b22617069223a206e756c6c7d	{"api":""}
+paths	7b22617069223a207b7d7d	error: json: cannot unmarshal object into Go value of type string
+paths	7b22617069223a202261222c2022617069223a202262227d	{"api":"b"}
+paths	7b22617069223a20227e2f7372632f617069222c2022776562223a20222e2e2f776562227d	{"api":"~/src/api","web":"../web"}

@@ -1,0 +1,9 @@
+args = ["references"]
+workspace = "init"
+
+[expect]
+exit = 1
+stderr = '''
+usage:
+  daiku references check                   warn about unindexed references and bad index entries
+'''

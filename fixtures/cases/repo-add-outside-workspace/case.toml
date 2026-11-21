@@ -1,0 +1,10 @@
+args = ["repo", "add", "web", "https://example.invalid/web.git"]
+
+[expect]
+exit = 0
+stdout = "added web — commit REPOS.json to share it\n"
+changes = [
+  "+ d .daiku",
+  "+ f .daiku/paths.json",
+  "+ f REPOS.json",
+]

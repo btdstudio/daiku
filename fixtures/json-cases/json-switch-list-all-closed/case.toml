@@ -1,0 +1,12 @@
+args = ["switch", "--json"]
+workspace = "plan-closed-change"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": [],
+  "warnings": []
+}
+'''

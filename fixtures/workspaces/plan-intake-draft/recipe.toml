@@ -1,0 +1,4 @@
+from = "init"
+steps = [
+  ["change", "new", "Auth flow"],
+]
