@@ -29,34 +29,9 @@ jobs:
       - run: cargo build --workspace
       - run: cargo test --workspace
 
-  # Checks every golden fixture against the Go CLI they were captured from, built
-  # the same way as locally (scripts/build-go-daiku.sh). Linux and macOS only:
-  # Windows runs the runner's self-tests in `test` above.
-  fixtures:
-    name: fixtures (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest, ubuntu-latest]
-    steps:
-      - uses: actions/checkout@v4
-      - run: rustup show active-toolchain || rustup toolchain install
-      - uses: Swatinem/rust-cache@v2
-      - uses: actions/setup-go@v5
-        with:
-          go-version: 1.26.5
-          cache: false
-      - run: scripts/build-go-daiku.sh
-      - run: cargo build --release -p daiku-fixtures
-      - name: check the fixtures against Go
-        run: time target/release/daiku-fixtures check --bin target/go-daiku/daiku
-      - run: target/release/daiku-fixtures coverage
-      - name: usage.txt matches Go's help
-        run: diff fixtures/usage.txt <(target/go-daiku/daiku help)
-
-  # Checks the Rust daiku against the cases it has been ported for
-  # (fixtures/ported.txt), on all three OSes. Each story adds its cases.
+  # Checks the Rust daiku against every golden fixture case and every --json case,
+  # on all three OSes, and that every command and verb in fixtures/usage.txt has a
+  # case.
   rust-fixtures:
     name: rust-fixtures (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -72,17 +47,22 @@ jobs:
       - run: rustup show active-toolchain || rustup toolchain install
       - uses: Swatinem/rust-cache@v2
       - run: cargo build -p daiku-cli -p daiku-fixtures
-      - name: check the ported cases against the Rust daiku
+      - name: check the cases against the Rust daiku
         run: |
           exe=""
           if [ "$RUNNER_OS" = "Windows" ]; then exe=".exe"; fi
-          target/debug/daiku-fixtures$exe check --bin "target/debug/daiku$exe" --list fixtures/ported.txt
-      # Rust only: Go has no --json (S-0009). fixtures/json-cases/README.md
+          target/debug/daiku-fixtures$exe check --bin "target/debug/daiku$exe"
+      # The --json cases: fixtures/json-cases/README.md
       - name: check the --json cases against the Rust daiku
         run: |
           exe=""
           if [ "$RUNNER_OS" = "Windows" ]; then exe=".exe"; fi
           target/debug/daiku-fixtures$exe check --bin "target/debug/daiku$exe" --cases fixtures/json-cases
+      - name: every command and verb has a case
+        run: |
+          exe=""
+          if [ "$RUNNER_OS" = "Windows" ]; then exe=".exe"; fi
+          target/debug/daiku-fixtures$exe coverage
 
   # Keeps the generated release workflow (.github/workflows/release.yml) in step with
   # dist-workspace.toml, and checks that dist can plan a release (S-0010). The dist
