@@ -11,9 +11,7 @@ kind of work, created the first time it's used:
   (coming in a later version).
 
 The filesystem is the architecture; no framework or runtime is required after
-scaffold. daiku replaces [zumen](https://github.com/btdstudio/zumen) (planning),
-[tomo](https://github.com/btdstudio/tomo) (building) and their shared core,
-[kiso](https://github.com/btdstudio/kiso). It doesn't read their workspaces.
+scaffold.
 
 ## Attribution
 
