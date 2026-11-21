@@ -203,7 +203,7 @@ daiku is a Cargo workspace:
 |---|---|
 | `crates/daiku-core` | The library: workspaces, changes, gates, tickets. It returns data and never prints, so any client (the CLI, a desktop app) can use it. |
 | `crates/daiku-cli` | The `daiku` binary: argument parsing, calling core, and printing. |
-| `crates/daiku-fixtures` | A test tool, not released. It runs any `daiku` binary against golden fixture cases captured from the Go CLI. |
+| `crates/daiku-fixtures` | A test tool, not released. It runs any `daiku` binary against the golden fixture cases, first captured from the Go CLI. |
 
 The toolchain is pinned in `rust-toolchain.toml`, and rustup installs it on first use.
 

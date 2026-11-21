@@ -168,11 +168,12 @@ go install github.com/btdstudio/daiku/cmd/daiku@v0.2.0
 
 ## What stays the same
 
-- **Commands, verbs, flags, output and exit codes** match the Go CLI's. The Rust binary
-  passes every one of the Go CLI's golden fixture cases on Linux, macOS and Windows.
+- **Commands, verbs, flags, output and exit codes** matched the Go CLI's at `v0.3.0`.
+  That release passed every one of the Go CLI's golden fixture cases on Linux, macOS
+  and Windows.
 - **Workspace files** keep their formats and meaning: `STATE.json`, `LOG.md`,
   `REPOS.json`, ticket frontmatter, the plan overview. The Rust CLI reads what Go wrote,
-  and Go reads what the Rust CLI writes.
+  and at `v0.3.0` Go read what the Rust CLI wrote.
 - **Global settings** are in the same place, `.config/daiku/settings.json` under
   `XDG_CONFIG_HOME` or your home folder, on every OS.
 - **`daiku update`** refreshes a workspace's managed files and the version in its
@@ -180,7 +181,9 @@ go install github.com/btdstudio/daiku/cmd/daiku@v0.2.0
 
 ## What differs
 
-Everything below is deliberate and small.
+After `v0.3.0`, daiku no longer checks itself against the Go CLI, so new behaviour may
+differ from Go's. `CHANGELOG.md` lists each change. The differences at `v0.3.0` are
+below; each is deliberate and small.
 
 - **JSON files** the Rust CLI writes can differ from Go's in escaping only (`<`, `>` and
   `&` aren't written as `\u003c`, `\u003e` and `\u0026`, as Go writes them).
