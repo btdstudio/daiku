@@ -43,17 +43,17 @@ holder.
 
 ## Build routing
 
-| Task / Intent | Directory | Persona | Read | Skip |
-|---|---|---|---|---|
-| Settle the ticket | `build/01_design/` | analyst | the build's ticket (`daiku status`), `sync.md` for a ticket with `external` | the repo, `build/02_implementation/*` |
-| Write requirements | `build/01_design/` | analyst | `build/01_design/context.md`, the build's ticket | the repo, `build/03_testing/*` |
-| Design solution | `build/01_design/` | architect | `build/01_design/context.md`, `build/<repo>/changes/<ticket-id>/requirements.md` | — |
-| Break down into tasks | `build/01_design/` | architect | `build/<repo>/changes/<ticket-id>/design.md` | — |
-| Implement code | `build/02_implementation/` | coder | `build/02_implementation/context.md`, `build/<repo>/changes/<ticket-id>/*`, the repo (`daiku repo list`) and its `AGENTS.md` | `build/04_refactoring/*` |
-| Test | `build/03_testing/` | qa | `build/03_testing/context.md`, the repo and its `AGENTS.md`, `build/<repo>/changes/<ticket-id>/requirements.md` | `build/tickets/*` |
-| Review | `build/04_refactoring/` | reviewer | `build/04_refactoring/context.md`, the repo and its `AGENTS.md`, `build/<repo>/changes/<ticket-id>/*` | `build/tickets/*` |
-| Security pass | `build/04_refactoring/` | security | `build/04_refactoring/context.md`, the repo and its `AGENTS.md` | `build/tickets/*` |
-| Ship | the repo | — | `build/<repo>/changes/<ticket-id>/tasks.json`, the build's ticket | `build/02_implementation/*` |
+| Task / Intent | Directory | Persona | Model | Read | Skip |
+|---|---|---|---|---|---|
+| Settle the ticket | `build/01_design/` | analyst | `standard` | the build's ticket (`daiku status`), `sync.md` for a ticket with `external` | the repo, `build/02_implementation/*` |
+| Write requirements | `build/01_design/` | analyst | `standard` | `build/01_design/context.md`, the build's ticket | the repo, `build/03_testing/*` |
+| Design solution | `build/01_design/` | architect | `deep` | `build/01_design/context.md`, `build/<repo>/changes/<ticket-id>/requirements.md` | — |
+| Break down into tasks | `build/01_design/` | architect | `deep` | `build/<repo>/changes/<ticket-id>/design.md` | — |
+| Implement code | `build/02_implementation/` | coder | `standard` | `build/02_implementation/context.md`, `build/<repo>/changes/<ticket-id>/*`, the repo (`daiku repo list`) and its `AGENTS.md` | `build/04_refactoring/*` |
+| Test | `build/03_testing/` | qa | `fast` | `build/03_testing/context.md`, the repo and its `AGENTS.md`, `build/<repo>/changes/<ticket-id>/requirements.md` | `build/tickets/*` |
+| Review | `build/04_refactoring/` | reviewer | `deep` | `build/04_refactoring/context.md`, the repo and its `AGENTS.md`, `build/<repo>/changes/<ticket-id>/*` | `build/tickets/*` |
+| Security pass | `build/04_refactoring/` | security | `deep` | `build/04_refactoring/context.md`, the repo and its `AGENTS.md` | `build/tickets/*` |
+| Ship | the repo | — | `fast` | `build/<repo>/changes/<ticket-id>/tasks.json`, the build's ticket | `build/02_implementation/*` |
 
 ## Build naming
 

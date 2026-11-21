@@ -10,7 +10,7 @@ use crate::{Error, write};
 pub const ROOMS: [&str; 2] = ["plan", "build"];
 
 /// The `##` sections a user fills in; a merge keeps their text.
-const USER_OWNED: [&str; 1] = ["Tech stack & standards"];
+const USER_OWNED: [&str; 2] = ["Tech stack & standards", "Model routing"];
 
 /// Headings an earlier scaffold had and the current one dropped. None yet.
 const RETIRED: [&str; 0] = [];
@@ -149,8 +149,9 @@ impl Doc {
     }
 }
 
-/// Go's `Merge`: daiku's sections take the scaffold's text, a missing one goes after
-/// its nearest preceding scaffold section, and everything else is kept as written.
+/// daiku's sections take the scaffold's text; a missing scaffold section, daiku's or
+/// user-owned, goes after its nearest preceding scaffold section (N-0010); everything
+/// else is kept as written.
 /// `Err(reason)` when it can't merge. The user's lines are kept byte for byte,
 /// valid UTF-8 or not (N-0001).
 pub fn merge(user: &[u8], scaffold: &str) -> Result<Vec<u8>, String> {
@@ -203,7 +204,7 @@ fn merge_with(
     }
     let index_of = |out: &Doc, h: &str| out.sections.iter().position(|x| x.heading == h);
     for (i, sec) in s.sections.iter().enumerate() {
-        if !owned(&sec.heading) || index_of(&out, &sec.heading).is_some() {
+        if index_of(&out, &sec.heading).is_some() {
             continue;
         }
         let at = (0..i)

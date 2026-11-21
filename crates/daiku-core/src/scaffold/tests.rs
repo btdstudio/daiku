@@ -472,6 +472,68 @@ fn update_merges_agents_keeping_owner_sections() {
     );
 }
 
+/// `text` without the `## <heading>` section: its heading through the line before
+/// the next `## `.
+fn without_section(text: &str, heading: &str) -> String {
+    let start = text.find(&format!("\n## {heading}\n")).unwrap();
+    let end = start + 1 + text[start + 1..].find("\n## ").unwrap();
+    format!("{}{}", &text[..start], &text[end..])
+}
+
+fn heading_order(text: &str) -> Vec<&str> {
+    text.lines().filter_map(|l| l.strip_prefix("## ")).collect()
+}
+
+/// N-0010 AC3–AC5 through update: a missing `## Model routing` is added after Tech
+/// stack and then left alone; an edited one is kept; a missing Tech stack comes back
+/// too.
+#[test]
+fn update_adds_model_routing_and_keeps_an_edited_one() {
+    let (t, c) = (Temp::new(), Temp::new());
+    let w = ws(&t.0, &c);
+    w.init(&opts(true, false)).unwrap();
+    let fresh = t.read("AGENTS.md");
+
+    // AC4: an old file, without the section, gains it; a second update does nothing.
+    let old = without_section(&fresh, "Model routing").replace(
+        "- <FILL IN: the target",
+        "- Rust 1.100\n- <FILL IN: the target",
+    );
+    t.write("AGENTS.md", &old);
+    assert_eq!(w.update("dev").unwrap().value.merged, ["AGENTS.md"]);
+    let got = t.read("AGENTS.md");
+    assert_eq!(
+        got,
+        fresh.replace(
+            "- <FILL IN: the target",
+            "- Rust 1.100\n- <FILL IN: the target"
+        )
+    );
+    let rep = w.update("dev").unwrap().value;
+    assert!(
+        rep.merged.is_empty() && rep.unchanged.contains(&"AGENTS.md".to_string()),
+        "{rep:?}"
+    );
+
+    // AC3: an edited section is kept byte for byte.
+    let mine = got.replace("| `deep` | judgment", "We use opus.\n\n| `deep` | judgment");
+    t.write("AGENTS.md", &mine);
+    let rep = w.update("dev").unwrap().value;
+    assert!(rep.merged.is_empty(), "{rep:?}");
+    assert_eq!(t.read("AGENTS.md"), mine);
+
+    // AC5: with Tech stack and Model routing both gone, both come back, in order.
+    let bare = without_section(
+        &without_section(&fresh, "Model routing"),
+        "Tech stack & standards",
+    );
+    t.write("AGENTS.md", &bare);
+    assert_eq!(w.update("dev").unwrap().value.merged, ["AGENTS.md"]);
+    let got = t.read("AGENTS.md");
+    assert_eq!(heading_order(&got), heading_order(&fresh));
+    assert_eq!(got, fresh);
+}
+
 #[test]
 fn update_reports_an_unmergeable_agents_and_restores_a_missing_one() {
     let (t, c) = (Temp::new(), Temp::new());
