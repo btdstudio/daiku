@@ -271,13 +271,18 @@ version makes a prerelease.
 - To release: set the workspace `version` in `Cargo.toml` (`Cargo.lock` follows), add a
   `## <version>` section to `CHANGELOG.md`, merge, then push the tag `v<version>` on
   `main`. A tag creates a public release, so ask the owner first.
+- A version's `CHANGELOG.md` section is published on its own as the release notes, and a
+  release can't be changed once it's published (releases are immutable). So a section
+  must not refer to the sections around it. Read it in `dist plan`'s output before
+  tagging.
 - Release builds set `DAIKU_RELEASE=1`, so `daiku version` prints `v<version>`; any
   other build prints `dev`.
 - The install scripts download from `repository` in `Cargo.toml`
   (`https://github.com/btdstudio/daiku`) without logging in. The release smoke check runs
   them on every target.
 - Releases carry build attestations (`github-attestations` in `dist-workspace.toml`).
-- Only admins can create, update or delete `v*` tags (a tag ruleset), because dist's
-  workflow uses the tag name in shell steps.
-- Pull requests are merged by rebase. The one merge commit on `main` brought in the Rust
-  workspace's history from `btdstudio/daiku-next` (S-0012).
+- Only admins can create, update or delete tags. A tag ruleset covers every tag, because
+  dist's workflow runs for any version-like tag and uses its name in shell steps.
+- Pull requests are merged by rebase. The only merge commits on `main` are `bad8a89`,
+  which brought in the Rust workspace's history from `btdstudio/daiku-next`, and
+  `ad2fcd4`, PR #7, which carried it (S-0012).

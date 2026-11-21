@@ -2,9 +2,12 @@
 
 ## Supported versions
 
-daiku is pre-1.0. Security fixes are applied to the latest commit on `main`.
-daiku is distributed as a single binary:
-`go install github.com/btdstudio/daiku/cmd/daiku@latest`.
+daiku is pre-1.0. Security fixes ship in a new release, and only the latest
+release is supported. Releases before `v0.3.0`, including `v0.2.0`, the last
+release of the Go CLI, get no fixes.
+
+Install daiku with one of the installers or a release archive, as the
+[README](../README.md#install) describes.
 
 ## Reporting a vulnerability
 
