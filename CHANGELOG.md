@@ -4,6 +4,30 @@ Releases before 0.3.0 were the Go CLI, the last being `v0.2.0`; their notes are 
 this repo's GitHub releases. The `0.3.0-alpha` prereleases were built in
 `btdstudio/daiku-next` before it merged here.
 
+## 0.4.0
+
+Model tiers in a workspace's AGENTS.md, and the Rust CLI as its own reference.
+
+- **Each routing row names a model tier.** The routing tables in AGENTS.md gain a
+  `Model` column, giving every persona and activity a tier: `deep`, `standard` or
+  `fast`. A new `## Model routing` section, after `## Tech stack & standards`, maps
+  each tier to a model for your harness. It starts with `<FILL IN>` placeholders and
+  an example line for Claude Code; it's yours to edit, and `daiku update` keeps it. A
+  tier applies when an agent hands a phase to a subagent, or when you pick the model
+  at the start of a phase. Reading AGENTS.md doesn't switch a session's model.
+- **`daiku update` adds a missing section of yours.** An existing workspace gets
+  `## Model routing` with its defaults on the next `update`, along with the new column.
+  A section of yours that's present is still kept byte for byte. If you deleted
+  `## Tech stack & standards`, `update` now puts its placeholder back; to opt out of a
+  section, keep its heading and clear its text.
+- **daiku no longer checks itself against the Go CLI.** CI checks the Rust CLI against
+  its own fixture cases, and from this release on its behaviour may differ from the Go
+  CLI's `v0.2.0`. Workspaces made by the Go CLI still work. See
+  [`docs/migration.md`](https://github.com/btdstudio/daiku/blob/v0.4.0/docs/migration.md).
+- **Docs match how releases ship:** the supported versions in `SECURITY.md`, a note
+  that the PowerShell installer doesn't check checksums (with the checked route for
+  Windows), and attestation checks pinned to the release workflow.
+
 ## 0.3.0
 
 daiku is now written in Rust. This release replaces the Go CLI in this repository with
