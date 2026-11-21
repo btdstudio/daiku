@@ -8,7 +8,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use super::file::{self, Written, WrittenFile};
-use super::machine::{DRAFT, SKIPPED};
+use super::machine::{CLOSED, DRAFT, SKIPPED};
 use super::{
     BUILD_LOOP, CHANGE_ID_RE, Change, PLAN_CHANGE_DIRS, PLAN_DIR, PLAN_LOOP, PLAN_NAME_RE,
 };
@@ -29,6 +29,17 @@ pub struct Known {
     pub status: String,
     pub gates: BTreeMap<String, String>,
     pub repos: Vec<String>,
+}
+
+/// The changes `switch` lists: every change with `all`, else those not closed, in
+/// `changes`' order (Go's `runSwitch`). Whether to say "no changes yet", and whether
+/// to show the loop column, still depend on every change, closed ones included.
+pub fn listed(changes: &[Known], all: bool) -> Vec<Known> {
+    changes
+        .iter()
+        .filter(|c| all || c.status != CLOSED)
+        .cloned()
+        .collect()
 }
 
 /// What `seed` writes besides the change itself.
@@ -742,5 +753,31 @@ impl<'a> Store<'a> {
             Err(e) => (e.to_string(), String::new()),
         };
         Err(format!("git {}: {err}: {}", args[0], out.trim()))
+    }
+}
+
+#[cfg(test)]
+mod listed_tests {
+    use super::{Known, listed};
+
+    fn known(name: &str, status: &str) -> Known {
+        Known {
+            name: name.into(),
+            status: status.into(),
+            ..Known::default()
+        }
+    }
+
+    #[test]
+    fn drops_closed_unless_all_and_keeps_order() {
+        let changes = [
+            known("b", "draft"),
+            known("a", "closed"),
+            known("c", "complete"),
+        ];
+        let names = |v: Vec<Known>| v.into_iter().map(|c| c.name).collect::<Vec<_>>();
+        assert_eq!(names(listed(&changes, false)), ["b", "c"]);
+        assert_eq!(names(listed(&changes, true)), ["b", "a", "c"]);
+        assert!(listed(&[known("a", "closed")], false).is_empty());
     }
 }

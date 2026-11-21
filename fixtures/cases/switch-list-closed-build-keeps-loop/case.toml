@@ -1,0 +1,6 @@
+args = ["switch"]
+workspace = "build-implement"
+
+[expect]
+exit = 0
+stdout = "1-auth-flow  plan  publish complete\n"

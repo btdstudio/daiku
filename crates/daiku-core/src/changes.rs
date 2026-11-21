@@ -333,6 +333,14 @@ impl crate::Workspace {
         self.reader().known().map(Outcome::new)
     }
 
+    /// `daiku switch [--all]`'s list: [`store::listed`] over every change.
+    pub fn switch_list(&self, all: bool) -> Result<Outcome<Vec<Known>>, Error> {
+        self.known_changes().map(|o| Outcome {
+            value: crate::state::store::listed(&o.value, all),
+            warnings: o.warnings,
+        })
+    }
+
     /// `daiku switch <change>`.
     pub fn switch(&self, name: &str) -> Result<Outcome<Change>, Error> {
         self.reader().switch(name).map(Outcome::new)

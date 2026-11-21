@@ -79,7 +79,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | `switch-through-symlink` |
 | corrupt | `switch-corrupt-state` |
-| other | `switch-all`, `switch-closed`, `switch-help-flag`, `switch-list`, `switch-list-hides-closed`, `switch-to-change`, `switch-unknown` |
+| other | `switch-all`, `switch-closed`, `switch-help-flag`, `switch-list`, `switch-list-all-closed`, `switch-list-closed-build-keeps-loop`, `switch-list-hides-closed`, `switch-to-change`, `switch-unknown` |
 
 ## daiku source new
 

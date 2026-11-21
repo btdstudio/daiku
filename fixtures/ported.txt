@@ -593,3 +593,7 @@ switch-to-change-json-flag
 source-show-extra-arg
 adr-show-extra-arg
 status-repo-explore-skipped
+
+# N-0002: switch's closed-change edges, before its listing moves into core
+switch-list-closed-build-keeps-loop
+switch-list-all-closed

@@ -382,11 +382,9 @@ fn switch(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> 
                 );
                 return;
             }
+            // As Go: the loop column depends on every change, closed ones included.
             let show_loop = changes.iter().any(|c| c.loop_ == "build");
-            for c in changes {
-                if c.status == "closed" && !all {
-                    continue;
-                }
+            for c in &daiku_core::state::store::listed(changes, all) {
                 if show_loop {
                     let _ = writeln!(stdout, "{}  {}  {} {}", c.name, c.loop_, c.phase, c.status);
                 } else {

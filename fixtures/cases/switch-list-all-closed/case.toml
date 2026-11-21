@@ -1,0 +1,5 @@
+args = ["switch"]
+workspace = "plan-closed-change"
+
+[expect]
+exit = 0
