@@ -6,6 +6,10 @@
 //! and warnings with exit 0 (`tickets check` exits 1 when its report has errors),
 //! or an error with exit 1. Every read form must have a data case and an error case, so a form
 //! can't lose its `--json` path without a test noticing.
+//!
+//! Each case `json-<name>` uses the inputs of the Go case `fixtures/cases/<name>`
+//! plus `--json`, and is checked against it: the same exit code, an error message
+//! that is Go's stderr, and warnings that are Go's `warning: ` lines (N-0002).
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -13,33 +17,49 @@ use std::path::Path;
 use daiku_fixtures::{Case, load_cases};
 use serde_json::Value;
 
-/// Every read form in spec R5, and why one has no error case, if it hasn't.
-const FORMS: &[(&str, Option<&str>)] = &[
-    ("status", None),
-    ("status <plan>", None),
-    ("switch", None),
-    ("settings", None),
-    ("source list", None),
-    ("source show", None),
-    ("adr list", None),
-    ("adr show", None),
+/// Every read form in spec R5: its name, and why it has no data case or no error
+/// case, when it hasn't.
+const FORMS: &[(&str, Option<&str>, Option<&str>)] = &[
+    ("status", None, None),
+    ("status <plan>", None, None),
+    ("switch", None, None),
+    ("settings", None, None),
+    ("source list", None, None),
+    ("source show", None, None),
+    ("adr list", None, None),
+    ("adr show", None, None),
     (
         "idea list",
+        None,
         Some("Go's idea list has no failing path (ERROR-PATHS.md)"),
     ),
-    ("idea show", None),
-    ("tickets check", None),
-    ("tickets status", None),
-    ("tickets order", None),
-    ("repo list", None),
-    ("references check", None),
-    ("env", None),
-    ("version", Some("version can't fail")),
+    ("idea show", None, None),
+    ("tickets check", None, None),
+    ("tickets status", None, None),
+    ("tickets order", None, None),
+    ("repo list", None, None),
+    ("references check", None, None),
+    ("env", None, None),
+    ("version", None, Some("version can't fail")),
+    // A group with no verb answers with its usage block (N-0002).
+    ("tickets", Some("a bare group is only a usage error"), None),
+    ("idea", Some("a bare group is only a usage error"), None),
+    ("repo", Some("a bare group is only a usage error"), None),
 ];
 
+/// JSON cases with no Go case of the same name, and the Go case whose starting
+/// files each one takes.
+const NO_TWIN: &[(&str, &str)] = &[
+    ("json-tickets-check-corrupt-state", "status-corrupt-state"),
+    ("json-tickets-status-corrupt-state", "status-corrupt-state"),
+];
+
+fn fixtures() -> std::path::PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures")
+}
+
 fn cases() -> Vec<Case> {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/json-cases");
-    load_cases(&dir, &[]).expect("load fixtures/json-cases")
+    load_cases(&fixtures().join("json-cases"), &[]).expect("load fixtures/json-cases")
 }
 
 /// The read form a case's arguments name.
@@ -148,17 +168,100 @@ fn every_read_form_has_a_data_and_an_error_case() {
         }
     }
     let mut problems = Vec::new();
-    for (f, exempt) in FORMS {
+    for (f, no_data, no_error) in FORMS {
         let (data, error) = seen.remove(*f).unwrap_or_default();
-        if !data {
+        if !data && no_data.is_none() {
             problems.push(format!("{f}: no data case"));
         }
-        if !error && exempt.is_none() {
+        if data && no_data.is_some() {
+            problems.push(format!("{f}: a data case for a form that has none"));
+        }
+        if !error && no_error.is_none() {
             problems.push(format!("{f}: no error case"));
         }
     }
     for f in seen.keys() {
         problems.push(format!("{f}: a case for a form that isn't in FORMS"));
+    }
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
+/// The Go case's stderr, as text.
+fn stderr_text(case: &Case) -> String {
+    let expect = case.spec.expect.as_ref().expect("captured");
+    String::from_utf8_lossy(&expect.stderr_bytes().expect("stderr")).into_owned()
+}
+
+#[test]
+fn every_case_agrees_with_its_go_twin() {
+    let go: BTreeMap<String, Case> = load_cases(&fixtures().join("cases"), &[])
+        .expect("load fixtures/cases")
+        .into_iter()
+        .map(|c| (c.name.clone(), c))
+        .collect();
+    let json = cases();
+    let names: Vec<&str> = json.iter().map(|c| c.name.as_str()).collect();
+    let mut problems = Vec::new();
+    for (case, source) in NO_TWIN {
+        if !names.contains(case) {
+            problems.push(format!("NO_TWIN names {case}, which isn't a JSON case"));
+        }
+        if !go.contains_key(*source) {
+            problems.push(format!("NO_TWIN: {case}'s source {source} isn't a Go case"));
+        }
+    }
+    for case in &json {
+        let name = &case.name;
+        let listed = NO_TWIN.iter().any(|(c, _)| c == name);
+        let twin = name.strip_prefix("json-").and_then(|n| go.get(n));
+        let Some(twin) = twin else {
+            if !listed {
+                problems.push(format!("{name}: no Go twin, and not in NO_TWIN"));
+            }
+            continue;
+        };
+        if listed {
+            problems.push(format!("{name}: in NO_TWIN, but {} exists", twin.name));
+            continue;
+        }
+        let (Some(mine), Some(theirs)) = (&case.spec.expect, &twin.spec.expect) else {
+            problems.push(format!("{name}: it or its twin isn't captured"));
+            continue;
+        };
+        if mine.exit != theirs.exit {
+            problems.push(format!(
+                "{name}: exit {} where {} exits {}",
+                mine.exit, twin.name, theirs.exit
+            ));
+        }
+        let Ok(doc) = serde_json::from_str::<Value>(&mine.stdout) else {
+            continue; // every_case_holds_one_envelope reports it
+        };
+        let stderr = stderr_text(twin);
+        if let Some(message) = doc.pointer("/error/message").and_then(Value::as_str) {
+            let want = stderr.strip_suffix('\n').unwrap_or(&stderr);
+            if message != want {
+                problems.push(format!(
+                    "{name}: message {message:?} isn't {}'s stderr {want:?}",
+                    twin.name
+                ));
+            }
+        } else if let Some(warnings) = doc.get("warnings").and_then(Value::as_array) {
+            let mine: Vec<String> = warnings
+                .iter()
+                .map(|w| format!("warning: {}", w.as_str().unwrap_or_default()))
+                .collect();
+            let theirs: Vec<&str> = stderr
+                .lines()
+                .filter(|l| l.starts_with("warning: "))
+                .collect();
+            if mine != theirs {
+                problems.push(format!(
+                    "{name}: warnings {mine:?} aren't {}'s {theirs:?}",
+                    twin.name
+                ));
+            }
+        }
     }
     assert!(problems.is_empty(), "{}", problems.join("\n"));
 }
