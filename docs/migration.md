@@ -12,15 +12,15 @@ hashes match Go's byte for byte, so no ticket needs re-marking.
 Each release has an install script for macOS and Linux, and one for Windows:
 
 ```sh
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/btdstudio/daiku/releases/download/v0.3.0/daiku-cli-installer.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/btdstudio/daiku/releases/download/v0.4.0/daiku-cli-installer.sh | sh
 ```
 
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://github.com/btdstudio/daiku/releases/download/v0.3.0/daiku-cli-installer.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/btdstudio/daiku/releases/download/v0.4.0/daiku-cli-installer.ps1 | iex"
 ```
 
 To always get the newest release, put `latest/download` in place of
-`download/v0.3.0` in the URL.
+`download/v0.4.0` in the URL.
 
 ### What the install scripts change on your machine
 
@@ -63,7 +63,7 @@ Each release also has an archive per platform, with its checksum:
 On macOS and Linux (bash, zsh):
 
 ```sh
-tag=v0.3.0
+tag=v0.4.0
 target=aarch64-apple-darwin        # from the table above
 base="https://github.com/btdstudio/daiku/releases/download/$tag"
 
@@ -84,7 +84,7 @@ your shell's startup file.
 On Windows (PowerShell):
 
 ```powershell
-$tag = "v0.3.0"
+$tag = "v0.4.0"
 $target = "x86_64-pc-windows-msvc"
 $base = "https://github.com/btdstudio/daiku/releases/download/$tag"
 
@@ -135,7 +135,7 @@ Check that the Rust one is now the one that runs:
 
 ```sh
 command -v daiku                 # ~/.cargo/bin/daiku (or ~/.local/bin/daiku from an archive)
-daiku version                    # daiku v0.3.0
+daiku version                    # daiku v0.4.0
 ```
 
 The Go binary prints its own version (`daiku v0.2.0` or earlier, or `daiku dev` for a
