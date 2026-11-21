@@ -1,5 +1,6 @@
-//! Registry tests: decoding against Go's probe output, `load` and `resolve`, and
-//! the writes (S-0008).
+//! Registry tests: decoding against `tests/repos-go.txt` (Go's wording, captured from
+//! `v0.2.0` and kept as daiku's expected wording), `load` and `resolve`, and the
+//! writes (S-0008).
 
 use super::*;
 

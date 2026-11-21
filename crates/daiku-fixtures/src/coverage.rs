@@ -1,4 +1,5 @@
-//! Which commands and verbs in the Go usage text no case exercises (R9, D14).
+//! Which commands and verbs in the usage text (`fixtures/usage.txt`) no case
+//! exercises (R9, D14).
 
 use crate::Case;
 
