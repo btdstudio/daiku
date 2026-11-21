@@ -8,11 +8,12 @@ members = ["cargo:."]
 cargo-dist-version = "0.34.0"
 # CI backends to support
 ci = "github"
-# The installers to generate for each app. They download from GitHub release URLs
-# without logging in, and a token (DAIKU_CLI_GITHUB_TOKEN) doesn't help on a private
-# repo (the URL still answers 404), so until the repo is public (after the merge into
-# btdstudio/daiku, S-0012) a release is installed from its archives.
+# The installers to generate for each app. They download from this repo's GitHub
+# release URLs without logging in (the release smoke check runs them).
 installers = ["shell", "powershell"]
+# Signed build provenance for each release's archives, checked with
+# `gh attestation verify` (S-0012).
+github-attestations = true
 # Target platforms to build apps for (Rust target-triple syntax)
 targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
 # Runs before each build: sets DAIKU_RELEASE=1 so `daiku version` prints v<version>.
