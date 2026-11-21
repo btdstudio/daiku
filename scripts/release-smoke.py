@@ -4,7 +4,7 @@ and `daiku init`.
 
     release-smoke.py <folder holding the archive and its .sha256> <tag> <target>
 
-For example `release-smoke.py dl v0.3.0-alpha.2 x86_64-unknown-linux-gnu`. The release
+For example `release-smoke.py dl v0.3.0-alpha.3 x86_64-unknown-linux-gnu`. The release
 workflow's smoke job runs it on each target's runner (S-0010); it also runs locally
 against `dist build --artifacts=local` output. It uses only the standard library, so it
 runs the same on Linux, macOS and Windows.

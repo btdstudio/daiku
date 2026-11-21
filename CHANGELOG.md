@@ -2,6 +2,40 @@
 
 Releases before 0.3.0 were the Go CLI, in `btdstudio/daiku`.
 
+## 0.3.0-alpha.3
+
+Fixes to the `--json` contract that `0.3.0-alpha.2` shipped, before anything is built
+on it. The contract stays `schema: 1`. It gains one member, and some field names and
+one error kind are different, so a script written against alpha.2 may need updating.
+
+- **Warnings are in the envelope.** A success is now
+  `{"schema":1,"data":...,"warnings":[...]}`. `warnings` is always present, and holds
+  what the text form prints to stderr as `warning: ...`. In alpha.2, `status --json`
+  dropped the warning for a repo source whose explore phase is skipped. The error
+  envelope is unchanged (ADR-0004, amended 2026-11-21).
+- **A stray `--json` behaves as it does in Go.** In alpha.2, `--json` was removed from
+  the arguments of every `tickets` and `repo` verb. So `daiku repo add --json …` and
+  `daiku tickets new … --json` wrote files where Go stops with a usage error, and
+  `switch <change> --json` failed where Go switches. Now only the read forms in spec
+  R5 treat `--json` as the flag. Every other command sees its arguments as Go would.
+  `source show <id> <extra>` and `adr show <n> <extra>` work again, as in Go.
+- **Every failing read under `--json` writes the error envelope.** A usage error, or
+  an id that doesn't parse, used to print text to stderr and leave stdout empty. It's
+  now `{"schema":1,"error":{"kind":"Usage","message":...}}`, with the text the
+  command prints without `--json` as `message`. `Usage` replaces alpha.2's
+  `InvalidArgs`. Arguments the text form ignores, `--json` now ignores too, so
+  `settings x --json` and `tickets check x --json` succeed as their text forms do.
+- **Field names are camelCase everywhere,** as in Go's files. `noChanges`, and in
+  `settings`' `effective`: `baseSource`, `sourceDir`, `adrDir` and `syncFile`. alpha.2
+  wrote these in snake_case. The schemas in `docs/json-schema/` are regenerated.
+- **Tested.** `fixtures/json-cases/` has 56 cases: a data case and an error case for
+  every read form, all run in CI on Linux, macOS and Windows. A test checks that each
+  case writes one envelope with the right exit code and nothing on stderr. Six new Go
+  cases pin the stray-`--json` behaviour and `status`'s warning against the Go CLI.
+
+**Installing from this release:** as for 0.3.0-alpha.2 below, with the tag
+`v0.3.0-alpha.3`.
+
 ## 0.3.0-alpha.2
 
 Full parity with the Go CLI plus `--json` on every read command, built from

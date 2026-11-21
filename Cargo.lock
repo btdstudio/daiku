@@ -63,7 +63,7 @@ dependencies = [
 
 [[package]]
 name = "daiku-cli"
-version = "0.3.0-alpha.2"
+version = "0.3.0-alpha.3"
 dependencies = [
  "daiku-core",
  "serde",
@@ -71,7 +71,7 @@ dependencies = [
 
 [[package]]
 name = "daiku-core"
-version = "0.3.0-alpha.2"
+version = "0.3.0-alpha.3"
 dependencies = [
  "include_dir",
  "jiff",
@@ -85,7 +85,7 @@ dependencies = [
 
 [[package]]
 name = "daiku-fixtures"
-version = "0.3.0-alpha.2"
+version = "0.3.0-alpha.3"
 dependencies = [
  "regex",
  "serde",
