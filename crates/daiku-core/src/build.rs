@@ -16,6 +16,7 @@ use crate::{Error, Event, gofmt, inbox};
 
 /// One line of `repo list`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct RepoRow {
     pub name: String,
     pub remote: String,

@@ -50,6 +50,7 @@ pub struct ChangeNewOptions {
 
 /// The active change, as `status` shows it.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct ActiveStatus {
     pub change: Change,
     /// Its machine's phases, in order.
@@ -64,6 +65,7 @@ pub struct ActiveStatus {
 
 /// One repo's builds on the board.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct RepoBuilds {
     pub repo: String,
     /// The build holding the repo's lock, if any.
@@ -73,6 +75,7 @@ pub struct RepoBuilds {
 
 /// `status`: the active change, the `vcs` setting, and the board of open changes.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Status {
     pub vcs: String,
     pub active: Option<ActiveStatus>,
@@ -84,6 +87,7 @@ pub struct Status {
 
 /// `status <plan>`: a plan's progress and its builds.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct PlanStatus {
     pub plan: Change,
     pub rows: Vec<BuildRow>,

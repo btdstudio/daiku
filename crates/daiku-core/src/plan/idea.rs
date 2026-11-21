@@ -36,6 +36,7 @@ static FOLDER_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(\d+)-").expe
 
 /// One idea, read from its `summary.md`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Idea {
     pub id: i64,
     pub slug: String,

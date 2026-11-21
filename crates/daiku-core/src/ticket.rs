@@ -114,6 +114,7 @@ pub struct Ticket {
 
 /// One thing wrong with a ticket.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Problem {
     /// The ticket, or its path if the id isn't usable.
     pub id: String,

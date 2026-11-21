@@ -18,6 +18,7 @@ use crate::{Env, Error, Warning, gofmt, json, repos, scaffold, ticket, write};
 
 /// A change as `switch` lists it: Go's `KnownChange`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Known {
     pub name: String,
     #[serde(rename = "loop")]

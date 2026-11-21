@@ -10,6 +10,7 @@ use crate::{Error, gofmt, gojson};
 
 /// The effective settings.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Settings {
     pub base_source: String,
     pub gates: String,
@@ -35,6 +36,7 @@ impl Default for Settings {
 
 /// The settings with the raw layers they came from.
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Loaded {
     pub global: Map<String, Value>,
     pub project: Map<String, Value>,

@@ -12,6 +12,7 @@ use crate::{Error, gofmt, write};
 
 /// One decision record.
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Record {
     pub number: i64,
     pub slug: String,

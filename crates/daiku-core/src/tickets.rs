@@ -44,6 +44,7 @@ pub struct Created {
 
 /// `tickets check`'s findings, in Go's order.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct CheckReport {
     /// `✗` lines; any makes the check fail.
     pub errors: Vec<Problem>,
@@ -56,12 +57,14 @@ pub struct CheckReport {
 /// `tickets status`: each bucket in Go's order with its sorted ids, and the
 /// files that couldn't be read.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct StatusReport {
     pub buckets: Vec<Bucket>,
     pub unreadable: Vec<Problem>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Bucket {
     pub name: String,
     pub ids: Vec<String>,
@@ -69,6 +72,7 @@ pub struct Bucket {
 
 /// One line of `tickets order`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Ordered {
     pub id: String,
     pub title: String,

@@ -6,7 +6,7 @@
   "required": [
     "merged",
     "rel",
-    "up_to_date",
+    "upToDate",
     "written"
   ],
   "properties": {
@@ -22,7 +22,7 @@
       "description": "Relative to the root, slash-separated.",
       "type": "string"
     },
-    "up_to_date": {
+    "upToDate": {
       "type": "boolean"
     },
     "written": {

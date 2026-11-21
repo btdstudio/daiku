@@ -15,6 +15,7 @@ pub const REPO: &str = "repo";
 
 /// One intake source.
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Source {
     pub id: i64,
     pub title: Text,

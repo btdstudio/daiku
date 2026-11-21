@@ -52,6 +52,7 @@ pub(crate) static CHANGE_ID_RE: LazyLock<Regex> =
 
 /// One change's progress through its loop. `gates` holds only started phases.
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Change {
     pub name: String,
     /// `plan` or `build`; empty for a change that isn't recorded or found.
@@ -65,7 +66,6 @@ pub struct Change {
     pub sources: Vec<String>,
     /// Logical repo names from `REPOS.json`.
     pub repos: Vec<String>,
-    #[serde(rename = "updatedAt")]
     pub updated_at: String,
 }
 

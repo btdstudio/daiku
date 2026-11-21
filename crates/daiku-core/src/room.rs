@@ -57,6 +57,7 @@ pub struct IdeaPromoteResult {
 /// A plan's README, rendered: its path, the merged text, whether the file on
 /// disk already holds it, and whether this call wrote it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct OverviewDoc {
     /// Relative to the root, slash-separated.
     pub rel: String,

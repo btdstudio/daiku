@@ -5,7 +5,8 @@
   "type": "object",
   "required": [
     "data",
-    "schema"
+    "schema",
+    "warnings"
   ],
   "properties": {
     "data": {
@@ -18,6 +19,13 @@
       "type": "integer",
       "format": "uint32",
       "minimum": 0.0
+    },
+    "warnings": {
+      "description": "The operation's warnings, in order: what the text form prints to stderr as `warning: <message>`, without the prefix. Always present; empty when there are none.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "definitions": {

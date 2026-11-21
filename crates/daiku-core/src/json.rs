@@ -4,15 +4,16 @@
 //! keys (`BTreeMap`, or serde_json's sorted `Map`), and a trailing newline, with
 //! serde_json's normal escaping.
 //!
-//! Read-command envelope (spec R5, ADR-0004): `{"schema":1,"data":<value>}` on
-//! success, or `{"schema":1,"error":{"kind":"<Variant>","message":"<text>"}}`
-//! with exit 1 on failure. `message` is the error's `Display` (Go-matching text)
-//! and `kind` is the stable `Error` variant name.
+//! Read-command envelope (spec R5, ADR-0004 and its 2026-11-21 amendment):
+//! `{"schema":1,"data":<value>,"warnings":[<message>...]}` on success, or
+//! `{"schema":1,"error":{"kind":"<Variant>","message":"<text>"}}` with exit 1 on
+//! failure. `message` is the error's `Display` (Go-matching text) and `kind` is the
+//! stable `Error` variant name, or [`USAGE`].
 
 use schemars::JsonSchema;
 use serde::Serialize;
 
-use crate::Error;
+use crate::{Error, Outcome};
 
 /// The envelope schema version.
 pub const SCHEMA: u32 = 1;
@@ -29,13 +30,28 @@ pub fn to_pretty<T: Serialize + ?Sized>(value: &T) -> Result<Vec<u8>, serde_json
 pub struct Success<T> {
     pub schema: u32,
     pub data: T,
+    /// The operation's warnings, in order: what the text form prints to stderr as
+    /// `warning: <message>`, without the prefix. Always present; empty when there
+    /// are none.
+    pub warnings: Vec<String>,
 }
 
 impl<T> Success<T> {
+    /// A success with no warnings.
     pub fn new(data: T) -> Self {
         Self {
             schema: SCHEMA,
             data,
+            warnings: Vec::new(),
+        }
+    }
+
+    /// An operation's value and its warnings.
+    pub fn from_outcome(outcome: Outcome<T>) -> Self {
+        Self {
+            schema: SCHEMA,
+            data: outcome.value,
+            warnings: outcome.warnings.into_iter().map(|w| w.message).collect(),
         }
     }
 }
@@ -50,17 +66,36 @@ pub struct Failure {
 /// The typed error carried in a [`Failure`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
 pub struct ErrorBody {
-    /// The stable `Error` variant name.
+    /// The stable `Error` variant name, or [`USAGE`] when the command's arguments
+    /// were wrong and it never reached core.
     pub kind: String,
-    /// The error's display text (what the CLI would print without `--json`).
+    /// The text the command prints to stderr without `--json`, without its
+    /// trailing newline: an `Error`'s display text, or the usage or argument
+    /// message.
     pub message: String,
 }
+
+/// The `kind` of a read command's argument error under `--json`: a usage line or
+/// block, or an id that doesn't parse. No `Error` variant has this name.
+pub const USAGE: &str = "Usage";
 
 /// The envelope for an error.
 pub fn failure(err: &Error) -> Failure {
     Failure {
         schema: SCHEMA,
         error: error_body(err),
+    }
+}
+
+/// The envelope for an argument error: `message` is what the command prints to
+/// stderr without `--json`, trailing newlines removed.
+pub fn usage_failure(message: &str) -> Failure {
+    Failure {
+        schema: SCHEMA,
+        error: ErrorBody {
+            kind: USAGE.to_string(),
+            message: message.trim_end_matches('\n').to_string(),
+        },
     }
 }
 

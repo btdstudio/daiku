@@ -10,6 +10,7 @@ use crate::ticket::{self, Ticket};
 
 /// One ticket of a plan and its build, if there is one.
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct BuildRow {
     pub id: String,
     pub repo: String,

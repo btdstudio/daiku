@@ -25,6 +25,7 @@ static FIELD_RE: LazyLock<Regex> =
 
 /// One reference in the index.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Entry {
     /// Relative to `references/`, cleaned, slash-separated.
     pub path: String,
@@ -38,12 +39,14 @@ pub struct Entry {
 
 /// One warning from [`check`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Finding {
     pub message: String,
 }
 
 /// What [`check`] found. `present` is false when there's no `references/` folder.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Check {
     pub present: bool,
     /// Files in the room, not counting `index.md`, `context.md` and dotfiles.

@@ -27,11 +27,11 @@
       ],
       "properties": {
         "kind": {
-          "description": "The stable `Error` variant name.",
+          "description": "The stable `Error` variant name, or [`USAGE`] when the command's arguments were wrong and it never reached core.",
           "type": "string"
         },
         "message": {
-          "description": "The error's display text (what the CLI would print without `--json`).",
+          "description": "The text the command prints to stderr without `--json`, without its trailing newline: an `Error`'s display text, or the usage or argument message.",
           "type": "string"
         }
       }

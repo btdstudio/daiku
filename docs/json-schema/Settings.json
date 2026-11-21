@@ -4,18 +4,18 @@
   "description": "The effective settings.",
   "type": "object",
   "required": [
-    "adr_dir",
-    "base_source",
+    "adrDir",
+    "baseSource",
     "gates",
     "overview",
-    "source_dir",
-    "sync_file"
+    "sourceDir",
+    "syncFile"
   ],
   "properties": {
-    "adr_dir": {
+    "adrDir": {
       "type": "string"
     },
-    "base_source": {
+    "baseSource": {
       "type": "string"
     },
     "gates": {
@@ -24,10 +24,10 @@
     "overview": {
       "type": "string"
     },
-    "source_dir": {
+    "sourceDir": {
       "type": "string"
     },
-    "sync_file": {
+    "syncFile": {
       "type": "string"
     }
   }
