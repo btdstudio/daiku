@@ -31,7 +31,7 @@ the Rust workspace, and brings in its history from `btdstudio/daiku-next`.
   `go install github.com/btdstudio/daiku/cmd/daiku@v0.2.0` still installs the last Go
   release.
 
-The alpha sections below have the details of the port.
+See [`CHANGELOG.md`](https://github.com/btdstudio/daiku/blob/v0.3.0/CHANGELOG.md) for the alpha releases' details of the port.
 
 ## 0.3.0-alpha.3
 

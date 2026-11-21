@@ -45,6 +45,10 @@ installs into that folder and changes nothing else.
 If you installed a `v0.3.0-alpha` release by hand into `~/.local/bin`, remove that copy,
 or make sure `~/.cargo/bin` comes before `~/.local/bin` on your `PATH`.
 
+The shell script checks the archive's sha256 before installing it. The PowerShell
+script doesn't, so on Windows the checked install is the archive below, with its
+checksum and `gh attestation verify`.
+
 ### Or download the archive
 
 Each release also has an archive per platform, with its checksum:
@@ -102,8 +106,11 @@ Open a new terminal afterwards, so the changed `PATH` takes effect.
 With the GitHub CLI:
 
 ```sh
-gh attestation verify "daiku-cli-$target.tar.xz" --repo btdstudio/daiku
+gh attestation verify "daiku-cli-$target.tar.xz" --repo btdstudio/daiku --signer-workflow btdstudio/daiku/.github/workflows/release.yml
 ```
+
+`--signer-workflow` accepts only an attestation made by the release workflow. Use
+`.zip` in place of `.tar.xz` on Windows.
 
 ## 2. Take over from the Go binary
 
@@ -176,7 +183,8 @@ go install github.com/btdstudio/daiku/cmd/daiku@v0.2.0
 Everything below is deliberate and small.
 
 - **JSON files** the Rust CLI writes can differ from Go's in escaping only (`<`, `>` and
-  `&` aren't written as `<`…). They mean the same, and both CLIs read both.
+  `&` aren't written as `\u003c`, `\u003e` and `\u0026`, as Go writes them).
+  They mean the same, and both CLIs read both.
 - **Text that isn't valid UTF-8** (a Latin-1 or Windows-1252 title, say) is kept
   byte for byte in the files daiku writes back. In two places it's shown with U+FFFD
   instead:
