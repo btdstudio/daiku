@@ -1,8 +1,0 @@
-{
-  "adrDir": "plan/04_architecture/adr",
-  "baseSource": "",
-  "gates": "block",
-  "sourceDir": "plan/00_intake",
-  "syncFile": "plan/06_publish/sync.md",
-  "vcs": "none"
-}
