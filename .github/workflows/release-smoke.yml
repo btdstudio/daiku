@@ -83,7 +83,13 @@ jobs:
       - name: Verify the archive's build attestation
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh attestation verify "dl/daiku-cli-${{ matrix.target }}.${{ matrix.archive }}" --repo "$GITHUB_REPOSITORY"
+        # Pinned to the release workflow at this tag, so an attestation from any other
+        # workflow or ref in the repo doesn't pass.
+        run: |
+          gh attestation verify "dl/daiku-cli-${{ matrix.target }}.${{ matrix.archive }}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+            --source-ref "refs/tags/$TAG"
       # The installers download without logging in, so these steps get no token. Each
       # installs into a throwaway CARGO_HOME, leaves PATH and GITHUB_PATH alone, and
       # checks what it installed.
@@ -110,8 +116,14 @@ jobs:
           Remove-Item Env:GITHUB_PATH -ErrorAction SilentlyContinue
           if (Test-Path $env:CARGO_HOME) { Remove-Item -Recurse -Force $env:CARGO_HOME }
           $url = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:TAG/daiku-cli-installer.ps1"
+          # The installer edits the user Path in the registry unless
+          # DAIKU_CLI_NO_MODIFY_PATH is set, so check it's unchanged.
+          $pathBefore = [Environment]::GetEnvironmentVariable('Path', 'User')
           powershell -ExecutionPolicy Bypass -c "irm $url | iex"
           if ($LASTEXITCODE -ne 0) { throw "the installer exited with $LASTEXITCODE" }
+          $pathAfter = [Environment]::GetEnvironmentVariable('Path', 'User')
+          if ($pathAfter -ne $pathBefore) { throw "the installer changed the user Path: before '$pathBefore', after '$pathAfter'" }
+          Write-Output "user Path unchanged"
           $got = & (Join-Path $env:CARGO_HOME 'bin\daiku.exe') version
           if ($got -ne "daiku $env:TAG") { throw "the installed daiku printed '$got', not 'daiku $env:TAG'" }
           Write-Output "installed: $got"
