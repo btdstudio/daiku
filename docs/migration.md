@@ -26,7 +26,7 @@ with access to `btdstudio/daiku-next`).
 ### macOS and Linux (bash, zsh)
 
 ```sh
-tag=v0.3.0-alpha.1
+tag=v0.3.0-alpha.2
 target=aarch64-apple-darwin        # from the table above
 
 gh release download "$tag" -R btdstudio/daiku-next -D daiku-dl -p "daiku-cli-$target.tar.xz*"
@@ -45,7 +45,7 @@ your shell's startup file.
 ### Windows (PowerShell)
 
 ```powershell
-$tag = "v0.3.0-alpha.1"
+$tag = "v0.3.0-alpha.2"
 $target = "x86_64-pc-windows-msvc"
 
 gh release download $tag -R btdstudio/daiku-next -D daiku-dl -p "daiku-cli-$target.zip*"
@@ -83,11 +83,11 @@ Check the Rust one is now the one that runs:
 
 ```sh
 command -v daiku                 # ~/.local/bin/daiku
-daiku version                    # daiku v0.3.0-alpha.1
+daiku version                    # daiku v0.3.0-alpha.2
 ```
 
 The Go binary prints its own version (`daiku v0.1.0`, or `daiku dev` for a build from a
-checkout), so a `daiku v0.3.0-alpha.1` means it's the Rust binary.
+checkout), so a `daiku v0.3.0-alpha.2` means it's the Rust binary.
 
 ## 3. Check an existing workspace
 
@@ -127,7 +127,7 @@ Everything below is deliberate and small.
   frontmatter isn't valid UTF-8, where Go would write it back.
 - **`daiku repo add`** refuses an `https://` remote that carries credentials even when
   its host name holds a percent-escaped letter (`h%41`), which Go lets through.
-- **`--json`** isn't there yet. It comes in a later alpha.
+- **`--json`** is available on every read command in spec R5: `status` (and `status <plan-change>`), `switch` (listing), `settings`, `source list`/`show`, `adr list`/`show`, `idea list`/`show`, `tickets check`/`status`/`order`, `repo list`, `references check`, `env`, and `version`. Each writes one versioned envelope to stdout: `{"schema":1,"data":...}` on success, or `{"schema":1,"error":{"kind","message"}}` with exit 1 on failure. `data` is the serialised core read value, and view/contract schemas are in `docs/json-schema/`.
 
 ## Going back to Go
 
@@ -152,12 +152,12 @@ release notes do. (GitHub's `releases/latest` skips prereleases, so it doesn't f
 `-alpha` release.)
 
 ```sh
-tag=v0.3.0-alpha.1
+tag=v0.3.0-alpha.2
 curl --proto '=https' --tlsv1.2 -LsSf "https://github.com/btdstudio/daiku/releases/download/$tag/daiku-cli-installer.sh" | sh
 ```
 
 ```powershell
-$tag = "v0.3.0-alpha.1"
+$tag = "v0.3.0-alpha.2"
 powershell -ExecutionPolicy Bypass -c "irm https://github.com/btdstudio/daiku/releases/download/$tag/daiku-cli-installer.ps1 | iex"
 ```
 
