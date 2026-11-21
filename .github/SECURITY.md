@@ -7,7 +7,7 @@ release is supported. Releases before `v0.3.0`, including `v0.2.0`, the last
 release of the Go CLI, get no fixes.
 
 Install daiku with one of the installers or a release archive, as the
-[README](../README.md#install) describes.
+[README](https://github.com/btdstudio/daiku#install) describes.
 
 ## Reporting a vulnerability
 
