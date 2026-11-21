@@ -5,7 +5,7 @@ file first, then navigates by the routing below. `CLAUDE.md` just points
 here; this file is harness-agnostic and the single source of truth.
 
 Edits inside daiku's `##` sections are overwritten by `daiku update`. Keep your own
-notes in `## Tech stack & standards` or in sections of your own.
+notes in `## Tech stack & standards`, `## Model routing`, or in sections of your own.
 
 ## How to start
 
@@ -60,9 +60,9 @@ hand-editing `STATE.json` when the binary is on your PATH.
 
 ## Routing
 
-| Task / Intent | Directory | Persona | Read | Skip |
-|---|---|---|---|---|
-| Work an idea | `ideas/` | facilitator | `ideas/context.md`, `ideas/<n>-<slug>/*`, `references/index.md` | `plan/specs/*`, the repos |
+| Task / Intent | Directory | Persona | Model | Read | Skip |
+|---|---|---|---|---|---|
+| Work an idea | `ideas/` | facilitator | `deep` | `ideas/context.md`, `ideas/<n>-<slug>/*`, `references/index.md` | `plan/specs/*`, the repos |
 
 Each room adds its own routing below once it exists.
 
@@ -97,6 +97,21 @@ repo, but writes no `.gitattributes` or `.gitkeep`.
 ## Tech stack & standards
 
 - <FILL IN: the target systems' stacks, or "greenfield — to be decided in architecture">
+
+## Model routing
+
+Each routing row names a model tier. Map each tier to a model your harness
+offers; this section is yours, and `daiku update` keeps it. A tier applies when
+an agent hands a phase to a subagent, or when you pick the model at the start
+of a phase. Reading this file doesn't switch the current session's model.
+
+| Tier | Use for | Model |
+|---|---|---|
+| `deep` | judgment: ideas, synthesis, specs, architecture, breakdown, design, review, security | <FILL IN> |
+| `standard` | most work: research, exploring repos, settling tickets, requirements, code | <FILL IN> |
+| `fast` | mechanical steps: intake, publishing, running tests, shipping | <FILL IN> |
+
+For example, in Claude Code: `opus`, `sonnet`, `haiku`.
 
 ## Directory map
 
@@ -186,16 +201,16 @@ Prefer `daiku <command>` over hand-editing `plan/00_intake/`.
 
 ## Plan routing
 
-| Task / Intent | Directory | Persona | Read | Skip |
-|---|---|---|---|---|
-| Define the base source | `plan/00_intake/` | — | `plan/00_intake/context.md`, `references/index.md` | `plan/specs/*` |
-| External research | `plan/01_research/` | researcher | `plan/01_research/context.md`, `plan/00_intake/<id>.md`, `references/index.md` | `plan/specs/*`, the repos |
-| Explore the repos | `plan/02_explore/` | explorer | `plan/02_explore/context.md`, the repos (`daiku repo list`), `references/index.md` | `plan/specs/*` |
-| Synthesize findings | `plan/02_explore/` | architect | `plan/02_explore/context.md`, `plan/02_explore/<n>-<slug>/*`, `references/index.md` | `plan/specs/*` |
-| Write the spec | `plan/03_spec/` | analyst | `plan/03_spec/context.md`, `plan/00_intake/*`, `plan/01_research/<n>-<slug>/*`, `plan/02_explore/<n>-<slug>/*`, `references/index.md` | the repos |
-| Design the architecture | `plan/04_architecture/` | architect | `plan/04_architecture/context.md`, `plan/specs/<n>-<slug>/functional-spec.md`, `plan/02_explore/<n>-<slug>/*`, `references/index.md` | the repos |
-| Break down into tickets | `plan/05_breakdown/` | architect | `plan/05_breakdown/context.md`, `plan/specs/<n>-<slug>/functional-spec.md`, `plan/specs/<n>-<slug>/architecture.md`, `references/index.md` | the repos |
-| Publish tickets | `plan/06_publish/` | publisher | `plan/06_publish/context.md`, `sync.md`, `plan/specs/<n>-<slug>/tickets/*`, `references/index.md` | the repos, `plan/01_research/*`, `plan/02_explore/*` |
+| Task / Intent | Directory | Persona | Model | Read | Skip |
+|---|---|---|---|---|---|
+| Define the base source | `plan/00_intake/` | — | `fast` | `plan/00_intake/context.md`, `references/index.md` | `plan/specs/*` |
+| External research | `plan/01_research/` | researcher | `standard` | `plan/01_research/context.md`, `plan/00_intake/<id>.md`, `references/index.md` | `plan/specs/*`, the repos |
+| Explore the repos | `plan/02_explore/` | explorer | `standard` | `plan/02_explore/context.md`, the repos (`daiku repo list`), `references/index.md` | `plan/specs/*` |
+| Synthesize findings | `plan/02_explore/` | architect | `deep` | `plan/02_explore/context.md`, `plan/02_explore/<n>-<slug>/*`, `references/index.md` | `plan/specs/*` |
+| Write the spec | `plan/03_spec/` | analyst | `deep` | `plan/03_spec/context.md`, `plan/00_intake/*`, `plan/01_research/<n>-<slug>/*`, `plan/02_explore/<n>-<slug>/*`, `references/index.md` | the repos |
+| Design the architecture | `plan/04_architecture/` | architect | `deep` | `plan/04_architecture/context.md`, `plan/specs/<n>-<slug>/functional-spec.md`, `plan/02_explore/<n>-<slug>/*`, `references/index.md` | the repos |
+| Break down into tickets | `plan/05_breakdown/` | architect | `deep` | `plan/05_breakdown/context.md`, `plan/specs/<n>-<slug>/functional-spec.md`, `plan/specs/<n>-<slug>/architecture.md`, `references/index.md` | the repos |
+| Publish tickets | `plan/06_publish/` | publisher | `fast` | `plan/06_publish/context.md`, `sync.md`, `plan/specs/<n>-<slug>/tickets/*`, `references/index.md` | the repos, `plan/01_research/*`, `plan/02_explore/*` |
 
 ## Plan naming
 
@@ -276,17 +291,17 @@ holder.
 
 ## Build routing
 
-| Task / Intent | Directory | Persona | Read | Skip |
-|---|---|---|---|---|
-| Settle the ticket | `build/01_design/` | analyst | the build's ticket (`daiku status`), `sync.md` for a ticket with `external` | the repo, `build/02_implementation/*` |
-| Write requirements | `build/01_design/` | analyst | `build/01_design/context.md`, the build's ticket | the repo, `build/03_testing/*` |
-| Design solution | `build/01_design/` | architect | `build/01_design/context.md`, `build/<repo>/changes/<ticket-id>/requirements.md` | — |
-| Break down into tasks | `build/01_design/` | architect | `build/<repo>/changes/<ticket-id>/design.md` | — |
-| Implement code | `build/02_implementation/` | coder | `build/02_implementation/context.md`, `build/<repo>/changes/<ticket-id>/*`, the repo (`daiku repo list`) and its `AGENTS.md` | `build/04_refactoring/*` |
-| Test | `build/03_testing/` | qa | `build/03_testing/context.md`, the repo and its `AGENTS.md`, `build/<repo>/changes/<ticket-id>/requirements.md` | `build/tickets/*` |
-| Review | `build/04_refactoring/` | reviewer | `build/04_refactoring/context.md`, the repo and its `AGENTS.md`, `build/<repo>/changes/<ticket-id>/*` | `build/tickets/*` |
-| Security pass | `build/04_refactoring/` | security | `build/04_refactoring/context.md`, the repo and its `AGENTS.md` | `build/tickets/*` |
-| Ship | the repo | — | `build/<repo>/changes/<ticket-id>/tasks.json`, the build's ticket | `build/02_implementation/*` |
+| Task / Intent | Directory | Persona | Model | Read | Skip |
+|---|---|---|---|---|---|
+| Settle the ticket | `build/01_design/` | analyst | `standard` | the build's ticket (`daiku status`), `sync.md` for a ticket with `external` | the repo, `build/02_implementation/*` |
+| Write requirements | `build/01_design/` | analyst | `standard` | `build/01_design/context.md`, the build's ticket | the repo, `build/03_testing/*` |
+| Design solution | `build/01_design/` | architect | `deep` | `build/01_design/context.md`, `build/<repo>/changes/<ticket-id>/requirements.md` | — |
+| Break down into tasks | `build/01_design/` | architect | `deep` | `build/<repo>/changes/<ticket-id>/design.md` | — |
+| Implement code | `build/02_implementation/` | coder | `standard` | `build/02_implementation/context.md`, `build/<repo>/changes/<ticket-id>/*`, the repo (`daiku repo list`) and its `AGENTS.md` | `build/04_refactoring/*` |
+| Test | `build/03_testing/` | qa | `fast` | `build/03_testing/context.md`, the repo and its `AGENTS.md`, `build/<repo>/changes/<ticket-id>/requirements.md` | `build/tickets/*` |
+| Review | `build/04_refactoring/` | reviewer | `deep` | `build/04_refactoring/context.md`, the repo and its `AGENTS.md`, `build/<repo>/changes/<ticket-id>/*` | `build/tickets/*` |
+| Security pass | `build/04_refactoring/` | security | `deep` | `build/04_refactoring/context.md`, the repo and its `AGENTS.md` | `build/tickets/*` |
+| Ship | the repo | — | `fast` | `build/<repo>/changes/<ticket-id>/tasks.json`, the build's ticket | `build/02_implementation/*` |
 
 ## Build naming
 
