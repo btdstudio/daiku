@@ -3,7 +3,7 @@ args = ["help", "tickets", "order"]
 [expect]
 exit = 0
 stdout = '''
-usage: daiku tickets order [--json]
+usage: daiku tickets order
 
 list tickets in publish order
 '''

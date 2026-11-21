@@ -120,7 +120,7 @@ fn json_schemas_match_docs() {
     for (name, body) in &schemas {
         let path = dir.join(format!("{name}.json"));
         match std::fs::read_to_string(&path) {
-            Ok(existing) if &existing == body => {}
+            Ok(existing) if existing.replace("\r\n", "\n") == *body => {}
             Ok(_) => changed.push(name.clone()),
             Err(_) => missing.push(name.clone()),
         }

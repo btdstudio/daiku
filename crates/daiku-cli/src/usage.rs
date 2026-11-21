@@ -20,7 +20,7 @@ pub struct Command {
 /// The `repo` block, as Go's `repos.Usage("daiku")` prints it.
 const REPO_USAGE: &str = "  daiku repo add <name> <remote> [--path <p>] [--branch <b>]
                                           register a repo
-  daiku repo list [--json]                 list repos and their local paths
+  daiku repo list                          list repos and their local paths
   daiku repo path <name> <path>            set a repo's local path
   daiku repo doctor [--clone] [--into <dir>]
                                           check repos; --clone fetches missing ones
@@ -43,21 +43,21 @@ pub const COMMANDS: &[Command] = &[
     },
     Command {
         path: &["status"],
-        synopsis: "daiku status [<plan-change>] [--json]",
+        synopsis: "daiku status [<plan-change>]",
         summary: "show the active change and the board, or a plan's tickets",
         notes: "",
         raw: "",
     },
     Command {
         path: &["settings"],
-        synopsis: "daiku settings [--json]",
+        synopsis: "daiku settings",
         summary: "show effective settings",
         notes: "",
         raw: "",
     },
     Command {
         path: &["switch"],
-        synopsis: "daiku switch [--all] [<change>] [--json]",
+        synopsis: "daiku switch [--all] [<change>]",
         summary: "list changes, or switch the active one",
         notes: "  --all      include closed changes in the list\n",
         raw: "",
@@ -71,14 +71,14 @@ pub const COMMANDS: &[Command] = &[
     },
     Command {
         path: &["source", "list"],
-        synopsis: "daiku source list [--json]",
+        synopsis: "daiku source list",
         summary: "list intake sources (the default verb)",
         notes: "",
         raw: "",
     },
     Command {
         path: &["source", "show"],
-        synopsis: "daiku source show <id> [--json]",
+        synopsis: "daiku source show <id>",
         summary: "show an intake source",
         notes: "",
         raw: "",
@@ -92,14 +92,14 @@ pub const COMMANDS: &[Command] = &[
     },
     Command {
         path: &["adr", "list"],
-        synopsis: "daiku adr list [--json]",
+        synopsis: "daiku adr list",
         summary: "list ADRs (the default verb)",
         notes: "",
         raw: "",
     },
     Command {
         path: &["adr", "show"],
-        synopsis: "daiku adr show <number> [--json]",
+        synopsis: "daiku adr show <number>",
         summary: "show an ADR",
         notes: "",
         raw: "",
@@ -155,21 +155,21 @@ pub const COMMANDS: &[Command] = &[
     },
     Command {
         path: &["tickets", "check"],
-        synopsis: "daiku tickets check [--json]",
+        synopsis: "daiku tickets check",
         summary: "validate every ticket",
         notes: "",
         raw: "",
     },
     Command {
         path: &["tickets", "status"],
-        synopsis: "daiku tickets status [--json]",
+        synopsis: "daiku tickets status",
         summary: "list tickets by draft, ready, published and drifted",
         notes: "",
         raw: "",
     },
     Command {
         path: &["tickets", "order"],
-        synopsis: "daiku tickets order [--json]",
+        synopsis: "daiku tickets order",
         summary: "list tickets in publish order",
         notes: "",
         raw: "",
@@ -211,14 +211,14 @@ pub const COMMANDS: &[Command] = &[
     },
     Command {
         path: &["idea", "list"],
-        synopsis: "daiku idea list [--json]",
+        synopsis: "daiku idea list",
         summary: "list ideas with their status",
         notes: "",
         raw: "",
     },
     Command {
         path: &["idea", "show"],
-        synopsis: "daiku idea show <id> [--json]",
+        synopsis: "daiku idea show <id>",
         summary: "print an idea's summary and status",
         notes: "",
         raw: "",
@@ -253,7 +253,7 @@ pub const COMMANDS: &[Command] = &[
     },
     Command {
         path: &["references", "check"],
-        synopsis: "daiku references check [--json]",
+        synopsis: "daiku references check",
         summary: "warn about unindexed references and bad index entries",
         notes: "",
         raw: "",
@@ -267,7 +267,7 @@ pub const COMMANDS: &[Command] = &[
     },
     Command {
         path: &["env"],
-        synopsis: "daiku env [--json]",
+        synopsis: "daiku env",
         summary: "print harness flags for the active change's repos",
         notes: "",
         raw: "",
@@ -295,7 +295,7 @@ pub const COMMANDS: &[Command] = &[
     },
     Command {
         path: &["version"],
-        synopsis: "daiku version [--json]",
+        synopsis: "daiku version",
         summary: "print the version",
         notes: "",
         raw: "",

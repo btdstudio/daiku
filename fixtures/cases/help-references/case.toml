@@ -4,5 +4,5 @@ args = ["help", "references"]
 exit = 0
 stdout = '''
 usage:
-  daiku references check [--json]          warn about unindexed references and bad index entries
+  daiku references check                   warn about unindexed references and bad index entries
 '''

@@ -31,3 +31,16 @@ pub fn err(stdout: &mut impl Write, e: &Error) -> u8 {
     let _ = stdout.write_all(&to_pretty(&failure(e)).expect("json"));
     1
 }
+
+/// Prints a failure envelope with an explicit kind/message and returns `code`.
+pub fn err_raw(stdout: &mut impl Write, kind: &str, message: String, code: u8) -> u8 {
+    let f = daiku_core::json::Failure {
+        schema: daiku_core::json::SCHEMA,
+        error: daiku_core::json::ErrorBody {
+            kind: kind.to_string(),
+            message,
+        },
+    };
+    let _ = stdout.write_all(&to_pretty(&f).expect("json"));
+    code
+}

@@ -107,11 +107,15 @@ fn new(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 
 
 /// Go's `ticketsCheck`.
 fn check(args: &[String], json_mode: bool, stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
-    if !args.is_empty() {
-        let _ = writeln!(stderr, "{}", usage::usage_line(&["tickets", "check"]));
-        return 1;
-    }
     if json_mode {
+        if !args.is_empty() {
+            return crate::json::err_raw(
+                stdout,
+                "InvalidArgs",
+                usage::usage_line(&["tickets", "check"]),
+                1,
+            );
+        }
         return match workspace().tickets_check() {
             Ok(o) => {
                 let code = if o.value.errors.is_empty() { 0 } else { 1 };
@@ -153,11 +157,15 @@ fn status(
     stdout: &mut impl Write,
     stderr: &mut impl Write,
 ) -> u8 {
-    if !args.is_empty() {
-        let _ = writeln!(stderr, "{}", usage::usage_line(&["tickets", "status"]));
-        return 1;
-    }
     if json_mode {
+        if !args.is_empty() {
+            return crate::json::err_raw(
+                stdout,
+                "InvalidArgs",
+                usage::usage_line(&["tickets", "status"]),
+                1,
+            );
+        }
         return match workspace().tickets_status() {
             Ok(o) => crate::json::ok(stdout, &o.value, 0),
             Err(e) => crate::json::err(stdout, &e),
@@ -186,11 +194,15 @@ fn status(
 
 /// Go's `ticketsOrder`.
 fn order(args: &[String], json_mode: bool, stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
-    if !args.is_empty() {
-        let _ = writeln!(stderr, "{}", usage::usage_line(&["tickets", "order"]));
-        return 1;
-    }
     if json_mode {
+        if !args.is_empty() {
+            return crate::json::err_raw(
+                stdout,
+                "InvalidArgs",
+                usage::usage_line(&["tickets", "order"]),
+                1,
+            );
+        }
         return match workspace().tickets_order() {
             Ok(o) => crate::json::ok(stdout, &o.value, 0),
             Err(e) => crate::json::err(stdout, &e),

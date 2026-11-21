@@ -3,7 +3,7 @@ args = ["help", "status"]
 [expect]
 exit = 0
 stdout = '''
-usage: daiku status [<plan-change>] [--json]
+usage: daiku status [<plan-change>]
 
 show the active change and the board, or a plan's tickets
 '''
