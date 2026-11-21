@@ -20,7 +20,9 @@ Thank you for your interest in contributing to daiku!
 
 ## How daiku is developed
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/).
-- Split work into small, reviewed commits, each of which builds and passes
-  `go vet ./...` and `go test ./...`.
+- Split work into small, reviewed commits, each of which passes `cargo fmt --check`,
+  `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test --workspace`.
+  A change to the CLI's behaviour also passes the fixture checks in
+  [`AGENTS.md`](../AGENTS.md).
 - Pull Requests are merged by rebase, so each commit lands on `main` as it was
   reviewed.
