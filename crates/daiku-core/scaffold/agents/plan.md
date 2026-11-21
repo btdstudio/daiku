@@ -66,16 +66,16 @@ Prefer `daiku <command>` over hand-editing `plan/00_intake/`.
 
 ## Plan routing
 
-| Task / Intent | Directory | Persona | Read | Skip |
-|---|---|---|---|---|
-| Define the base source | `plan/00_intake/` | — | `plan/00_intake/context.md`, `references/index.md` | `plan/specs/*` |
-| External research | `plan/01_research/` | researcher | `plan/01_research/context.md`, `plan/00_intake/<id>.md`, `references/index.md` | `plan/specs/*`, the repos |
-| Explore the repos | `plan/02_explore/` | explorer | `plan/02_explore/context.md`, the repos (`daiku repo list`), `references/index.md` | `plan/specs/*` |
-| Synthesize findings | `plan/02_explore/` | architect | `plan/02_explore/context.md`, `plan/02_explore/<n>-<slug>/*`, `references/index.md` | `plan/specs/*` |
-| Write the spec | `plan/03_spec/` | analyst | `plan/03_spec/context.md`, `plan/00_intake/*`, `plan/01_research/<n>-<slug>/*`, `plan/02_explore/<n>-<slug>/*`, `references/index.md` | the repos |
-| Design the architecture | `plan/04_architecture/` | architect | `plan/04_architecture/context.md`, `plan/specs/<n>-<slug>/functional-spec.md`, `plan/02_explore/<n>-<slug>/*`, `references/index.md` | the repos |
-| Break down into tickets | `plan/05_breakdown/` | architect | `plan/05_breakdown/context.md`, `plan/specs/<n>-<slug>/functional-spec.md`, `plan/specs/<n>-<slug>/architecture.md`, `references/index.md` | the repos |
-| Publish tickets | `plan/06_publish/` | publisher | `plan/06_publish/context.md`, `sync.md`, `plan/specs/<n>-<slug>/tickets/*`, `references/index.md` | the repos, `plan/01_research/*`, `plan/02_explore/*` |
+| Task / Intent | Directory | Persona | Model | Read | Skip |
+|---|---|---|---|---|---|
+| Define the base source | `plan/00_intake/` | — | `fast` | `plan/00_intake/context.md`, `references/index.md` | `plan/specs/*` |
+| External research | `plan/01_research/` | researcher | `standard` | `plan/01_research/context.md`, `plan/00_intake/<id>.md`, `references/index.md` | `plan/specs/*`, the repos |
+| Explore the repos | `plan/02_explore/` | explorer | `standard` | `plan/02_explore/context.md`, the repos (`daiku repo list`), `references/index.md` | `plan/specs/*` |
+| Synthesize findings | `plan/02_explore/` | architect | `deep` | `plan/02_explore/context.md`, `plan/02_explore/<n>-<slug>/*`, `references/index.md` | `plan/specs/*` |
+| Write the spec | `plan/03_spec/` | analyst | `deep` | `plan/03_spec/context.md`, `plan/00_intake/*`, `plan/01_research/<n>-<slug>/*`, `plan/02_explore/<n>-<slug>/*`, `references/index.md` | the repos |
+| Design the architecture | `plan/04_architecture/` | architect | `deep` | `plan/04_architecture/context.md`, `plan/specs/<n>-<slug>/functional-spec.md`, `plan/02_explore/<n>-<slug>/*`, `references/index.md` | the repos |
+| Break down into tickets | `plan/05_breakdown/` | architect | `deep` | `plan/05_breakdown/context.md`, `plan/specs/<n>-<slug>/functional-spec.md`, `plan/specs/<n>-<slug>/architecture.md`, `references/index.md` | the repos |
+| Publish tickets | `plan/06_publish/` | publisher | `fast` | `plan/06_publish/context.md`, `sync.md`, `plan/specs/<n>-<slug>/tickets/*`, `references/index.md` | the repos, `plan/01_research/*`, `plan/02_explore/*` |
 
 ## Plan naming
 

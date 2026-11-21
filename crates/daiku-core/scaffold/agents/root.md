@@ -5,7 +5,7 @@ file first, then navigates by the routing below. `CLAUDE.md` just points
 here; this file is harness-agnostic and the single source of truth.
 
 Edits inside daiku's `##` sections are overwritten by `daiku update`. Keep your own
-notes in `## Tech stack & standards` or in sections of your own.
+notes in `## Tech stack & standards`, `## Model routing`, or in sections of your own.
 
 ## How to start
 
@@ -60,9 +60,9 @@ hand-editing `STATE.json` when the binary is on your PATH.
 
 ## Routing
 
-| Task / Intent | Directory | Persona | Read | Skip |
-|---|---|---|---|---|
-| Work an idea | `ideas/` | facilitator | `ideas/context.md`, `ideas/<n>-<slug>/*`, `references/index.md` | `plan/specs/*`, the repos |
+| Task / Intent | Directory | Persona | Model | Read | Skip |
+|---|---|---|---|---|---|
+| Work an idea | `ideas/` | facilitator | `deep` | `ideas/context.md`, `ideas/<n>-<slug>/*`, `references/index.md` | `plan/specs/*`, the repos |
 
 Each room adds its own routing below once it exists.
 
@@ -97,6 +97,21 @@ repo, but writes no `.gitattributes` or `.gitkeep`.
 ## Tech stack & standards
 
 - <FILL IN: the target systems' stacks, or "greenfield — to be decided in architecture">
+
+## Model routing
+
+Each routing row names a model tier. Map each tier to a model your harness
+offers; this section is yours, and `daiku update` keeps it. A tier applies when
+an agent hands a phase to a subagent, or when you pick the model at the start
+of a phase. Reading this file doesn't switch the current session's model.
+
+| Tier | Use for | Model |
+|---|---|---|
+| `deep` | judgment: ideas, synthesis, specs, architecture, breakdown, design, review, security | <FILL IN> |
+| `standard` | most work: research, exploring repos, settling tickets, requirements, code | <FILL IN> |
+| `fast` | mechanical steps: intake, publishing, running tests, shipping | <FILL IN> |
+
+For example, in Claude Code: `opus`, `sonnet`, `haiku`.
 
 ## Directory map
 
