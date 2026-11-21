@@ -1,0 +1,17 @@
+args = ["status", "--json"]
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "vcs": "git",
+    "active": null,
+    "noChanges": true,
+    "plans": [],
+    "builds": []
+  },
+  "warnings": []
+}
+'''

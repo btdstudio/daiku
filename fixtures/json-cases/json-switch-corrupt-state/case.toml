@@ -1,0 +1,14 @@
+args = ["switch", "--json"]
+workspace = "plan-intake-draft"
+
+[expect]
+exit = 1
+stdout = '''
+{
+  "schema": 1,
+  "error": {
+    "kind": "StateParse",
+    "message": "daiku: cannot parse STATE.json: invalid character 'n' looking for beginning of object key string"
+  }
+}
+'''

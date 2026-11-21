@@ -1,0 +1,14 @@
+args = ["idea", "show", "0", "--json"]
+workspace = "ideas"
+
+[expect]
+exit = 1
+stdout = '''
+{
+  "schema": 1,
+  "error": {
+    "kind": "Usage",
+    "message": "invalid id: 0"
+  }
+}
+'''

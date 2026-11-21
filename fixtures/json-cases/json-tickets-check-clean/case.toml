@@ -1,0 +1,16 @@
+args = ["tickets", "check", "--json"]
+workspace = "plan-published"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "errors": [],
+    "warnings": [],
+    "count": 2
+  },
+  "warnings": []
+}
+'''

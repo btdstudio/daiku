@@ -77,6 +77,12 @@ jobs:
           exe=""
           if [ "$RUNNER_OS" = "Windows" ]; then exe=".exe"; fi
           target/debug/daiku-fixtures$exe check --bin "target/debug/daiku$exe" --list fixtures/ported.txt
+      # Rust only: Go has no --json (S-0009). fixtures/json-cases/README.md
+      - name: check the --json cases against the Rust daiku
+        run: |
+          exe=""
+          if [ "$RUNNER_OS" = "Windows" ]; then exe=".exe"; fi
+          target/debug/daiku-fixtures$exe check --bin "target/debug/daiku$exe" --cases fixtures/json-cases
 
   # Keeps the generated release workflow (.github/workflows/release.yml) in step with
   # dist-workspace.toml, and checks that dist can plan a release (S-0010). The dist

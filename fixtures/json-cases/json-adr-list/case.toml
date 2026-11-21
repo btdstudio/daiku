@@ -1,0 +1,35 @@
+args = ["adr", "list", "--json"]
+workspace = "adrs"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": [
+    {
+      "number": 1,
+      "slug": "use-postgres",
+      "title": "Use Postgres",
+      "status": "proposed",
+      "date": "2026-01-15",
+      "deciders": "team",
+      "path": "plan/04_architecture/adr/0001-use-postgres.md",
+      "file": "0001-use-postgres.md",
+      "raw": "# 0001 — Use Postgres\n\n- Status: proposed\n- Date: 2026-01-15\n- Deciders: team\n\n## Context\n\nWe need a database.\n\n## Decision\n\nPostgres.\n\n## Consequences\n\nOne more service.\n"
+    },
+    {
+      "number": 2,
+      "slug": "session-tokens",
+      "title": "Session tokens",
+      "status": "proposed",
+      "date": "2026-01-15",
+      "deciders": "",
+      "path": "plan/04_architecture/adr/0002-session-tokens.md",
+      "file": "0002-session-tokens.md",
+      "raw": "# 0002 — Session tokens\n\n- Status: proposed\n- Date: 2026-01-15\n- Deciders: \n\n## Context\n\n\n\n## Decision\n\n\n\n## Consequences\n\n\n"
+    }
+  ],
+  "warnings": []
+}
+'''

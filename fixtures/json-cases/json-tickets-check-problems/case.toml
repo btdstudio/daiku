@@ -1,0 +1,42 @@
+args = ["tickets", "check", "--json"]
+workspace = "plan-architecture-approved"
+
+[expect]
+exit = 1
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "errors": [
+      {
+        "id": "plan/specs/1-auth-flow/tickets/T-0005.md",
+        "message": "frontmatter: line 2: unterminated list",
+        "reference": ""
+      },
+      {
+        "id": "S-0003",
+        "message": "repo is required for a story",
+        "reference": ""
+      },
+      {
+        "id": "S-0004",
+        "message": "repo is required for a story",
+        "reference": ""
+      },
+      {
+        "id": "S-0003",
+        "message": "parent E-0009 doesn't exist",
+        "reference": "E-0009"
+      },
+      {
+        "id": "tickets",
+        "message": "dependency cycle among S-0003, S-0004",
+        "reference": ""
+      }
+    ],
+    "warnings": [],
+    "count": 4
+  },
+  "warnings": []
+}
+'''

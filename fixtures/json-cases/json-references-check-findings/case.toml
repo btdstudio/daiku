@@ -1,0 +1,33 @@
+args = ["references", "check", "--json"]
+workspace = "init"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "present": true,
+    "files": 3,
+    "indexed": 2,
+    "findings": [
+      {
+        "message": "gone.md: listed in the index, but the file is missing"
+      },
+      {
+        "message": "notes/partial.md: missing from"
+      },
+      {
+        "message": "notes/partial.md: missing added"
+      },
+      {
+        "message": "../escape.md: outside references/"
+      },
+      {
+        "message": "unlisted.pdf: not in references/index.md"
+      }
+    ]
+  },
+  "warnings": []
+}
+'''

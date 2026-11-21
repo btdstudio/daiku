@@ -1,0 +1,21 @@
+args = ["source", "show", "2", "--json"]
+workspace = "adrs"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "id": 2,
+    "title": "Customer interviews",
+    "source": "issue",
+    "repo": "",
+    "rev": "",
+    "idea": 0,
+    "body": "Notes from five calls.",
+    "path": "plan/00_intake/2.md"
+  },
+  "warnings": []
+}
+'''

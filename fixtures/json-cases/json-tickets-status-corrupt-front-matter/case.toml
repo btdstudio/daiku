@@ -1,0 +1,44 @@
+args = ["tickets", "status", "--json"]
+workspace = "plan-published"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "buckets": [
+      {
+        "name": "draft",
+        "ids": []
+      },
+      {
+        "name": "ready",
+        "ids": []
+      },
+      {
+        "name": "published",
+        "ids": [
+          "S-0002"
+        ]
+      },
+      {
+        "name": "unfrozen",
+        "ids": []
+      },
+      {
+        "name": "drifted",
+        "ids": []
+      }
+    ],
+    "unreadable": [
+      {
+        "id": "plan/specs/1-auth-flow/tickets/E-0001.md",
+        "message": "frontmatter: line 2: unterminated list",
+        "reference": ""
+      }
+    ]
+  },
+  "warnings": []
+}
+'''

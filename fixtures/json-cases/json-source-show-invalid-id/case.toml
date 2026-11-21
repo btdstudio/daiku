@@ -1,0 +1,14 @@
+args = ["source", "show", "two", "--json"]
+workspace = "adrs"
+
+[expect]
+exit = 1
+stdout = '''
+{
+  "schema": 1,
+  "error": {
+    "kind": "Usage",
+    "message": "invalid id: two"
+  }
+}
+'''

@@ -1,0 +1,14 @@
+args = ["idea", "show", "--json"]
+workspace = "ideas"
+
+[expect]
+exit = 1
+stdout = '''
+{
+  "schema": 1,
+  "error": {
+    "kind": "Usage",
+    "message": "usage: daiku idea show <id>"
+  }
+}
+'''

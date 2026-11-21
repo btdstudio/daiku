@@ -1,0 +1,39 @@
+args = ["tickets", "status", "--json"]
+workspace = "plan-breakdown-approved"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "buckets": [
+      {
+        "name": "draft",
+        "ids": []
+      },
+      {
+        "name": "ready",
+        "ids": [
+          "E-0001",
+          "S-0002"
+        ]
+      },
+      {
+        "name": "published",
+        "ids": []
+      },
+      {
+        "name": "unfrozen",
+        "ids": []
+      },
+      {
+        "name": "drifted",
+        "ids": []
+      }
+    ],
+    "unreadable": []
+  },
+  "warnings": []
+}
+'''

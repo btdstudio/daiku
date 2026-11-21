@@ -1,0 +1,14 @@
+args = ["env", "--json"]
+workspace = "build-implement"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "flags": "--add-dir {ROOT}"
+  },
+  "warnings": []
+}
+'''
