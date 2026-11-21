@@ -41,12 +41,21 @@ pub fn source(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write)
     let verb = args.first().map_or("list", String::as_str);
     match verb {
         "list" => {
-            let (rest, json_mode) = crate::json::take_flag(&args[1..]);
-            if !rest.is_empty() {
-                let _ = writeln!(stderr, "{}", usage::usage_line(&["source", "list"]));
-                return 1;
-            }
+            let rest_args = if args.first().map(String::as_str) == Some("list") {
+                &args[1..]
+            } else {
+                args
+            };
+            let (rest, json_mode) = crate::json::take_flag(rest_args);
             if json_mode {
+                if !rest.is_empty() {
+                    return crate::json::err_raw(
+                        stdout,
+                        "InvalidArgs",
+                        usage::usage_line(&["source", "list"]),
+                        1,
+                    );
+                }
                 return match ws.source_list() {
                     Ok(o) => crate::json::ok(stdout, &o.value, 0),
                     Err(e) => crate::json::err(stdout, &e),
@@ -156,12 +165,21 @@ pub fn adr(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) ->
     let verb = args.first().map_or("list", String::as_str);
     match verb {
         "list" => {
-            let (rest, json_mode) = crate::json::take_flag(&args[1..]);
-            if !rest.is_empty() {
-                let _ = writeln!(stderr, "{}", usage::usage_line(&["adr", "list"]));
-                return 1;
-            }
+            let rest_args = if args.first().map(String::as_str) == Some("list") {
+                &args[1..]
+            } else {
+                args
+            };
+            let (rest, json_mode) = crate::json::take_flag(rest_args);
             if json_mode {
+                if !rest.is_empty() {
+                    return crate::json::err_raw(
+                        stdout,
+                        "InvalidArgs",
+                        usage::usage_line(&["adr", "list"]),
+                        1,
+                    );
+                }
                 return match ws.adr_list() {
                     Ok(o) => crate::json::ok(stdout, &o.value, 0),
                     Err(e) => crate::json::err(stdout, &e),
@@ -313,11 +331,15 @@ pub fn idea(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -
         "new" => idea_new(rest, stdout, stderr),
         "list" => {
             let (r, json_mode) = crate::json::take_flag(rest);
-            if !r.is_empty() {
-                let _ = writeln!(stderr, "{}", usage::usage_line(&["idea", "list"]));
-                return 1;
-            }
             if json_mode {
+                if !r.is_empty() {
+                    return crate::json::err_raw(
+                        stdout,
+                        "InvalidArgs",
+                        usage::usage_line(&["idea", "list"]),
+                        1,
+                    );
+                }
                 return match workspace().idea_list() {
                     Ok(o) => crate::json::ok(stdout, &o.value, 0),
                     Err(e) => crate::json::err(stdout, &e),

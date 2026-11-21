@@ -123,11 +123,10 @@ fn report(err: &Error) -> String {
 
 fn settings(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
     let (rest, json_mode) = json::take_flag(args);
-    if !rest.is_empty() {
-        let _ = writeln!(stderr, "{}", usage::usage_line(&["settings"]));
-        return 1;
-    }
     if json_mode {
+        if !rest.is_empty() {
+            return json::err_raw(stdout, "InvalidArgs", usage::usage_line(&["settings"]), 1);
+        }
         return match workspace().settings() {
             Ok(o) => json::ok(stdout, &o.value, 0),
             Err(e) => json::err(stdout, &e),
