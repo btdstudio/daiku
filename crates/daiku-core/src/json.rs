@@ -11,7 +11,9 @@
 //! stable `Error` variant name, or [`USAGE`].
 
 use schemars::JsonSchema;
-use serde::Serialize;
+/// The bound for envelope data. Re-exported so clients such as the CLI don't depend
+/// on serde themselves (ADR-0005).
+pub use serde::Serialize;
 
 use crate::{Error, Outcome};
 

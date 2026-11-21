@@ -66,7 +66,6 @@ name = "daiku-cli"
 version = "0.3.0-alpha.3"
 dependencies = [
  "daiku-core",
- "serde",
 ]
 
 [[package]]

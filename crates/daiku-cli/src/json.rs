@@ -6,6 +6,10 @@
 //! arguments untouched, so a stray `--json` on any other command behaves as it
 //! does in Go.
 //!
+//! A read group named with no verb (`tickets`, `idea`, `repo`, `references`) is a read
+//! form too: it writes a `Usage` envelope with the group's usage block. An unknown
+//! verb isn't, because it can't be told apart from a command that writes.
+//!
 //! A read form writes one envelope to stdout and nothing to stderr. The warnings
 //! the text form prints to stderr go in the envelope's `warnings`. Its arguments
 //! are checked as the text form checks them: what the text form ignores, `--json`
@@ -14,9 +18,8 @@
 
 use std::io::Write;
 
-use daiku_core::json::{Success, failure, to_pretty, usage_failure};
+use daiku_core::json::{Serialize, Success, failure, to_pretty, usage_failure};
 use daiku_core::{Error, Outcome};
-use serde::Serialize;
 
 use crate::{usage, workspace};
 
@@ -49,17 +52,11 @@ pub fn run(command: &str, args: &[String], stdout: &mut impl Write) -> Option<u8
             if rest.len() != usize::from(all) {
                 return None;
             }
-            match workspace().known_changes() {
-                Ok(mut o) => {
-                    if !all {
-                        o.value.retain(|c| c.status != "closed");
-                    }
-                    ok(out, o, 0)
-                }
-                Err(e) => err(out, &e),
-            }
+            read(out, workspace().switch_list(all))
         }
         "env" => read(out, workspace().env_view()),
+        // Go prints `repo`'s usage before it loads the registry when there's no verb.
+        "repo" if rest.is_empty() => usage_err(out, &usage::usage_text(&["repo"])),
         "repo" if rest.first() == Some(&"list") => {
             // Go loads the registry before it reads the verb.
             let ws = workspace();
@@ -78,6 +75,7 @@ pub fn run(command: &str, args: &[String], stdout: &mut impl Write) -> Option<u8
             },
             Some("status") => read(out, workspace().tickets_status()),
             Some("order") => read(out, workspace().tickets_order()),
+            None => usage_err(out, &usage::usage_text(&["tickets"])),
             _ => return None,
         },
         "references" => match rest.as_slice() {
@@ -92,6 +90,7 @@ pub fn run(command: &str, args: &[String], stdout: &mut impl Write) -> Option<u8
                 _ => usage_err(out, &format!("invalid id: {id}")),
             },
             ["show", ..] => usage_err(out, &usage::usage_line(&["idea", "show"])),
+            [] => usage_err(out, &usage::usage_text(&["idea"])),
             _ => return None,
         },
         _ => return None,
