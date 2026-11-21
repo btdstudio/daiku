@@ -435,7 +435,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn listing_matches_go_usage_txt() {
+    fn listing_matches_usage_txt() {
         let usage_txt = include_str!("../../../fixtures/usage.txt");
         assert_eq!(usage(), usage_txt);
     }

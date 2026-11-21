@@ -490,7 +490,7 @@ fn checklist_check_catches_renames_and_gaps() {
     );
 }
 
-// ---- S-0003: check --list and fixtures/ported.txt ----
+// ---- S-0003: check --list ----
 
 #[test]
 fn check_list_runs_the_listed_cases() {
@@ -531,32 +531,4 @@ fn check_list_runs_the_listed_cases() {
     );
     assert_eq!(out.status.code(), Some(2));
     assert!(text(&out.stderr).contains("lists no cases"));
-}
-
-/// AC10: every name in fixtures/ported.txt is a case.
-#[test]
-fn ported_list_names_only_cases() {
-    let dir = repo_fixtures();
-    let text = std::fs::read_to_string(dir.join("ported.txt")).unwrap();
-    let names: Vec<&str> = text
-        .lines()
-        .map(|l| l.split('#').next().unwrap_or("").trim())
-        .filter(|l| !l.is_empty())
-        .collect();
-    assert!(!names.is_empty());
-    let missing: Vec<&&str> = names
-        .iter()
-        .filter(|n| !dir.join("cases").join(n).join("case.toml").is_file())
-        .collect();
-    assert!(
-        missing.is_empty(),
-        "fixtures/ported.txt names cases that don't exist: {missing:?}"
-    );
-    let mut sorted = names.clone();
-    sorted.dedup();
-    assert_eq!(
-        sorted.len(),
-        names.len(),
-        "fixtures/ported.txt names a case twice"
-    );
 }

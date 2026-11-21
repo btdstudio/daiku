@@ -4,8 +4,8 @@
 //! its own: keys match fields without regard to case, unknown keys are ignored,
 //! `null` leaves a string as it was, a repeated object key merges into a map, and a
 //! repeated array reuses the slice's storage. [`decode`] follows them, and its type
-//! errors carry Go's wording. `scripts/state-messages.go` captures Go's behaviour
-//! for the tests.
+//! errors carry Go's wording. `tests/state-go.txt` holds Go's behaviour, captured
+//! from `v0.2.0`, as the tests' expectations.
 
 use std::collections::BTreeMap;
 

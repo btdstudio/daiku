@@ -3,5 +3,5 @@ fixtures/** -text
 crates/daiku-fixtures/tests/cases/** -text
 # The embedded scaffold must keep its bytes (manifest hashes, AC4).
 crates/daiku-core/scaffold/** -text
-# The overview golden test compares Go's bytes exactly (S-0006 D10).
+# The overview golden test compares the golden bytes exactly (S-0006 D10).
 testdata/** -text

@@ -277,7 +277,8 @@ fn slugify_matches_go() {
     assert_eq!(slugify(&"x".repeat(100)).len(), 40);
 }
 
-// --- STATE.json decoding against Go (scripts/state-messages.go) ---
+// --- STATE.json decoding against tests/state-go.txt (Go's behaviour, captured from
+// v0.2.0 and kept as daiku's expected behaviour) ---
 
 /// The decoded file as Go's `json.Marshal` prints `stateFile`.
 fn go_json(f: &file::RawFile) -> String {

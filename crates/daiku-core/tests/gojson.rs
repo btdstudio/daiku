@@ -1,5 +1,5 @@
-//! daiku-core's port of Go's JSON syntax errors against Go's own messages, captured
-//! by `scripts/gojson-messages.go` into `gojson-go.txt` (AC8).
+//! daiku-core's port of Go's JSON syntax errors against `gojson-go.txt`: Go's own
+//! messages, captured from `v0.2.0` and kept as daiku's expected wording (AC8).
 
 use daiku_core::gojson;
 
