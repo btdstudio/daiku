@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Success_for_IdeaSummary",
+  "description": "A successful read: `data` is the serialised core value the command reads.",
+  "type": "object",
+  "required": [
+    "data",
+    "schema"
+  ],
+  "properties": {
+    "data": {
+      "$ref": "#/definitions/IdeaSummary"
+    },
+    "schema": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    }
+  },
+  "definitions": {
+    "IdeaSummary": {
+      "description": "An idea's summary (`idea show --json`).",
+      "type": "object",
+      "required": [
+        "summary"
+      ],
+      "properties": {
+        "summary": {
+          "$ref": "#/definitions/Text"
+        }
+      }
+    },
+    "Text": {
+      "type": "string"
+    }
+  }
+}

@@ -56,7 +56,7 @@ pub struct IdeaPromoteResult {
 
 /// A plan's README, rendered: its path, the merged text, whether the file on
 /// disk already holds it, and whether this call wrote it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct OverviewDoc {
     /// Relative to the root, slash-separated.
     pub rel: String,
@@ -155,6 +155,15 @@ impl Workspace {
     /// `daiku idea show <id>`: the idea's `summary.md`, byte for byte.
     pub fn idea_show(&self, id: i64) -> Result<Outcome<Vec<u8>>, Error> {
         idea::summary(self.root(), id).map(Outcome::new)
+    }
+
+    /// `daiku idea show --json`: the summary as a JSON-safe core view (D6).
+    pub fn idea_summary(&self, id: i64) -> Result<Outcome<crate::json::IdeaSummary>, Error> {
+        idea::summary(self.root(), id).map(|b| {
+            Outcome::new(crate::json::IdeaSummary {
+                summary: crate::text::Text::from(b),
+            })
+        })
     }
 
     /// `daiku idea park|drop|reopen <id> --reason <r>`, dated today.

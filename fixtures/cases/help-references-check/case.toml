@@ -3,7 +3,7 @@ args = ["help", "references", "check"]
 [expect]
 exit = 0
 stdout = '''
-usage: daiku references check
+usage: daiku references check [--json]
 
 warn about unindexed references and bad index entries
 '''

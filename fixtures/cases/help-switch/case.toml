@@ -3,7 +3,7 @@ args = ["help", "switch"]
 [expect]
 exit = 0
 stdout = '''
-usage: daiku switch [--all] [<change>]
+usage: daiku switch [--all] [<change>] [--json]
 
 list changes, or switch the active one
   --all      include closed changes in the list

@@ -3,7 +3,7 @@ args = ["help", "idea", "list"]
 [expect]
 exit = 0
 stdout = '''
-usage: daiku idea list
+usage: daiku idea list [--json]
 
 list ideas with their status
 '''

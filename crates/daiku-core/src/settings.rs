@@ -9,7 +9,7 @@ use crate::env::Dirs;
 use crate::{Error, gofmt, gojson};
 
 /// The effective settings.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, schemars::JsonSchema)]
 pub struct Settings {
     pub base_source: String,
     pub gates: String,
@@ -34,13 +34,49 @@ impl Default for Settings {
 }
 
 /// The settings with the raw layers they came from.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct Loaded {
     pub global: Map<String, Value>,
     pub project: Map<String, Value>,
     pub effective: Settings,
     /// The effective `vcs`: `git` (the default) or `none`.
     pub vcs: String,
+}
+
+impl schemars::JsonSchema for Loaded {
+    fn schema_name() -> String {
+        "Loaded".to_string()
+    }
+
+    fn json_schema(generator: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+        use schemars::schema::{InstanceType, ObjectValidation, Schema, SchemaObject, SingleOrVec};
+        let obj = Schema::Object(SchemaObject {
+            instance_type: Some(SingleOrVec::Single(Box::new(InstanceType::Object))),
+            object: Some(Box::new(ObjectValidation {
+                additional_properties: Some(Box::new(Schema::Bool(true))),
+                ..Default::default()
+            })),
+            ..Default::default()
+        });
+        let mut props = schemars::Map::new();
+        props.insert("global".into(), obj.clone());
+        props.insert("project".into(), obj);
+        props.insert("effective".into(), generator.subschema_for::<Settings>());
+        props.insert("vcs".into(), generator.subschema_for::<String>());
+        let required = ["global", "project", "effective", "vcs"]
+            .into_iter()
+            .map(str::to_string)
+            .collect();
+        Schema::Object(SchemaObject {
+            instance_type: Some(SingleOrVec::Single(Box::new(InstanceType::Object))),
+            object: Some(Box::new(ObjectValidation {
+                properties: props,
+                required,
+                ..Default::default()
+            })),
+            ..Default::default()
+        })
+    }
 }
 
 /// The global settings file: `$XDG_CONFIG_HOME/daiku/settings.json` when it's set

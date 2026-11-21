@@ -3,7 +3,7 @@ args = ["help", "env"]
 [expect]
 exit = 0
 stdout = '''
-usage: daiku env
+usage: daiku env [--json]
 
 print harness flags for the active change's repos
 '''

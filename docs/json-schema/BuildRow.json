@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BuildRow",
+  "description": "One ticket of a plan and its build, if there is one.",
+  "type": "object",
+  "required": [
+    "closed",
+    "id",
+    "phase",
+    "repo",
+    "started",
+    "status"
+  ],
+  "properties": {
+    "closed": {
+      "type": "boolean"
+    },
+    "id": {
+      "type": "string"
+    },
+    "phase": {
+      "description": "The build's; empty when it isn't started.",
+      "type": "string"
+    },
+    "repo": {
+      "type": "string"
+    },
+    "started": {
+      "description": "A build change by the ticket's id exists.",
+      "type": "boolean"
+    },
+    "status": {
+      "type": "string"
+    }
+  }
+}

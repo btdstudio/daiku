@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ErrorBody",
+  "description": "The typed error carried in a [`Failure`].",
+  "type": "object",
+  "required": [
+    "kind",
+    "message"
+  ],
+  "properties": {
+    "kind": {
+      "description": "The stable `Error` variant name.",
+      "type": "string"
+    },
+    "message": {
+      "description": "The error's display text (what the CLI would print without `--json`).",
+      "type": "string"
+    }
+  }
+}

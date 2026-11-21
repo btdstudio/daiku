@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Success_for_Check",
+  "description": "A successful read: `data` is the serialised core value the command reads.",
+  "type": "object",
+  "required": [
+    "data",
+    "schema"
+  ],
+  "properties": {
+    "data": {
+      "$ref": "#/definitions/Check"
+    },
+    "schema": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    }
+  },
+  "definitions": {
+    "Check": {
+      "description": "What [`check`] found. `present` is false when there's no `references/` folder.",
+      "type": "object",
+      "required": [
+        "files",
+        "findings",
+        "indexed",
+        "present"
+      ],
+      "properties": {
+        "files": {
+          "description": "Files in the room, not counting `index.md`, `context.md` and dotfiles.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0.0
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Finding"
+          }
+        },
+        "indexed": {
+          "description": "How many of them the index lists.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0.0
+        },
+        "present": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Finding": {
+      "description": "One warning from [`check`].",
+      "type": "object",
+      "required": [
+        "message"
+      ],
+      "properties": {
+        "message": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

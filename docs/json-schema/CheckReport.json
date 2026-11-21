@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CheckReport",
+  "description": "`tickets check`'s findings, in Go's order.",
+  "type": "object",
+  "required": [
+    "count",
+    "errors",
+    "warnings"
+  ],
+  "properties": {
+    "count": {
+      "description": "Tickets read: the plan's and the inbox's.",
+      "type": "integer",
+      "format": "uint",
+      "minimum": 0.0
+    },
+    "errors": {
+      "description": "`✗` lines; any makes the check fail.",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Problem"
+      }
+    },
+    "warnings": {
+      "description": "`!` lines.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "definitions": {
+    "Problem": {
+      "description": "One thing wrong with a ticket.",
+      "type": "object",
+      "required": [
+        "id",
+        "message",
+        "reference"
+      ],
+      "properties": {
+        "id": {
+          "description": "The ticket, or its path if the id isn't usable.",
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "reference": {
+          "description": "For a missing reference, the id it names.",
+          "type": "string"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Idea",
+  "description": "One idea, read from its `summary.md`.",
+  "type": "object",
+  "required": [
+    "body",
+    "changes",
+    "dir",
+    "id",
+    "reason",
+    "slug",
+    "status",
+    "title",
+    "updated"
+  ],
+  "properties": {
+    "body": {
+      "description": "`summary.md` below its frontmatter, as bytes (`idea promote` copies it).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Text"
+        }
+      ]
+    },
+    "changes": {
+      "description": "The changes promoted from it, in order.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "dir": {
+      "description": "`ideas/<n>-<slug>`, slash-separated, relative to the root.",
+      "type": "string"
+    },
+    "id": {
+      "type": "integer",
+      "format": "int64"
+    },
+    "reason": {
+      "$ref": "#/definitions/Text"
+    },
+    "slug": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    },
+    "title": {
+      "description": "As the summary holds it (`idea list` prints it).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Text"
+        }
+      ]
+    },
+    "updated": {
+      "description": "`YYYY-MM-DD`.",
+      "type": "string"
+    }
+  },
+  "definitions": {
+    "Text": {
+      "type": "string"
+    }
+  }
+}

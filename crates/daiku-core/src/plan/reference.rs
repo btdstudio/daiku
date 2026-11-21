@@ -24,7 +24,7 @@ static FIELD_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\s+- (purpose|from|added|summary):[ \t]*(.*)$").expect("valid"));
 
 /// One reference in the index.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct Entry {
     /// Relative to `references/`, cleaned, slash-separated.
     pub path: String,
@@ -37,13 +37,13 @@ pub struct Entry {
 }
 
 /// One warning from [`check`].
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct Finding {
     pub message: String,
 }
 
 /// What [`check`] found. `present` is false when there's no `references/` folder.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct Check {
     pub present: bool,
     /// Files in the room, not counting `index.md`, `context.md` and dotfiles.

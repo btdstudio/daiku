@@ -54,6 +54,16 @@ impl serde::Serialize for Text {
     }
 }
 
+impl schemars::JsonSchema for Text {
+    fn schema_name() -> String {
+        "Text".into()
+    }
+
+    fn json_schema(generator: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+        <String>::json_schema(generator)
+    }
+}
+
 impl PartialEq<&str> for Text {
     fn eq(&self, other: &&str) -> bool {
         self.0 == other.as_bytes()

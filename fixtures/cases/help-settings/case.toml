@@ -3,7 +3,7 @@ args = ["help", "settings"]
 [expect]
 exit = 0
 stdout = '''
-usage: daiku settings
+usage: daiku settings [--json]
 
 show effective settings
 '''

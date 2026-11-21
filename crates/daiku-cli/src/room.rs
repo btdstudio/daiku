@@ -40,26 +40,46 @@ pub fn source(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write)
     };
     let verb = args.first().map_or("list", String::as_str);
     match verb {
-        "list" => finish(ws.source_list(), stderr, |sources| {
-            for s in sources {
-                let label = if s.source == source::REPO {
-                    [b"repo:", s.repo.as_bytes()].concat()
-                } else {
-                    s.source.as_bytes().to_vec()
-                };
-                let id = format!("#{} [", s.id);
-                line(stdout, &[id.as_bytes(), &label, b"] ", s.title.as_bytes()]);
+        "list" => {
+            let (rest, json_mode) = crate::json::take_flag(&args[1..]);
+            if !rest.is_empty() {
+                let _ = writeln!(stderr, "{}", usage::usage_line(&["source", "list"]));
+                return 1;
             }
-        }),
+            if json_mode {
+                return match ws.source_list() {
+                    Ok(o) => crate::json::ok(stdout, &o.value, 0),
+                    Err(e) => crate::json::err(stdout, &e),
+                };
+            }
+            finish(ws.source_list(), stderr, |sources| {
+                for s in sources {
+                    let label = if s.source == source::REPO {
+                        [b"repo:", s.repo.as_bytes()].concat()
+                    } else {
+                        s.source.as_bytes().to_vec()
+                    };
+                    let id = format!("#{} [", s.id);
+                    line(stdout, &[id.as_bytes(), &label, b"] ", s.title.as_bytes()]);
+                }
+            })
+        }
         "show" => {
-            let Some(arg) = args.get(1) else {
+            let (rest, json_mode) = crate::json::take_flag(&args[1..]);
+            if rest.len() != 1 {
                 let _ = writeln!(stderr, "{}", usage::usage_line(&["source", "show"]));
                 return 1;
-            };
-            let Ok(id) = arg.parse::<i64>() else {
-                let _ = writeln!(stderr, "invalid id: {arg}");
+            }
+            let Ok(id) = rest[0].parse::<i64>() else {
+                let _ = writeln!(stderr, "invalid id: {}", rest[0]);
                 return 1;
             };
+            if json_mode {
+                return match ws.source_show(id) {
+                    Ok(o) => crate::json::ok(stdout, &o.value, 0),
+                    Err(e) => crate::json::err(stdout, &e),
+                };
+            }
             finish(ws.source_show(id), stderr, |s| {
                 let head = format!("#{} [{}] ", s.id, s.source);
                 let mut parts: Vec<&[u8]> = vec![head.as_bytes(), s.title.as_bytes()];
@@ -135,21 +155,41 @@ pub fn adr(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) ->
     };
     let verb = args.first().map_or("list", String::as_str);
     match verb {
-        "list" => finish(ws.adr_list(), stderr, |records| {
-            for r in records {
-                let head = format!("{:04} [{}] ", r.number, r.status);
-                line(stdout, &[head.as_bytes(), r.title.as_bytes()]);
+        "list" => {
+            let (rest, json_mode) = crate::json::take_flag(&args[1..]);
+            if !rest.is_empty() {
+                let _ = writeln!(stderr, "{}", usage::usage_line(&["adr", "list"]));
+                return 1;
             }
-        }),
+            if json_mode {
+                return match ws.adr_list() {
+                    Ok(o) => crate::json::ok(stdout, &o.value, 0),
+                    Err(e) => crate::json::err(stdout, &e),
+                };
+            }
+            finish(ws.adr_list(), stderr, |records| {
+                for r in records {
+                    let head = format!("{:04} [{}] ", r.number, r.status);
+                    line(stdout, &[head.as_bytes(), r.title.as_bytes()]);
+                }
+            })
+        }
         "show" => {
-            let Some(arg) = args.get(1) else {
+            let (rest, json_mode) = crate::json::take_flag(&args[1..]);
+            if rest.len() != 1 {
                 let _ = writeln!(stderr, "{}", usage::usage_line(&["adr", "show"]));
                 return 1;
-            };
-            let Ok(n) = arg.parse::<i64>() else {
-                let _ = writeln!(stderr, "invalid number: {arg}");
+            }
+            let Ok(n) = rest[0].parse::<i64>() else {
+                let _ = writeln!(stderr, "invalid number: {}", rest[0]);
                 return 1;
             };
+            if json_mode {
+                return match ws.adr_show(n) {
+                    Ok(o) => crate::json::ok(stdout, &o.value, 0),
+                    Err(e) => crate::json::err(stdout, &e),
+                };
+            }
             finish(ws.adr_show(n), stderr, |r| {
                 let _ = stdout.write_all(&r.raw);
             })
@@ -226,9 +266,20 @@ pub fn adr(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) ->
 
 /// Go's `runReferences`.
 pub fn references(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
-    if args.len() != 1 || args[0] != "check" {
+    if args.first().map(String::as_str) != Some("check") {
         let _ = write!(stderr, "{}", usage::usage_text(&["references"]));
         return 1;
+    }
+    let (rest, json_mode) = crate::json::take_flag(&args[1..]);
+    if !rest.is_empty() {
+        let _ = write!(stderr, "{}", usage::usage_text(&["references"]));
+        return 1;
+    }
+    if json_mode {
+        return match workspace().references_check() {
+            Ok(o) => crate::json::ok(stdout, &o.value, 0),
+            Err(e) => crate::json::err(stdout, &e),
+        };
     }
     finish(workspace().references_check(), stderr, |res| {
         if !res.present {
@@ -260,25 +311,45 @@ pub fn idea(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -
     let rest = &args[1..];
     match verb.as_str() {
         "new" => idea_new(rest, stdout, stderr),
-        "list" => finish(workspace().idea_list(), stderr, |ideas| {
-            for i in ideas {
-                let head = format!("{} [{}] ", i.id, i.status);
-                let mut parts: Vec<&[u8]> = vec![head.as_bytes(), i.title.as_bytes()];
-                let set_aside = i.status == "parked" || i.status == "dropped";
-                if set_aside && !i.reason.is_empty() {
-                    parts.extend([" — reason: ".as_bytes(), i.reason.as_bytes()]);
-                }
-                line(stdout, &parts);
+        "list" => {
+            let (r, json_mode) = crate::json::take_flag(rest);
+            if !r.is_empty() {
+                let _ = writeln!(stderr, "{}", usage::usage_line(&["idea", "list"]));
+                return 1;
             }
-        }),
+            if json_mode {
+                return match workspace().idea_list() {
+                    Ok(o) => crate::json::ok(stdout, &o.value, 0),
+                    Err(e) => crate::json::err(stdout, &e),
+                };
+            }
+            finish(workspace().idea_list(), stderr, |ideas| {
+                for i in ideas {
+                    let head = format!("{} [{}] ", i.id, i.status);
+                    let mut parts: Vec<&[u8]> = vec![head.as_bytes(), i.title.as_bytes()];
+                    let set_aside = i.status == "parked" || i.status == "dropped";
+                    if set_aside && !i.reason.is_empty() {
+                        parts.extend([" — reason: ".as_bytes(), i.reason.as_bytes()]);
+                    }
+                    line(stdout, &parts);
+                }
+            })
+        }
         "show" => {
-            if rest.len() != 1 {
+            let (r, json_mode) = crate::json::take_flag(rest);
+            if r.len() != 1 {
                 let _ = writeln!(stderr, "{}", usage::usage_line(&["idea", "show"]));
                 return 1;
             }
-            let Some(id) = parse_idea_id(&rest[0], stderr) else {
+            let Some(id) = parse_idea_id(&r[0], stderr) else {
                 return 1;
             };
+            if json_mode {
+                return match workspace().idea_summary(id) {
+                    Ok(o) => crate::json::ok(stdout, &o.value, 0),
+                    Err(e) => crate::json::err(stdout, &e),
+                };
+            }
             finish(workspace().idea_show(id), stderr, |summary| {
                 let _ = stdout.write_all(summary);
             })

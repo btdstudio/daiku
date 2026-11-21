@@ -3,7 +3,7 @@ args = ["help", "adr", "show"]
 [expect]
 exit = 0
 stdout = '''
-usage: daiku adr show <number>
+usage: daiku adr show <number> [--json]
 
 show an ADR
 '''

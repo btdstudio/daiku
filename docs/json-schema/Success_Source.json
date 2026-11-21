@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Success_for_Source",
+  "description": "A successful read: `data` is the serialised core value the command reads.",
+  "type": "object",
+  "required": [
+    "data",
+    "schema"
+  ],
+  "properties": {
+    "data": {
+      "$ref": "#/definitions/Source"
+    },
+    "schema": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    }
+  },
+  "definitions": {
+    "Source": {
+      "description": "One intake source.",
+      "type": "object",
+      "required": [
+        "body",
+        "id",
+        "idea",
+        "path",
+        "repo",
+        "rev",
+        "source",
+        "title"
+      ],
+      "properties": {
+        "body": {
+          "$ref": "#/definitions/Text"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "idea": {
+          "description": "The idea this was promoted from, 0 for none.",
+          "type": "integer",
+          "format": "int64"
+        },
+        "path": {
+          "description": "Where it was read from or written to, as shown.",
+          "type": "string"
+        },
+        "repo": {
+          "description": "A path or URL when the source is a repo.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Text"
+            }
+          ]
+        },
+        "rev": {
+          "description": "An optional pin.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Text"
+            }
+          ]
+        },
+        "source": {
+          "description": "`issue` or `repo`.",
+          "type": "string"
+        },
+        "title": {
+          "$ref": "#/definitions/Text"
+        }
+      }
+    },
+    "Text": {
+      "type": "string"
+    }
+  }
+}

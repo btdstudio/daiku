@@ -9,7 +9,7 @@ use crate::plan::spec::Severity;
 use crate::ticket::{self, Ticket};
 
 /// One ticket of a plan and its build, if there is one.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, schemars::JsonSchema)]
 pub struct BuildRow {
     pub id: String,
     pub repo: String,

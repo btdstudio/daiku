@@ -3,7 +3,7 @@ args = ["help", "adr", "list"]
 [expect]
 exit = 0
 stdout = '''
-usage: daiku adr list
+usage: daiku adr list [--json]
 
 list ADRs (the default verb)
 '''

@@ -14,7 +14,7 @@ pub const ISSUE: &str = "issue";
 pub const REPO: &str = "repo";
 
 /// One intake source.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, schemars::JsonSchema)]
 pub struct Source {
     pub id: i64,
     pub title: Text,

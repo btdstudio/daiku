@@ -26,19 +26,32 @@ pub fn repo(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -
     let Some(verb) = args.first() else {
         return repo_usage(stderr);
     };
+    let (rest, json_mode) = crate::json::take_flag(&args[1..]);
     let ws = workspace();
     if let Err(e) = ws.registry() {
-        return fail(stderr, &report(&e));
+        return if json_mode && verb.as_str() == "list" {
+            crate::json::err(stdout, &e)
+        } else {
+            fail(stderr, &report(&e))
+        };
     }
-    let rest = &args[1..];
     match verb.as_str() {
-        "add" => repo_add(rest, stdout, stderr),
-        "list" => finish(ws.repo_list(), stderr, |rows| {
-            for r in rows {
-                let path = r.path.as_deref().unwrap_or("(no local path)");
-                let _ = writeln!(stdout, "{}  {}  {}  {path}", r.name, r.remote, r.branch);
+        "add" => repo_add(&rest, stdout, stderr),
+        "list" => {
+            if json_mode {
+                match ws.repo_list() {
+                    Ok(o) => crate::json::ok(stdout, &o.value, 0),
+                    Err(e) => crate::json::err(stdout, &e),
+                }
+            } else {
+                finish(ws.repo_list(), stderr, |rows| {
+                    for r in rows {
+                        let path = r.path.as_deref().unwrap_or("(no local path)");
+                        let _ = writeln!(stdout, "{}  {}  {}  {path}", r.name, r.remote, r.branch);
+                    }
+                })
             }
-        }),
+        }
         "path" => {
             if rest.len() != 2 {
                 return repo_usage(stderr);
@@ -47,7 +60,7 @@ pub fn repo(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -
                 let _ = writeln!(stdout, "{}: {stored}", rest[0]);
             })
         }
-        "doctor" => repo_doctor(rest, stdout, stderr),
+        "doctor" => repo_doctor(&rest, stdout, stderr),
         _ => repo_usage(stderr),
     }
 }
@@ -131,8 +144,15 @@ fn repo_doctor(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write
     0
 }
 
-/// Go's `runEnv`. Extra arguments are ignored, as in Go.
-pub fn env(stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
+/// Go's `runEnv`. Extra arguments are ignored in text mode, as in Go.
+pub fn env(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
+    let (_, json_mode) = crate::json::take_flag(args);
+    if json_mode {
+        return match workspace().env_view() {
+            Ok(o) => crate::json::ok(stdout, &o.value, 0),
+            Err(e) => crate::json::err(stdout, &e),
+        };
+    }
     finish(workspace().env_flags(), stderr, |flags| {
         if !flags.is_empty() {
             let _ = writeln!(stdout, "{flags}");

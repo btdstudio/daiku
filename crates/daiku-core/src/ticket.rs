@@ -113,7 +113,7 @@ pub struct Ticket {
 }
 
 /// One thing wrong with a ticket.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, schemars::JsonSchema)]
 pub struct Problem {
     /// The ticket, or its path if the id isn't usable.
     pub id: String,

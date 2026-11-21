@@ -6,6 +6,6 @@ stdout = '''
 usage:
   daiku adr new --title <t> [--deciders <d>] [--context <c>] [--decision <d>] [--consequences <c>] [--file <path>]
                                            create an ADR in plan/04_architecture/adr/
-  daiku adr list                           list ADRs (the default verb)
-  daiku adr show <number>                  show an ADR
+  daiku adr list [--json]                  list ADRs (the default verb)
+  daiku adr show <number> [--json]         show an ADR
 '''

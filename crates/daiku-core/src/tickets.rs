@@ -33,7 +33,7 @@ pub struct TicketNewOptions {
 }
 
 /// A ticket `tickets new` wrote.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct Created {
     pub id: String,
     /// Shown as Go prints it: joined to the root, slash-separated.
@@ -43,7 +43,7 @@ pub struct Created {
 }
 
 /// `tickets check`'s findings, in Go's order.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct CheckReport {
     /// `✗` lines; any makes the check fail.
     pub errors: Vec<Problem>,
@@ -55,20 +55,20 @@ pub struct CheckReport {
 
 /// `tickets status`: each bucket in Go's order with its sorted ids, and the
 /// files that couldn't be read.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct StatusReport {
     pub buckets: Vec<Bucket>,
     pub unreadable: Vec<Problem>,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct Bucket {
     pub name: String,
     pub ids: Vec<String>,
 }
 
 /// One line of `tickets order`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct Ordered {
     pub id: String,
     pub title: String,
@@ -82,7 +82,7 @@ pub enum ReadyTargets {
     Ids(Vec<String>),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub enum ReadyResult {
     /// The tickets readied, in the order they were written.
     Readied(Vec<String>),
@@ -92,14 +92,14 @@ pub enum ReadyResult {
     Refused(Vec<Problem>),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct Published {
     pub id: String,
     pub tool: String,
     pub item: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub enum PublishResult {
     Published(Published),
     /// Nothing was written.
@@ -107,7 +107,7 @@ pub enum PublishResult {
 }
 
 /// A ticket `tickets pull` recorded.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct Pulled {
     pub id: String,
     pub rel: String,

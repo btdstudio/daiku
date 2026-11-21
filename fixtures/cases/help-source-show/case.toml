@@ -3,7 +3,7 @@ args = ["help", "source", "show"]
 [expect]
 exit = 0
 stdout = '''
-usage: daiku source show <id>
+usage: daiku source show <id> [--json]
 
 show an intake source
 '''

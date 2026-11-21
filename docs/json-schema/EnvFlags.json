@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EnvFlags",
+  "description": "A read command's environment flags (`env --json`).",
+  "type": "object",
+  "required": [
+    "flags"
+  ],
+  "properties": {
+    "flags": {
+      "type": "string"
+    }
+  }
+}

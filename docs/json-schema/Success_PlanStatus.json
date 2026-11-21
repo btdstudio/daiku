@@ -1,0 +1,134 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Success_for_PlanStatus",
+  "description": "A successful read: `data` is the serialised core value the command reads.",
+  "type": "object",
+  "required": [
+    "data",
+    "schema"
+  ],
+  "properties": {
+    "data": {
+      "$ref": "#/definitions/PlanStatus"
+    },
+    "schema": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    }
+  },
+  "definitions": {
+    "BuildRow": {
+      "description": "One ticket of a plan and its build, if there is one.",
+      "type": "object",
+      "required": [
+        "closed",
+        "id",
+        "phase",
+        "repo",
+        "started",
+        "status"
+      ],
+      "properties": {
+        "closed": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "phase": {
+          "description": "The build's; empty when it isn't started.",
+          "type": "string"
+        },
+        "repo": {
+          "type": "string"
+        },
+        "started": {
+          "description": "A build change by the ticket's id exists.",
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "Change": {
+      "description": "One change's progress through its loop. `gates` holds only started phases.",
+      "type": "object",
+      "required": [
+        "gates",
+        "loop",
+        "name",
+        "phase",
+        "reasons",
+        "repos",
+        "sources",
+        "status",
+        "updatedAt"
+      ],
+      "properties": {
+        "gates": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "loop": {
+          "description": "`plan` or `build`; empty for a change that isn't recorded or found.",
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "reasons": {
+          "description": "Why each skipped phase was skipped.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "repos": {
+          "description": "Logical repo names from `REPOS.json`.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      }
+    },
+    "PlanStatus": {
+      "description": "`status <plan>`: a plan's progress and its builds.",
+      "type": "object",
+      "required": [
+        "plan",
+        "rows"
+      ],
+      "properties": {
+        "plan": {
+          "$ref": "#/definitions/Change"
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/BuildRow"
+          }
+        }
+      }
+    }
+  }
+}

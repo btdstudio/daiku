@@ -35,7 +35,7 @@ const TEMPLATE: &str = "root/ideas/templates/summary.md";
 static FOLDER_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(\d+)-").expect("valid"));
 
 /// One idea, read from its `summary.md`.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct Idea {
     pub id: i64,
     pub slug: String,

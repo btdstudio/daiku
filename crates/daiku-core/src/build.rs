@@ -15,7 +15,7 @@ use crate::ticket::{self, Ticket};
 use crate::{Error, Event, gofmt, inbox};
 
 /// One line of `repo list`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct RepoRow {
     pub name: String,
     pub remote: String,
@@ -258,6 +258,14 @@ impl crate::Workspace {
         }
         let reg = self.registry()?;
         reg.env_flags(&st.repos, &self.env().dirs).map(Outcome::new)
+    }
+
+    /// `daiku env --json`: the flags as a core view.
+    pub fn env_view(&self) -> Result<Outcome<crate::json::EnvFlags>, Error> {
+        self.env_flags().map(|o| Outcome {
+            value: crate::json::EnvFlags { flags: o.value },
+            warnings: o.warnings,
+        })
     }
 }
 

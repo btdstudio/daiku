@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Success_for_Array_of_RepoRow",
+  "description": "A successful read: `data` is the serialised core value the command reads.",
+  "type": "object",
+  "required": [
+    "data",
+    "schema"
+  ],
+  "properties": {
+    "data": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/RepoRow"
+      }
+    },
+    "schema": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    }
+  },
+  "definitions": {
+    "RepoRow": {
+      "description": "One line of `repo list`.",
+      "type": "object",
+      "required": [
+        "branch",
+        "name",
+        "remote"
+      ],
+      "properties": {
+        "branch": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "description": "The path as stored in `paths.json` (a `~/` path unexpanded), if any.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "remote": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

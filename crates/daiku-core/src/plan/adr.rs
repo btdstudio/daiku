@@ -11,7 +11,7 @@ use crate::text::Text;
 use crate::{Error, gofmt, write};
 
 /// One decision record.
-#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, schemars::JsonSchema)]
 pub struct Record {
     pub number: i64,
     pub slug: String,
@@ -28,6 +28,7 @@ pub struct Record {
     /// Serialised as a string with U+FFFD for invalid bytes, as Go's
     /// `encoding/json` writes its `Raw`.
     #[serde(serialize_with = "lossy")]
+    #[schemars(with = "String")]
     pub raw: Vec<u8>,
 }
 

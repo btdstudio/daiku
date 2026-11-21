@@ -3,7 +3,7 @@ args = ["help", "version"]
 [expect]
 exit = 0
 stdout = '''
-usage: daiku version
+usage: daiku version [--json]
 
 print the version
 '''
