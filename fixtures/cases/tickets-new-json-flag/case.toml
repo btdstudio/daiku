@@ -1,0 +1,6 @@
+args = ["tickets", "new", "task", "Fix typo", "--inbox", "--repo", "api", "--json"]
+workspace = "plan-architecture-approved"
+
+[expect]
+exit = 1
+stderr = "daiku tickets new: unknown flag \"--json\"\n"

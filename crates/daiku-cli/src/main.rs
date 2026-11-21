@@ -52,9 +52,15 @@ fn run(args: &[String]) -> u8 {
         let _ = stderr.write_all(usage::usage().as_bytes());
         return 1;
     };
+    if let Some(code) = json::run(command, &args[1..], &mut stdout) {
+        return code;
+    }
     match command.as_str() {
-        "version" | "--version" | "-v" => version(&args[1..], &mut stdout),
-        "settings" => settings(&args[1..], &mut stdout, &mut stderr),
+        "version" | "--version" | "-v" => {
+            let _ = writeln!(stdout, "daiku {}", env!("DAIKU_VERSION"));
+            0
+        }
+        "settings" => settings(&mut stdout, &mut stderr),
         "init" => init(&args[1..], &mut stdout, &mut stderr),
         "update" => update(&mut stdout, &mut stderr),
         "check" => check(&mut stdout, &mut stderr),
@@ -70,7 +76,7 @@ fn run(args: &[String]) -> u8 {
         "status" => status(&args[1..], &mut stdout, &mut stderr),
         "tickets" => tickets::tickets(&args[1..], &mut stdout, &mut stderr),
         "repo" => build::repo(&args[1..], &mut stdout, &mut stderr),
-        "env" => build::env(&args[1..], &mut stdout, &mut stderr),
+        "env" => build::env(&mut stdout, &mut stderr),
         "build" => build::build(&args[1..], &mut stdout, &mut stderr),
         "commit" => build::commit(&args[1..], &mut stderr),
         "pr" => build::pr(&args[1..], &mut stderr),
@@ -121,17 +127,7 @@ fn report(err: &Error) -> String {
     err.to_string()
 }
 
-fn settings(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
-    let (rest, json_mode) = json::take_flag(args);
-    if json_mode {
-        if !rest.is_empty() {
-            return json::err_raw(stdout, "InvalidArgs", usage::usage_line(&["settings"]), 1);
-        }
-        return match workspace().settings() {
-            Ok(o) => json::ok(stdout, &o.value, 0),
-            Err(e) => json::err(stdout, &e),
-        };
-    }
+fn settings(stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
     finish(workspace().settings(), stderr, |loaded| {
         let e = &loaded.effective;
         let _ = write!(
@@ -144,22 +140,6 @@ fn settings(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -
 
 /// The version written into manifests, as `daiku version` prints it.
 const VERSION: &str = env!("DAIKU_VERSION");
-
-/// `daiku version [--json]`.
-fn version(args: &[String], stdout: &mut impl Write) -> u8 {
-    let (_, json_mode) = json::take_flag(args);
-    if json_mode {
-        return json::ok(
-            stdout,
-            &daiku_core::json::Version {
-                version: env!("DAIKU_VERSION").to_string(),
-            },
-            0,
-        );
-    }
-    let _ = writeln!(stdout, "daiku {}", env!("DAIKU_VERSION"));
-    0
-}
 
 /// Go's `runInit`.
 fn init(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
@@ -391,22 +371,9 @@ fn change_close(args: &[String], stdout: &mut impl Write, stderr: &mut impl Writ
 
 /// Go's `runSwitch`.
 fn switch(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
-    let (args, json_mode) = json::take_flag(args);
     let all = args.first().is_some_and(|a| a == "--all");
-    let args = if all { &args[1..] } else { &args[..] };
+    let args = if all { &args[1..] } else { args };
     let Some(name) = args.first() else {
-        if json_mode {
-            return match workspace().known_changes() {
-                Ok(o) => {
-                    let mut changes = o.value;
-                    if !all {
-                        changes.retain(|c| c.status != "closed");
-                    }
-                    json::ok(stdout, &changes, 0)
-                }
-                Err(e) => json::err(stdout, &e),
-            };
-        }
         return finish(workspace().known_changes(), stderr, |changes| {
             if changes.is_empty() {
                 let _ = writeln!(
@@ -428,11 +395,6 @@ fn switch(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> 
             }
         });
     };
-    if json_mode {
-        // `switch <change>` is mutating and not in R5; reject json mode clearly.
-        let _ = writeln!(stderr, "{}", usage::usage_line(&["switch"]));
-        return 1;
-    }
     finish(workspace().switch(name), stderr, |c| {
         let _ = writeln!(stdout, "switched to {}", c.name);
     })
@@ -440,15 +402,8 @@ fn switch(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> 
 
 /// Go's `runStatus` and, with a plan's name, `runInitiative`.
 fn status(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
-    let (args, json_mode) = json::take_flag(args);
-    match args.as_slice() {
+    match args {
         [plan] if !plan.starts_with('-') => {
-            if json_mode {
-                return match workspace().status_plan(plan) {
-                    Ok(o) => json::ok(stdout, &o.value, 0),
-                    Err(e) => json::err(stdout, &e),
-                };
-            }
             return finish(workspace().status_plan(plan), stderr, |p| {
                 let _ = writeln!(
                     stdout,
@@ -469,12 +424,6 @@ fn status(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> 
             let _ = writeln!(stderr, "{}", usage::usage_line(&["status"]));
             return 1;
         }
-    }
-    if json_mode {
-        return match workspace().status() {
-            Ok(o) => json::ok(stdout, &o.value, 0),
-            Err(e) => json::err(stdout, &e),
-        };
     }
     finish(workspace().status(), stderr, |s| {
         let mut out = String::new();

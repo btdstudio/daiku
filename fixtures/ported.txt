@@ -584,3 +584,12 @@ repo-path-outside-workspace
 repo-path-through-symlink
 repo-path-unknown
 repo-unknown-verb
+
+# S-0009 follow-up: a stray --json on a command that isn't a read form, and an
+# extra argument to `show`, behave as in Go; status's skipped-explore warning
+repo-add-json-flag
+tickets-new-json-flag
+switch-to-change-json-flag
+source-show-extra-arg
+adr-show-extra-arg
+status-repo-explore-skipped

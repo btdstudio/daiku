@@ -57,7 +57,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `status-corrupt-state` |
-| other | `status-build-change`, `status-git-workspace`, `status-help-flag`, `status-plan-argument`, `status-plan-change`, `status-unknown-plan` |
+| other | `status-build-change`, `status-git-workspace`, `status-help-flag`, `status-plan-argument`, `status-plan-change`, `status-repo-explore-skipped`, `status-unknown-plan` |
 
 ## daiku settings
 
@@ -74,7 +74,7 @@ The classes:
 
 | Class | Cases |
 | --- | --- |
-| args | `switch-two-changes`, `switch-unknown-flag` |
+| args | `switch-to-change-json-flag`, `switch-two-changes`, `switch-unknown-flag` |
 | context | `switch-no-changes`, `switch-outside-workspace` |
 | order | n/a: no phase order: works in any phase |
 | unsafe | `switch-through-symlink` |
@@ -107,7 +107,7 @@ The classes:
 
 | Class | Cases |
 | --- | --- |
-| args | `source-show-invalid-id`, `source-show-missing-id` |
+| args | `source-show-extra-arg`, `source-show-invalid-id`, `source-show-missing-id` |
 | context | `source-show-outside-workspace` |
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
@@ -140,7 +140,7 @@ The classes:
 
 | Class | Cases |
 | --- | --- |
-| args | `adr-show-invalid-number`, `adr-show-missing-number` |
+| args | `adr-show-extra-arg`, `adr-show-invalid-number`, `adr-show-missing-number` |
 | context | `adr-show-outside-workspace` |
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
@@ -206,7 +206,7 @@ The classes:
 
 | Class | Cases |
 | --- | --- |
-| args | `tickets-new-flag-missing-value`, `tickets-new-inbox-missing-repo`, `tickets-new-missing-title`, `tickets-new-task-missing-repo`, `tickets-new-unknown-flag`, `tickets-new-unknown-type`, `tickets-new-unquoted-title` |
+| args | `tickets-new-flag-missing-value`, `tickets-new-json-flag`, `tickets-new-inbox-missing-repo`, `tickets-new-missing-title`, `tickets-new-task-missing-repo`, `tickets-new-unknown-flag`, `tickets-new-unknown-type`, `tickets-new-unquoted-title` |
 | context | `tickets-new-no-change-needs-repo`, `tickets-new-outside-workspace` |
 | order | n/a: no phase order: works in any phase |
 | unsafe | `tickets-new-through-symlink` |
@@ -393,7 +393,7 @@ The classes:
 
 | Class | Cases |
 | --- | --- |
-| args | `repo-add-missing-remote`, `repo-add-unknown-flag` |
+| args | `repo-add-json-flag`, `repo-add-missing-remote`, `repo-add-unknown-flag` |
 | context | `repo-add-outside-workspace` |
 | order | n/a: no phase order: works in any phase |
 | unsafe | `repo-add-through-symlink` |

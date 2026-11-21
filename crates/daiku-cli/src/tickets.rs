@@ -11,18 +11,16 @@ use crate::{finish, parse_transition, report, usage, workspace};
 
 /// Go's `runTickets`.
 pub fn tickets(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
-    let verb = args.first().map(String::as_str);
     let rest = args.get(1..).unwrap_or_default();
-    let (rest, json_mode) = crate::json::take_flag(rest);
-    match verb {
-        Some("new") => new(&rest, stdout, stderr),
-        Some("check") => check(&rest, json_mode, stdout, stderr),
-        Some("status") => status(&rest, json_mode, stdout, stderr),
-        Some("order") => order(&rest, json_mode, stdout, stderr),
-        Some("ready") => ready(&rest, stdout, stderr),
-        Some("mark-published") => mark_published(&rest, stdout, stderr),
-        Some("unfreeze") => unfreeze(&rest, stdout, stderr),
-        Some("pull") => pull(&rest, stdout, stderr),
+    match args.first().map(String::as_str) {
+        Some("new") => new(rest, stdout, stderr),
+        Some("check") => check(stdout, stderr),
+        Some("status") => status(stdout, stderr),
+        Some("order") => order(stdout, stderr),
+        Some("ready") => ready(rest, stdout, stderr),
+        Some("mark-published") => mark_published(rest, stdout, stderr),
+        Some("unfreeze") => unfreeze(rest, stdout, stderr),
+        Some("pull") => pull(rest, stdout, stderr),
         _ => {
             let _ = write!(stderr, "{}", usage::usage_text(&["tickets"]));
             1
@@ -106,24 +104,7 @@ fn new(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 
 }
 
 /// Go's `ticketsCheck`.
-fn check(args: &[String], json_mode: bool, stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
-    if json_mode {
-        if !args.is_empty() {
-            return crate::json::err_raw(
-                stdout,
-                "InvalidArgs",
-                usage::usage_line(&["tickets", "check"]),
-                1,
-            );
-        }
-        return match workspace().tickets_check() {
-            Ok(o) => {
-                let code = if o.value.errors.is_empty() { 0 } else { 1 };
-                crate::json::ok(stdout, &o.value, code)
-            }
-            Err(e) => crate::json::err(stdout, &e),
-        };
-    }
+fn check(stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
     let report_ = match workspace().tickets_check() {
         Ok(o) => o.value,
         Err(e) => return fail(stderr, &report(&e)),
@@ -151,26 +132,7 @@ fn check(args: &[String], json_mode: bool, stdout: &mut impl Write, stderr: &mut
 }
 
 /// Go's `ticketsStatus`.
-fn status(
-    args: &[String],
-    json_mode: bool,
-    stdout: &mut impl Write,
-    stderr: &mut impl Write,
-) -> u8 {
-    if json_mode {
-        if !args.is_empty() {
-            return crate::json::err_raw(
-                stdout,
-                "InvalidArgs",
-                usage::usage_line(&["tickets", "status"]),
-                1,
-            );
-        }
-        return match workspace().tickets_status() {
-            Ok(o) => crate::json::ok(stdout, &o.value, 0),
-            Err(e) => crate::json::err(stdout, &e),
-        };
-    }
+fn status(stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
     match workspace().tickets_status() {
         Err(e) => fail(stderr, &report(&e)),
         Ok(o) => {
@@ -193,21 +155,7 @@ fn status(
 }
 
 /// Go's `ticketsOrder`.
-fn order(args: &[String], json_mode: bool, stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
-    if json_mode {
-        if !args.is_empty() {
-            return crate::json::err_raw(
-                stdout,
-                "InvalidArgs",
-                usage::usage_line(&["tickets", "order"]),
-                1,
-            );
-        }
-        return match workspace().tickets_order() {
-            Ok(o) => crate::json::ok(stdout, &o.value, 0),
-            Err(e) => crate::json::err(stdout, &e),
-        };
-    }
+fn order(stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
     finish(workspace().tickets_order(), stderr, |list| {
         for t in list {
             let _ = writeln!(stdout, "{}  {}", t.id, t.title);
