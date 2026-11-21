@@ -1,0 +1,5 @@
+args = ["version"]
+
+[expect]
+exit = 0
+stdout = "daiku dev\n"

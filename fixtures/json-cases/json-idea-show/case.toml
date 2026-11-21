@@ -1,0 +1,14 @@
+args = ["idea", "show", "2", "--json"]
+workspace = "ideas"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "summary": "---\nid: 2\ntitle: Dark mode\nstatus: parked\nreason: after the beta\nupdated: 2026-01-15\nchanges:\n---\n\n## Problem\n\nWhat's wrong or missing, and for whom?\n\n## Options considered\n\n## Cuts and no-gos\n\n## Open questions\n\n## References cited\n\n## Resulting changes\n"
+  },
+  "warnings": []
+}
+'''

@@ -1,0 +1,6 @@
+args = ["tickets", "pull"]
+workspace = "init"
+
+[expect]
+exit = 1
+stderr = "usage: daiku tickets pull <file>\n"

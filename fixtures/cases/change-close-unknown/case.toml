@@ -1,0 +1,6 @@
+args = ["change", "close", "9-nope", "--reason", "done"]
+workspace = "plan-intake-draft"
+
+[expect]
+exit = 1
+stderr = "daiku: unknown change \"9-nope\"\n"

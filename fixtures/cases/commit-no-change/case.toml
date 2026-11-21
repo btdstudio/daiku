@@ -1,0 +1,6 @@
+args = ["commit"]
+workspace = "init"
+
+[expect]
+exit = 1
+stderr = "daiku: commit and pr need an active build — run `daiku build new <ticket-id>`\n"

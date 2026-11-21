@@ -1,0 +1,7 @@
+args = ["repo", "add", "web", "https://example.invalid/web.git"]
+workspace = "build-implement"
+skip_on = ["windows"]
+
+[expect]
+exit = 1
+stderr = "daiku: won't write REPOS.json: REPOS.json is a symlink, which could lead outside the workspace\n"

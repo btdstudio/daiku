@@ -1,0 +1,9 @@
+args = ["help", "idea", "new"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku idea new <title>
+
+create an idea in ideas/, from the summary template
+'''

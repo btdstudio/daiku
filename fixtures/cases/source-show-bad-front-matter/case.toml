@@ -1,0 +1,9 @@
+args = ["source", "show", "1"]
+workspace = "adrs"
+
+[expect]
+exit = 0
+stdout = '''
+#1 [issue] 
+
+'''

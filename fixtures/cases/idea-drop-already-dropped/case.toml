@@ -1,0 +1,6 @@
+args = ["idea", "drop", "3", "--reason", "again"]
+workspace = "ideas"
+
+[expect]
+exit = 1
+stderr = "daiku: idea 3 is dropped: only an open idea can be dropped\n"

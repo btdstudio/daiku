@@ -1,0 +1,7 @@
+args = ["change", "new", "Auth flow"]
+workspace = "init"
+skip_on = ["windows"]
+
+[expect]
+exit = 1
+stderr = "daiku: plan/ is a symlink, which could lead outside the workspace — replace it with a folder\n"

@@ -1,0 +1,6 @@
+args = ["overview", "--check", "--stdout"]
+workspace = "plan-published"
+
+[expect]
+exit = 1
+stderr = "usage: daiku overview [<change>] [--check] [--stdout]\n"

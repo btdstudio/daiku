@@ -1,0 +1,5 @@
+from = "git-plan-published"
+git = true
+steps = [
+  ["build", "new", "S-0002"],
+]

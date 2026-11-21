@@ -1,0 +1,6 @@
+args = ["tickets", "unfreeze", "S-0002"]
+workspace = "plan-published"
+
+[expect]
+exit = 1
+stderr = "usage: daiku tickets unfreeze <id> --reason <r>\n"

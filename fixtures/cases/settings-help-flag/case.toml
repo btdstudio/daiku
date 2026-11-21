@@ -1,0 +1,9 @@
+args = ["settings", "--help"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku settings
+
+show effective settings
+'''

@@ -1,0 +1,43 @@
+args = ["source", "list", "--json"]
+workspace = "adrs"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": [
+    {
+      "id": 1,
+      "title": "Auth flow",
+      "source": "issue",
+      "repo": "",
+      "rev": "",
+      "idea": 0,
+      "body": "",
+      "path": "plan/00_intake/1.md"
+    },
+    {
+      "id": 2,
+      "title": "Customer interviews, caf�",
+      "source": "issue",
+      "repo": "",
+      "rev": "",
+      "idea": 0,
+      "body": "Notes from five calls, �.",
+      "path": "plan/00_intake/2.md"
+    },
+    {
+      "id": 3,
+      "title": "The app, r�vision",
+      "source": "repo",
+      "repo": "../app-�",
+      "rev": "v1-�",
+      "idea": 0,
+      "body": "Read the code.",
+      "path": "plan/00_intake/3.md"
+    }
+  ],
+  "warnings": []
+}
+'''

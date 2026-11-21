@@ -1,0 +1,6 @@
+args = ["change", "close", "--reason", "done"]
+workspace = "plan-intake-draft"
+
+[expect]
+exit = 1
+stderr = "usage: daiku change close <change> --reason <r>\n"

@@ -1,0 +1,6 @@
+args = ["status", "9-nope"]
+workspace = "plan-intake-draft"
+
+[expect]
+exit = 1
+stderr = "daiku: 9-nope isn't a plan change in this workspace\n"

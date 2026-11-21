@@ -1,0 +1,6 @@
+args = ["repo", "doctor"]
+workspace = "build-implement"
+
+[expect]
+exit = 1
+stdout = "✗ api: missing on disk: {ROOT}/gone\n"

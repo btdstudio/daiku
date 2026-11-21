@@ -1,0 +1,44 @@
+from = "plan-intake-draft"
+steps = [
+  ["gate", "intake", "approved"],
+  ["gate", "research", "skipped", "--reason", "known domain"],
+]
+
+[[files]]
+path = "plan/specs/1-auth-flow/functional-spec.md"
+text = '''
+# Functional spec — Auth flow
+
+## Functional requirements
+
+- R1. Sign in. — **must**
+'''
+
+[[files]]
+path = "plan/specs/1-auth-flow/architecture.md"
+text = '''
+# Architecture — Auth flow
+
+## Diagrams
+
+### Context
+
+```mermaid
+flowchart LR
+  user --> app
+```
+
+### Layers
+
+```mermaid
+flowchart TB
+  cli --> core
+```
+
+### Flow: sign in
+
+```mermaid
+sequenceDiagram
+  user->>app: sign in
+```
+'''

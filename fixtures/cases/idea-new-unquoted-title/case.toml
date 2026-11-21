@@ -1,0 +1,6 @@
+args = ["idea", "new", "Bulk", "import"]
+workspace = "ideas"
+
+[expect]
+exit = 1
+stderr = "daiku idea new: unexpected argument \"import\" (quote a multi-word title)\n"

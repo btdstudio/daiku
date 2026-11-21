@@ -1,0 +1,6 @@
+args = ["overview", "1-auth-flow"]
+workspace = "build-implement"
+
+[expect]
+exit = 0
+stdout = "plan/specs/1-auth-flow/README.md is up to date\n"

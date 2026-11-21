@@ -1,0 +1,18 @@
+args = ["status"]
+workspace = "git-plan-intake-draft"
+git = true
+
+[expect]
+exit = 0
+stdout = '''
+change:   1-auth-flow
+room:     plan
+phase:    intake
+status:   draft
+gates:    intake=draft research= explore=skipped synthesis=skipped spec= architecture= breakdown= publish=
+initiative: 1-auth-flow
+vcs:      git
+
+plans:
+* 1-auth-flow  intake draft
+'''

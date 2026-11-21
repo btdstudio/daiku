@@ -1,0 +1,6 @@
+args = ["gate", "bogus", "approved"]
+workspace = "plan-intake-draft"
+
+[expect]
+exit = 1
+stderr = "unknown phase: bogus\n"

@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      # rustup reads rust-toolchain.toml and installs the pinned toolchain.
+      - run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo build --workspace
+      - run: cargo test --workspace
+
+  # Checks every golden fixture against the Go CLI they were captured from, built
+  # the same way as locally (scripts/build-go-daiku.sh). Linux and macOS only:
+  # Windows runs the runner's self-tests in `test` above.
+  fixtures:
+    name: fixtures (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.26.5
+          cache: false
+      - run: scripts/build-go-daiku.sh
+      - run: cargo build --release -p daiku-fixtures
+      - name: check the fixtures against Go
+        run: time target/release/daiku-fixtures check --bin target/go-daiku/daiku
+      - run: target/release/daiku-fixtures coverage
+      - name: usage.txt matches Go's help
+        run: diff fixtures/usage.txt <(target/go-daiku/daiku help)
+
+  # Checks the Rust daiku against the cases it has been ported for
+  # (fixtures/ported.txt), on all three OSes. Each story adds its cases.
+  rust-fixtures:
+    name: rust-fixtures (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build -p daiku-cli -p daiku-fixtures
+      - name: check the ported cases against the Rust daiku
+        run: |
+          exe=""
+          if [ "$RUNNER_OS" = "Windows" ]; then exe=".exe"; fi
+          target/debug/daiku-fixtures$exe check --bin "target/debug/daiku$exe" --list fixtures/ported.txt
+      # Rust only: Go has no --json (S-0009). fixtures/json-cases/README.md
+      - name: check the --json cases against the Rust daiku
+        run: |
+          exe=""
+          if [ "$RUNNER_OS" = "Windows" ]; then exe=".exe"; fi
+          target/debug/daiku-fixtures$exe check --bin "target/debug/daiku$exe" --cases fixtures/json-cases
+
+  # Keeps the generated release workflow (.github/workflows/release.yml) in step with
+  # dist-workspace.toml, and checks that dist can plan a release (S-0010). The dist
+  # version is the one release.yml installs; `dist generate` pins it in the workflow.
+  dist:
+    name: dist
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dist
+        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.34.0/cargo-dist-installer.sh | sh
+      - name: the release workflow is generated from dist-workspace.toml
+        run: dist generate --check
+      - name: dist can plan a release
+        run: dist plan

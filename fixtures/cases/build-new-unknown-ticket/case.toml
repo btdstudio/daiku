@@ -1,0 +1,6 @@
+args = ["build", "new", "S-0099"]
+workspace = "plan-published"
+
+[expect]
+exit = 1
+stderr = "daiku: no ticket S-0099 in plan/specs/*/tickets/ or build/tickets/\n"

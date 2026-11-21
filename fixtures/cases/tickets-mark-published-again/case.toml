@@ -1,0 +1,6 @@
+args = ["tickets", "mark-published", "S-0002", "--external", "github=org/api#99"]
+workspace = "plan-published"
+
+[expect]
+exit = 1
+stdout = "✗ 1-auth-flow: daiku: mark-published requires publish in-progress for 1-auth-flow (it's \"complete\") (pass --force to override)\n"

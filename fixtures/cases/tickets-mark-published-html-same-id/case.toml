@@ -1,0 +1,12 @@
+# Re-marking the Go-published ticket with the same tool and id needs no unfreeze
+# (S-0007 AC3).
+args = ["tickets", "mark-published", "S-0003", "--external", "github=org/api#13"]
+workspace = "plan-publish-in-progress"
+
+[expect]
+exit = 0
+stdout = "S-0003: published to github (org/api#13)\n"
+changes = [
+  "~ f LOG.md",
+  "~ f plan/specs/1-auth-flow/README.md",
+]

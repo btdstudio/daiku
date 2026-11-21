@@ -1,0 +1,34 @@
+args = ["settings", "--json"]
+workspace = "init"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "global": {
+      "gates": "auto"
+    },
+    "project": {
+      "adrDir": "plan/04_architecture/adr",
+      "baseSource": "",
+      "gates": "block",
+      "overview": "auto",
+      "sourceDir": "plan/00_intake",
+      "syncFile": "sync.md",
+      "vcs": "none"
+    },
+    "effective": {
+      "baseSource": "",
+      "gates": "block",
+      "sourceDir": "plan/00_intake",
+      "adrDir": "plan/04_architecture/adr",
+      "syncFile": "sync.md",
+      "overview": "auto"
+    },
+    "vcs": "none"
+  },
+  "warnings": []
+}
+'''

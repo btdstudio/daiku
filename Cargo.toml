@@ -1,0 +1,15 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.3.0-alpha.3"
+edition = "2024"
+license = "MIT"
+rust-version = "1.100"
+repository = "https://github.com/btdstudio/daiku-next"
+
+# The profile that 'dist' will build releases with.
+[profile.dist]
+inherits = "release"
+lto = "thin"

@@ -1,0 +1,6 @@
+from = "plan-intake-draft"
+steps = [
+  ["source", "new", "--title", "Customer interviews", "--body", "Notes from five calls."],
+  ["adr", "new", "--title", "Use Postgres", "--deciders", "team", "--context", "We need a database.", "--decision", "Postgres.", "--consequences", "One more service."],
+  ["adr", "new", "--title", "Session tokens"],
+]

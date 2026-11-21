@@ -1,0 +1,8 @@
+args = ["print", "hello", ";", "print", "world"]
+
+[expect]
+exit = 0
+stdout = '''
+hello
+world!
+'''

@@ -1,0 +1,9 @@
+args = ["switch"]
+workspace = "build-implement"
+
+[expect]
+exit = 0
+stdout = '''
+S-0002  build  implement in-progress
+1-auth-flow  plan  publish complete
+'''

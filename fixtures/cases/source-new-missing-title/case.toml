@@ -1,0 +1,6 @@
+args = ["source", "new", "--body", "x"]
+workspace = "plan-intake-draft"
+
+[expect]
+exit = 1
+stderr = "usage: daiku source new --title <t> [--repo <path>] [--rev <r>] [--body <b>]\n"

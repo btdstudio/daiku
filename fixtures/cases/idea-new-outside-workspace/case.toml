@@ -1,0 +1,11 @@
+args = ["idea", "new", "Bulk import"]
+
+[expect]
+exit = 0
+stdout = "created idea 1 Bulk import (ideas/1-bulk-import/)\n"
+changes = [
+  "+ d ideas",
+  "+ d ideas/1-bulk-import",
+  "+ f ideas/1-bulk-import/log.md",
+  "+ f ideas/1-bulk-import/summary.md",
+]

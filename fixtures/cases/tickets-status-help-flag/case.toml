@@ -1,0 +1,9 @@
+args = ["tickets", "status", "--help"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku tickets status
+
+list tickets by draft, ready, published and drifted
+'''

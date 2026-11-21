@@ -1,0 +1,9 @@
+args = ["source", "show", "--help"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku source show <id>
+
+show an intake source
+'''

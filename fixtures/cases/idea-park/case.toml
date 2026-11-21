@@ -1,0 +1,10 @@
+args = ["idea", "park", "1", "--reason", "waiting on data"]
+workspace = "ideas"
+
+[expect]
+exit = 0
+stdout = "idea 1: parked\n"
+changes = [
+  "~ f ideas/1-faster-sync/log.md",
+  "~ f ideas/1-faster-sync/summary.md",
+]

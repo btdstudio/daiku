@@ -1,0 +1,14 @@
+args = ["idea", "show", "1", "--json"]
+workspace = "ideas"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "summary": "---\nid: 1\ntitle: Faster sync\nowner: Ren�e\nstatus: open\nreason:\nupdated: 2026-01-15\nchanges:\n---\n\n## Problem\n\nSlow, caf� �.\n\n## Options considered\n\n## Cuts and no-gos\n\n## Open questions\n\n## References cited\n\n## Resulting changes\n"
+  },
+  "warnings": []
+}
+'''

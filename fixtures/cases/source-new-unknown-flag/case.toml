@@ -1,0 +1,6 @@
+args = ["source", "new", "--title", "x", "--bogus", "y"]
+workspace = "plan-intake-draft"
+
+[expect]
+exit = 1
+stderr = "daiku source new: unknown flag \"--bogus\", or it needs a value (see daiku source new --help)\n"

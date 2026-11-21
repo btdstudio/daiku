@@ -1,0 +1,3 @@
+- {TIMESTAMP} 1-sync-rewrite: created
+- {TIMESTAMP} 1-sync-rewrite: explore → skipped (no repo in the intake)
+- {TIMESTAMP} 1-sync-rewrite: synthesis → skipped (fewer than two repos in scope)

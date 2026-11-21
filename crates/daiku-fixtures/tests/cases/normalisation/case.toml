@@ -1,0 +1,19 @@
+args = ["now", ";", "today", ";", "pwd", ";", "write", "paths.txt", "{ROOT} {HOME} {CONFIG}", ";", "commit", "record paths"]
+git = true
+
+[expect]
+exit = 0
+stdout = '''
+{TIMESTAMP}
+{TODAY}
+{ROOT}
+{COMMIT}
+'''
+git_log = '''
+record paths
+
+A	paths.txt
+'''
+changes = [
+  "+ f paths.txt",
+]

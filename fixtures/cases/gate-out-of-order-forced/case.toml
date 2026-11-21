@@ -1,0 +1,12 @@
+args = ["gate", "spec", "draft", "--force"]
+workspace = "plan-intake-draft"
+
+[expect]
+exit = 0
+stdout = "1-auth-flow: spec = draft\n"
+stderr = "warning: daiku: spec requires intake to be approved (currently \"draft\")\n"
+changes = [
+  "~ f LOG.md",
+  "~ f STATE.json",
+  "+ f plan/specs/1-auth-flow/README.md",
+]

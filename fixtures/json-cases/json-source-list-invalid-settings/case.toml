@@ -1,0 +1,14 @@
+args = ["source", "list", "--json"]
+workspace = "init"
+
+[expect]
+exit = 1
+stdout = '''
+{
+  "schema": 1,
+  "error": {
+    "kind": "SettingsParse",
+    "message": "daiku: cannot parse settings .daiku/settings.json: invalid character 'n' looking for beginning of object key string"
+  }
+}
+'''

@@ -1,0 +1,19 @@
+args = ["gate", "spec", "approved"]
+workspace = "git-plan-spec-ready"
+git = true
+
+[expect]
+exit = 0
+stdout = "1-auth-flow: spec = approved\n"
+git_log = '''
+daiku: 1-auth-flow: spec → approved
+
+M	LOG.md
+M	STATE.json
+M	plan/specs/1-auth-flow/README.md
+'''
+changes = [
+  "~ f LOG.md",
+  "~ f STATE.json",
+  "~ f plan/specs/1-auth-flow/README.md",
+]

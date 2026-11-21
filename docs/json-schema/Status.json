@@ -1,0 +1,196 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Status",
+  "description": "`status`: the active change, the `vcs` setting, and the board of open changes.",
+  "type": "object",
+  "required": [
+    "builds",
+    "noChanges",
+    "plans",
+    "vcs"
+  ],
+  "properties": {
+    "active": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/ActiveStatus"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "builds": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/RepoBuilds"
+      }
+    },
+    "noChanges": {
+      "description": "No change is recorded at all.",
+      "type": "boolean"
+    },
+    "plans": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Change"
+      }
+    },
+    "vcs": {
+      "type": "string"
+    }
+  },
+  "definitions": {
+    "ActiveStatus": {
+      "description": "The active change, as `status` shows it.",
+      "type": "object",
+      "required": [
+        "change",
+        "code",
+        "initiative",
+        "phases"
+      ],
+      "properties": {
+        "change": {
+          "$ref": "#/definitions/Change"
+        },
+        "code": {
+          "description": "Each repo and its local path, `None` when it isn't set.",
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": [
+              {
+                "type": "string"
+              },
+              {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2
+          }
+        },
+        "initiative": {
+          "description": "The plan it belongs to, or a note when that isn't known.",
+          "type": "string"
+        },
+        "phases": {
+          "description": "Its machine's phases, in order.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ticket": {
+          "description": "A build's ticket: id, title, and the branch name for it.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "maxItems": 3,
+          "minItems": 3
+        }
+      }
+    },
+    "Change": {
+      "description": "One change's progress through its loop. `gates` holds only started phases.",
+      "type": "object",
+      "required": [
+        "gates",
+        "loop",
+        "name",
+        "phase",
+        "reasons",
+        "repos",
+        "sources",
+        "status",
+        "updatedAt"
+      ],
+      "properties": {
+        "gates": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "loop": {
+          "description": "`plan` or `build`; empty for a change that isn't recorded or found.",
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "reasons": {
+          "description": "Why each skipped phase was skipped.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "repos": {
+          "description": "Logical repo names from `REPOS.json`.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      }
+    },
+    "RepoBuilds": {
+      "description": "One repo's builds on the board.",
+      "type": "object",
+      "required": [
+        "builds",
+        "repo"
+      ],
+      "properties": {
+        "builds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Change"
+          }
+        },
+        "holder": {
+          "description": "The build holding the repo's lock, if any.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "repo": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

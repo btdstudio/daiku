@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Success_for_CheckReport",
+  "description": "A successful read: `data` is the serialised core value the command reads.",
+  "type": "object",
+  "required": [
+    "data",
+    "schema",
+    "warnings"
+  ],
+  "properties": {
+    "data": {
+      "$ref": "#/definitions/CheckReport"
+    },
+    "schema": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "warnings": {
+      "description": "The operation's warnings, in order: what the text form prints to stderr as `warning: <message>`, without the prefix. Always present; empty when there are none.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "definitions": {
+    "CheckReport": {
+      "description": "`tickets check`'s findings, in Go's order.",
+      "type": "object",
+      "required": [
+        "count",
+        "errors",
+        "warnings"
+      ],
+      "properties": {
+        "count": {
+          "description": "Tickets read: the plan's and the inbox's.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0.0
+        },
+        "errors": {
+          "description": "`✗` lines; any makes the check fail.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Problem"
+          }
+        },
+        "warnings": {
+          "description": "`!` lines.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "Problem": {
+      "description": "One thing wrong with a ticket.",
+      "type": "object",
+      "required": [
+        "id",
+        "message",
+        "reference"
+      ],
+      "properties": {
+        "id": {
+          "description": "The ticket, or its path if the id isn't usable.",
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "reference": {
+          "description": "For a missing reference, the id it names.",
+          "type": "string"
+        }
+      }
+    }
+  }
+}

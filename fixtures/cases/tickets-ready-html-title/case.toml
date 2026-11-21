@@ -1,0 +1,14 @@
+# A title and labels holding <, > and &: Go's ready_hash escapes them as
+# <, > and &, and the Rust hash must match (S-0007 AC2, ADR-0006
+# amendment).
+args = ["tickets", "ready", "S-0003"]
+workspace = "plan-breakdown-approved"
+
+[expect]
+exit = 0
+stdout = "S-0003: ready\n"
+changes = [
+  "~ f LOG.md",
+  "~ f plan/specs/1-auth-flow/README.md",
+  "~ f plan/specs/1-auth-flow/tickets/S-0003.md",
+]

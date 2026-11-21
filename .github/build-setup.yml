@@ -1,0 +1,5 @@
+# Steps dist inserts into every release build job, before the build. This one makes
+# `daiku version` print v<crate version> (crates/daiku-cli/build.rs, architecture D17).
+- name: Stamp the release version
+  shell: bash
+  run: echo "DAIKU_RELEASE=1" >> "$GITHUB_ENV"

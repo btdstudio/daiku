@@ -1,0 +1,6 @@
+args = ["source", "show", "9"]
+workspace = "adrs"
+
+[expect]
+exit = 1
+stderr = "daiku: source 9 not found at plan/00_intake/9.md\n"

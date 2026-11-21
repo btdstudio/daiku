@@ -1,0 +1,11 @@
+args = ["adr", "new", "--title", "x"]
+
+[expect]
+exit = 0
+stdout = "created 0001 x\n"
+changes = [
+  "+ d plan",
+  "+ d plan/04_architecture",
+  "+ d plan/04_architecture/adr",
+  "+ f plan/04_architecture/adr/0001-x.md",
+]

@@ -1,0 +1,6 @@
+args = ["overview", "--check"]
+workspace = "plan-published"
+
+[expect]
+exit = 2
+stderr = "daiku: plan/specs/1-auth-flow/README.md: missing marker <!-- daiku:narrative -->\n"

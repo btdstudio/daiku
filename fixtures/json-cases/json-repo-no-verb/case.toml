@@ -1,0 +1,14 @@
+args = ["repo", "--json"]
+workspace = "init"
+
+[expect]
+exit = 1
+stdout = '''
+{
+  "schema": 1,
+  "error": {
+    "kind": "Usage",
+    "message": "usage:\n  daiku repo add <name> <remote> [--path <p>] [--branch <b>]\n                                          register a repo\n  daiku repo list                          list repos and their local paths\n  daiku repo path <name> <path>            set a repo's local path\n  daiku repo doctor [--clone] [--into <dir>]\n                                          check repos; --clone fetches missing ones"
+  }
+}
+'''

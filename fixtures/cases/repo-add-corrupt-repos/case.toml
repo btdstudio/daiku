@@ -1,0 +1,6 @@
+args = ["repo", "add", "web", "https://example.invalid/web.git"]
+workspace = "init"
+
+[expect]
+exit = 1
+stderr = "daiku: cannot parse REPOS.json: invalid character 'n' looking for beginning of object key string\n"

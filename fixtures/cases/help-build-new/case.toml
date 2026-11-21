@@ -1,0 +1,9 @@
+args = ["help", "build", "new"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku build new <ticket-id>
+
+build a ticket in its repo; creates build/ the first time
+'''

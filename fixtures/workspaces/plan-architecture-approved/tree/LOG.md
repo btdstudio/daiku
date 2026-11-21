@@ -1,0 +1,7 @@
+- 2026-01-15T00:00:00.000Z 1-auth-flow: created
+- 2026-01-15T00:00:00.000Z 1-auth-flow: explore → skipped (no repo in the intake)
+- 2026-01-15T00:00:00.000Z 1-auth-flow: synthesis → skipped (fewer than two repos in scope)
+- 2026-01-15T00:00:00.000Z 1-auth-flow: intake → approved
+- 2026-01-15T00:00:00.000Z 1-auth-flow: research → skipped (known domain)
+- 2026-01-15T00:00:00.000Z 1-auth-flow: spec → approved
+- 2026-01-15T00:00:00.000Z 1-auth-flow: architecture → approved

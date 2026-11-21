@@ -1,0 +1,6 @@
+args = ["init", "--no-git"]
+workspace = "init"
+
+[expect]
+exit = 0
+stdout = "scaffolded daiku workspace in .\n"

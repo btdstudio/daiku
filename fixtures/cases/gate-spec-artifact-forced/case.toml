@@ -1,0 +1,15 @@
+args = ["gate", "spec", "approved", "--force"]
+workspace = "plan-spec-ready"
+
+[expect]
+exit = 0
+stdout = "1-auth-flow: spec = approved\n"
+stderr = '''
+warning: daiku: spec approved: 1 artifact problem(s):
+  plan/specs/1-auth-flow/functional-spec.md: no R requirements under ## Functional requirements
+'''
+changes = [
+  "~ f LOG.md",
+  "~ f STATE.json",
+  "~ f plan/specs/1-auth-flow/README.md",
+]

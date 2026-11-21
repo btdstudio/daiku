@@ -1,0 +1,6 @@
+args = ["idea", "park", "9", "--reason", "x"]
+workspace = "ideas"
+
+[expect]
+exit = 1
+stderr = "daiku: idea 9 not found\n"

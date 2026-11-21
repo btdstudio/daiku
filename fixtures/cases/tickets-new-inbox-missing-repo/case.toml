@@ -1,0 +1,6 @@
+args = ["tickets", "new", "task", "Fix typo", "--inbox"]
+workspace = "plan-spec-ready"
+
+[expect]
+exit = 1
+stderr = "daiku: an inbox ticket needs a repo (--repo <name>)\n"

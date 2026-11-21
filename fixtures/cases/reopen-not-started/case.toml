@@ -1,0 +1,6 @@
+args = ["reopen", "breakdown", "--reason", "x"]
+workspace = "plan-spec-ready"
+
+[expect]
+exit = 1
+stderr = "daiku: breakdown hasn't started\n"

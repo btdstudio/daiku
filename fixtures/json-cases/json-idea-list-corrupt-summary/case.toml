@@ -1,0 +1,46 @@
+args = ["idea", "list", "--json"]
+workspace = "ideas"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": [
+    {
+      "id": 1,
+      "slug": "faster-sync",
+      "title": "",
+      "status": "",
+      "reason": "",
+      "updated": "",
+      "changes": [],
+      "dir": "ideas/1-faster-sync",
+      "body": ""
+    },
+    {
+      "id": 2,
+      "slug": "dark-mode",
+      "title": "Dark mode",
+      "status": "parked",
+      "reason": "after the beta",
+      "updated": "2026-01-15",
+      "changes": [],
+      "dir": "ideas/2-dark-mode",
+      "body": "## Problem\n\nWhat's wrong or missing, and for whom?\n\n## Options considered\n\n## Cuts and no-gos\n\n## Open questions\n\n## References cited\n\n## Resulting changes"
+    },
+    {
+      "id": 3,
+      "slug": "offline-edits",
+      "title": "Offline edits",
+      "status": "dropped",
+      "reason": "out of scope",
+      "updated": "2026-01-15",
+      "changes": [],
+      "dir": "ideas/3-offline-edits",
+      "body": "## Problem\n\nWhat's wrong or missing, and for whom?\n\n## Options considered\n\n## Cuts and no-gos\n\n## Open questions\n\n## References cited\n\n## Resulting changes"
+    }
+  ],
+  "warnings": []
+}
+'''

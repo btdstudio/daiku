@@ -1,0 +1,11 @@
+args = ["commit", "-q", "-m", "Sign in", "-m", "Second paragraph."]
+workspace = "build-implement"
+git = true
+
+[expect]
+exit = 0
+git_log = '''
+Sign in
+
+A	src/signin.txt
+'''

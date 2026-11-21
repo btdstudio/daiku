@@ -1,0 +1,6 @@
+args = ["commit"]
+workspace = "build-implement"
+
+[expect]
+exit = 1
+stderr = "daiku: api's local path {ROOT} isn't a git checkout — run `daiku repo path api <dir>`\n"

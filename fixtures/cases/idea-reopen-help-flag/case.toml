@@ -1,0 +1,9 @@
+args = ["idea", "reopen", "--help"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku idea reopen <id> --reason <r>
+
+reopen a parked or dropped idea, with a reason
+'''

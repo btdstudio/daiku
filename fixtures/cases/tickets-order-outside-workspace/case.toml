@@ -1,0 +1,4 @@
+args = ["tickets", "order"]
+
+[expect]
+exit = 0

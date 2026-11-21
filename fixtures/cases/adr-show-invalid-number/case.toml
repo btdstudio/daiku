@@ -1,0 +1,6 @@
+args = ["adr", "show", "one"]
+workspace = "adrs"
+
+[expect]
+exit = 1
+stderr = "invalid number: one\n"

@@ -1,0 +1,6 @@
+args = ["tickets", "ready", "S-0002", "--all"]
+workspace = "plan-breakdown-approved"
+
+[expect]
+exit = 1
+stderr = "usage: daiku tickets ready <id>... | --all [--force]\n"

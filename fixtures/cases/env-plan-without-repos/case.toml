@@ -1,0 +1,5 @@
+args = ["env"]
+workspace = "plan-intake-draft"
+
+[expect]
+exit = 0

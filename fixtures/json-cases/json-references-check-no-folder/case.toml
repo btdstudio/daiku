@@ -1,0 +1,16 @@
+args = ["references", "check", "--json"]
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "present": false,
+    "files": 0,
+    "indexed": 0,
+    "findings": []
+  },
+  "warnings": []
+}
+'''

@@ -1,0 +1,6 @@
+args = ["idea", "drop", "1", "2", "--reason", "x"]
+workspace = "ideas"
+
+[expect]
+exit = 1
+stderr = "usage: daiku idea drop <id> --reason <r>\n"

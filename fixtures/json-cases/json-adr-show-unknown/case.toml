@@ -1,0 +1,14 @@
+args = ["adr", "show", "9", "--json"]
+workspace = "adrs"
+
+[expect]
+exit = 1
+stdout = '''
+{
+  "schema": 1,
+  "error": {
+    "kind": "AdrNotFound",
+    "message": "daiku: adr 0009 not found"
+  }
+}
+'''

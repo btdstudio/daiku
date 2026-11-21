@@ -1,0 +1,9 @@
+args = ["help", "pr"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku pr [title]
+
+open a pull request from the active build's repo, linking its ticket
+'''

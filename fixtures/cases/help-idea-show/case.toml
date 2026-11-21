@@ -1,0 +1,9 @@
+args = ["help", "idea", "show"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku idea show <id>
+
+print an idea's summary and status
+'''

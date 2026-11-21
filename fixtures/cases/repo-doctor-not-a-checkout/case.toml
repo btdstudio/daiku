@@ -1,0 +1,6 @@
+args = ["repo", "doctor"]
+workspace = "build-implement"
+
+[expect]
+exit = 1
+stdout = "✗ api: not a git checkout with an origin: {ROOT}\n"

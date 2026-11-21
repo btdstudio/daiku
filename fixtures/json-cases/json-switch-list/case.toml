@@ -1,0 +1,48 @@
+args = ["switch", "--json"]
+workspace = "build-implement"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": [
+    {
+      "name": "S-0002",
+      "loop": "build",
+      "id": 0,
+      "phase": "implement",
+      "status": "in-progress",
+      "gates": {
+        "design": "approved",
+        "implement": "in-progress",
+        "requirements": "approved",
+        "tasks": "approved",
+        "ticket": "approved"
+      },
+      "repos": [
+        "api"
+      ]
+    },
+    {
+      "name": "1-auth-flow",
+      "loop": "plan",
+      "id": 1,
+      "phase": "publish",
+      "status": "complete",
+      "gates": {
+        "architecture": "approved",
+        "breakdown": "approved",
+        "explore": "skipped",
+        "intake": "approved",
+        "publish": "complete",
+        "research": "skipped",
+        "spec": "approved",
+        "synthesis": "skipped"
+      },
+      "repos": []
+    }
+  ],
+  "warnings": []
+}
+'''

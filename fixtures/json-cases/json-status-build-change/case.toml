@@ -1,0 +1,118 @@
+args = ["status", "--json"]
+workspace = "build-implement"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "vcs": "none",
+    "active": {
+      "change": {
+        "name": "S-0002",
+        "loop": "build",
+        "phase": "implement",
+        "status": "in-progress",
+        "gates": {
+          "design": "approved",
+          "implement": "in-progress",
+          "requirements": "approved",
+          "tasks": "approved",
+          "ticket": "approved"
+        },
+        "reasons": {},
+        "sources": [
+          "plan/specs/1-auth-flow/tickets/S-0002.md"
+        ],
+        "repos": [
+          "api"
+        ],
+        "updatedAt": "{TIMESTAMP}"
+      },
+      "phases": [
+        "ticket",
+        "requirements",
+        "design",
+        "tasks",
+        "implement",
+        "test",
+        "review",
+        "security",
+        "ship"
+      ],
+      "initiative": "1-auth-flow",
+      "code": [
+        [
+          "api",
+          "{ROOT}"
+        ]
+      ],
+      "ticket": [
+        "S-0002",
+        "Sign in",
+        "s-0002-sign-in"
+      ]
+    },
+    "noChanges": false,
+    "plans": [
+      {
+        "name": "1-auth-flow",
+        "loop": "plan",
+        "phase": "publish",
+        "status": "complete",
+        "gates": {
+          "architecture": "approved",
+          "breakdown": "approved",
+          "explore": "skipped",
+          "intake": "approved",
+          "publish": "complete",
+          "research": "skipped",
+          "spec": "approved",
+          "synthesis": "skipped"
+        },
+        "reasons": {
+          "explore": "no repo in the intake",
+          "research": "known domain",
+          "synthesis": "fewer than two repos in scope"
+        },
+        "sources": [
+          "plan/00_intake/1.md"
+        ],
+        "repos": [],
+        "updatedAt": "{TIMESTAMP}"
+      }
+    ],
+    "builds": [
+      {
+        "repo": "api",
+        "holder": "S-0002",
+        "builds": [
+          {
+            "name": "S-0002",
+            "loop": "build",
+            "phase": "implement",
+            "status": "in-progress",
+            "gates": {
+              "design": "approved",
+              "implement": "in-progress",
+              "requirements": "approved",
+              "tasks": "approved",
+              "ticket": "approved"
+            },
+            "reasons": {},
+            "sources": [
+              "plan/specs/1-auth-flow/tickets/S-0002.md"
+            ],
+            "repos": [
+              "api"
+            ],
+            "updatedAt": "{TIMESTAMP}"
+          }
+        ]
+      }
+    ]
+  },
+  "warnings": []
+}
+'''

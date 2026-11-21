@@ -1,0 +1,8 @@
+args = ["write", "keep.txt", "k"]
+
+[expect]
+exit = 0
+changes = [
+  "+ f gone.txt",
+  "+ f keep.txt",
+]

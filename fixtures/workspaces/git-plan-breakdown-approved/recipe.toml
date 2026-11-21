@@ -1,0 +1,6 @@
+from = "git-plan-architecture-approved"
+git = true
+steps = [
+  ["gate", "breakdown", "approved"],
+  ["tickets", "ready", "--all"],
+]

@@ -1,0 +1,6 @@
+args = ["change", "close", "1-auth-flow", "--reason", "x"]
+workspace = "plan-intake-draft"
+
+[expect]
+exit = 1
+stderr = "daiku: cannot parse STATE.json: invalid character 'n' looking for beginning of object key string\n"

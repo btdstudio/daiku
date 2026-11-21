@@ -1,0 +1,5 @@
+args = ["idea", "list"]
+workspace = "init"
+
+[expect]
+exit = 0

@@ -1,0 +1,7 @@
+args = ["repo", "doctor", "--clone"]
+workspace = "init"
+
+[expect]
+exit = 1
+stdout = "✗ self: no local path\n"
+stderr = "self: no local path — pass --into <dir> or run `daiku repo path self <path>`\n"

@@ -1,0 +1,9 @@
+args = ["tickets", "ready", "S-0002"]
+workspace = "plan-breakdown-approved"
+
+[expect]
+exit = 0
+stdout = "S-0002: ready\n"
+changes = [
+  "~ f LOG.md",
+]

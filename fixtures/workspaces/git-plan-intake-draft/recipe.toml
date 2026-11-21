@@ -1,0 +1,5 @@
+from = "git-init"
+git = true
+steps = [
+  ["change", "new", "Auth flow"],
+]

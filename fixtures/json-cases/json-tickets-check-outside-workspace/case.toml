@@ -1,0 +1,15 @@
+args = ["tickets", "check", "--json"]
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "errors": [],
+    "warnings": [],
+    "count": 0
+  },
+  "warnings": []
+}
+'''

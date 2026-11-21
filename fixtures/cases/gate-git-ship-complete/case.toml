@@ -1,0 +1,19 @@
+args = ["gate", "ship", "complete"]
+workspace = "git-build-ship"
+git = true
+
+[expect]
+exit = 0
+stdout = "S-0002: ship = complete\n"
+git_log = '''
+daiku: S-0002: ship → complete
+
+M	LOG.md
+M	STATE.json
+M	plan/specs/1-auth-flow/README.md
+'''
+changes = [
+  "~ f LOG.md",
+  "~ f STATE.json",
+  "~ f plan/specs/1-auth-flow/README.md",
+]

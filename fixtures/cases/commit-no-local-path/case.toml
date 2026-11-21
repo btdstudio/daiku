@@ -1,0 +1,6 @@
+args = ["commit"]
+workspace = "build-implement"
+
+[expect]
+exit = 1
+stderr = "daiku: repo \"api\" has no local path — run `daiku repo path api <path>`\n"

@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "changes": {
+    "1-api-work": {
+      "loop": "plan",
+      "phase": "intake",
+      "status": "draft",
+      "gates": {
+        "intake": "draft",
+        "synthesis": "skipped"
+      },
+      "reasons": {
+        "synthesis": "fewer than two repos in scope"
+      },
+      "sources": [
+        "plan/00_intake/1.md"
+      ],
+      "updatedAt": "{TIMESTAMP}"
+    }
+  }
+}

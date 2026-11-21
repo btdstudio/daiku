@@ -1,0 +1,6 @@
+args = ["settings"]
+workspace = "init"
+
+[expect]
+exit = 1
+stderr = "daiku: invalid overview \"off\" (expected auto|manual)\n"

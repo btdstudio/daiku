@@ -1,0 +1,6 @@
+args = ["idea", "reopen", "1", "--reason", "x"]
+workspace = "ideas"
+
+[expect]
+exit = 1
+stderr = "daiku: idea 1 is open: only a parked or dropped idea can be reopened\n"
