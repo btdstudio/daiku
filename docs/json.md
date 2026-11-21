@@ -9,8 +9,7 @@ daiku status --json
 daiku tickets check --json | jq '.data.errors'
 ```
 
-`daiku help` doesn't mention `--json`, because its text must match the Go CLI's.
-This page is the reference.
+`daiku help` doesn't mention `--json`; this page is the reference.
 
 ## The envelope
 
@@ -90,11 +89,10 @@ files comes through as U+FFFD, since JSON strings can't hold raw bytes.
 - A read group named with no verb is a read: `tickets`, `idea`, `repo` and
   `references` with `--json` return a `Usage` error holding the group's usage
   block. `source` and `adr` with no verb list.
-- On any other command, `--json` is an ordinary argument, handled as the Go CLI
-  handles it, with text output:
+- On any other command, `--json` is an extra argument, and the output is text:
   - Commands that change files reject it as an unknown flag or a usage error, on
     stderr. `daiku tickets new … --json` writes nothing.
-  - `switch <change> --json` switches, and ignores the extra argument, as Go does.
+  - `switch <change> --json` switches, and ignores the extra argument.
   - An unknown verb, such as `tickets frob --json`, prints the group's usage on
     stderr.
 - `--help` wins over `--json`: `daiku status --json --help` prints help as text.
