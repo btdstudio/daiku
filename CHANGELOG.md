@@ -1,6 +1,37 @@
 # Changelog
 
-Releases before 0.3.0 were the Go CLI, in `btdstudio/daiku`.
+Releases before 0.3.0 were the Go CLI, the last being `v0.2.0`; their notes are on
+this repo's GitHub releases. The `0.3.0-alpha` prereleases were built in
+`btdstudio/daiku-next` before it merged here.
+
+## 0.3.0
+
+daiku is now written in Rust. This release replaces the Go CLI in this repository with
+the Rust workspace, and brings in its history from `btdstudio/daiku-next`.
+
+- **The same daiku.** Every Go command, verb, flag, output and exit code is ported. The
+  Go CLI's golden fixture cases all pass against it on Linux, macOS and Windows.
+  Workspaces made by the Go CLI work unchanged, and ticket hashes match Go's, so no
+  ticket needs re-marking.
+- **Install with one command.** Each release has a shell installer for macOS and Linux,
+  and a PowerShell one for Windows, as well as an archive per platform with its
+  checksum. See [`docs/migration.md`](https://github.com/btdstudio/daiku/blob/v0.3.0/docs/migration.md),
+  which also covers moving from the Go binary.
+- **Signed builds.** Every archive has a build attestation:
+  `gh attestation verify <archive> --repo btdstudio/daiku`.
+- **`--json` on every read command.** It writes one versioned document,
+  `{"schema":1,"data":...,"warnings":[...]}`, or an error with exit 1. See
+  [`docs/json.md`](https://github.com/btdstudio/daiku/blob/v0.3.0/docs/json.md). Since
+  `0.3.0-alpha.3`:
+  - `tickets`, `idea` and `repo` with `--json` and no verb return a `Usage` error;
+  - `switch`'s listing comes from the core library;
+  - a test checks each `--json` case against the Go CLI's case on the same inputs.
+- **`go install` stops at `v0.2.0`.** This release has no Go module, so
+  `go install github.com/btdstudio/daiku/cmd/daiku@latest` fails.
+  `go install github.com/btdstudio/daiku/cmd/daiku@v0.2.0` still installs the last Go
+  release.
+
+The alpha sections below have the details of the port.
 
 ## 0.3.0-alpha.3
 
