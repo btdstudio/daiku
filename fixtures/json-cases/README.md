@@ -1,5 +1,7 @@
 # `--json` cases
 
+The contract these cases check is described in [`docs/json.md`](../../docs/json.md).
+
 Fixture cases for `--json` on the read commands in spec R5 (ADR-0004). They have
 the same format as `fixtures/cases/` and use the same shared workspaces, but they
 run only against the Rust daiku, because the Go CLI has no `--json`:
@@ -17,8 +19,11 @@ plus `--json`, so its `data` can be compared with the text output Go was checked
 against (AC3). A few cases have no Go case of the same name; each of these takes
 another Go case's starting files and changes only its `args`.
 
-`crates/daiku-fixtures/tests/json_cases.rs` checks every case here. Each case's
-expected output must be one envelope with nothing on stderr, with the exit code the
+`crates/daiku-fixtures/tests/json_cases.rs` checks every case here, and checks each one against
+its Go twin: the same exit code, an error `message` that is the twin's stderr, and
+`warnings` that are its `warning: ` lines. A case with no twin is listed in that
+test's `NO_TWIN`, with the Go case whose files it takes. Each case's expected output
+must be one envelope with nothing on stderr, with the exit code the
 contract gives. Every read form must have a data case and an error case. A new read
 form needs an entry in that test's `FORMS`, and both kinds of case.
 

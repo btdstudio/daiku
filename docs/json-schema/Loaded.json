@@ -13,10 +13,12 @@
       "$ref": "#/definitions/Settings"
     },
     "global": {
+      "description": "The global settings file's contents, unchanged, including keys daiku doesn't use; empty when there's no file.",
       "type": "object",
       "additionalProperties": true
     },
     "project": {
+      "description": "The project settings file's contents, unchanged, including keys daiku doesn't use; empty when there's no file.",
       "type": "object",
       "additionalProperties": true
     },

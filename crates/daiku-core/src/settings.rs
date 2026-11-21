@@ -51,18 +51,29 @@ impl schemars::JsonSchema for Loaded {
     }
 
     fn json_schema(generator: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
-        use schemars::schema::{InstanceType, ObjectValidation, Schema, SchemaObject, SingleOrVec};
-        let obj = Schema::Object(SchemaObject {
-            instance_type: Some(SingleOrVec::Single(Box::new(InstanceType::Object))),
-            object: Some(Box::new(ObjectValidation {
-                additional_properties: Some(Box::new(Schema::Bool(true))),
+        use schemars::schema::{
+            InstanceType, Metadata, ObjectValidation, Schema, SchemaObject, SingleOrVec,
+        };
+        // A settings file's contents, unchanged, including keys daiku doesn't use.
+        let layer = |which: &str| {
+            Schema::Object(SchemaObject {
+                metadata: Some(Box::new(Metadata {
+                    description: Some(format!(
+                        "The {which} settings file's contents, unchanged, including keys daiku doesn't use; empty when there's no file."
+                    )),
+                    ..Default::default()
+                })),
+                instance_type: Some(SingleOrVec::Single(Box::new(InstanceType::Object))),
+                object: Some(Box::new(ObjectValidation {
+                    additional_properties: Some(Box::new(Schema::Bool(true))),
+                    ..Default::default()
+                })),
                 ..Default::default()
-            })),
-            ..Default::default()
-        });
+            })
+        };
         let mut props = schemars::Map::new();
-        props.insert("global".into(), obj.clone());
-        props.insert("project".into(), obj);
+        props.insert("global".into(), layer("global"));
+        props.insert("project".into(), layer("project"));
         props.insert("effective".into(), generator.subschema_for::<Settings>());
         props.insert("vcs".into(), generator.subschema_for::<String>());
         let required = ["global", "project", "effective", "vcs"]
