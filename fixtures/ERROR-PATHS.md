@@ -408,7 +408,7 @@ The classes:
 | context | `repo-list-outside-workspace` |
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
-| corrupt | `repo-list-corrupt-paths`, `repo-list-corrupt-repos` |
+| corrupt | `repo-list-corrupt-paths`, `repo-list-corrupt-repos`, `repo-list-invalid-repo-name` |
 | other | `repo-list`, `repo-list-empty`, `repo-list-help-flag`, `repo-list-no-path` |
 
 ## daiku repo path
@@ -430,7 +430,7 @@ The classes:
 | context | `repo-doctor-missing-on-disk`, `repo-doctor-no-local-path`, `repo-doctor-not-a-checkout`, `repo-doctor-outside-workspace` |
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: --clone's one workspace write is .daiku/paths.json, the writer covered by repo-path-through-symlink |
-| corrupt | `repo-doctor-corrupt-repos` |
+| corrupt | `repo-doctor-clone-invalid-repo-name`, `repo-doctor-corrupt-repos` |
 | other | `repo-doctor-clone`, `repo-doctor-clone-no-into`, `repo-doctor-clone-nothing-missing`, `repo-doctor-empty`, `repo-doctor-help-flag`, `repo-doctor-no-origin` |
 
 ## daiku env
@@ -441,7 +441,7 @@ The classes:
 | context | `env-no-change`, `env-outside-workspace` |
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
-| corrupt | `env-corrupt-repos`, `env-corrupt-state` |
+| corrupt | `env-corrupt-repos`, `env-corrupt-state`, `env-invalid-repo-name` |
 | other | `env-build-change`, `env-help-flag`, `env-plan-without-repos` |
 
 ## daiku commit

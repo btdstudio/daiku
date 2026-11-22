@@ -1,0 +1,1 @@
+{"repos": {"../outside": {"remote": "https://example.invalid/x.git", "defaultBranch": "main"}, "ok": {"remote": "https://example.invalid/ok.git", "defaultBranch": "main"}}}

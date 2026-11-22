@@ -1,0 +1,6 @@
+args = ["env"]
+workspace = "build-implement"
+
+[expect]
+exit = 1
+stderr = "daiku: REPOS.json: invalid repo name \"../outside\" (use lowercase letters, digits, '.', '_' and '-')\n"
