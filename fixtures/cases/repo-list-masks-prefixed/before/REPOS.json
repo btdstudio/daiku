@@ -1,0 +1,1 @@
+{"repos": {"a": {"remote": "-ssh://u:p@host.invalid/a.git", "defaultBranch": "main"}, "b": {"remote": "ext::https://tok@host.invalid/b.git", "defaultBranch": "main"}, "c": {"remote": "\u0001https://tok@host.invalid/c.git", "defaultBranch": "main"}}}
