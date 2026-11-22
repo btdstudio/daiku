@@ -690,3 +690,11 @@ fn the_build_room_needs_its_marker() {
 fn the_shipped_scaffold_is_clean() {
     assert_eq!(check(), Vec::<String>::new());
 }
+
+#[test]
+fn check_allows_the_links_placeholder_only() {
+    let flagged = has_template_syntax;
+    assert!(!flagged("## Links\n\n{{links}}\n"));
+    assert!(flagged("{{links}} and {{title}}"));
+    assert!(flagged("{{ links }}"));
+}
