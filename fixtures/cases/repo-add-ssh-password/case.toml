@@ -1,0 +1,6 @@
+args = ["repo", "add", "web", "ssh://u:p@host.invalid/x.git"]
+workspace = "init"
+
+[expect]
+exit = 1
+stderr = "daiku: remote has credentials in it, and REPOS.json is committed — remove them\n"
