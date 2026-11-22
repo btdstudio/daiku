@@ -236,6 +236,65 @@ fn a_failed_clone_ends_with_its_error_and_the_run_goes_on() {
     );
 }
 
+/// N-0004 AC2: every valid name shape clones to a direct child of `--into`. Paths
+/// are compared by component, so this runs on every OS.
+#[test]
+fn doctor_clone_keeps_each_destination_inside_into() {
+    let t = Temp::new();
+    let (ws, process, _events) = workspace(&t);
+    let names = ["0a", "a", "a-b", "a.b", "a_b"];
+    for name in names {
+        ws.repo_add(
+            name,
+            &format!("https://example.invalid/{name}.git"),
+            None,
+            "",
+        )
+        .unwrap();
+        process.reply(ok());
+    }
+    let into = t.p("clones").to_string_lossy().into_owned();
+    let report = ws.repo_doctor(true, Some(&into)).unwrap().value;
+
+    assert_eq!(report.clones.len(), names.len(), "{:?}", report.clones);
+    for (step, name) in report.clones.iter().zip(names) {
+        let CloneStep::Cloned { repo, path } = step else {
+            panic!("{step:?}");
+        };
+        assert_eq!(repo, name);
+        let dest = std::path::Path::new(path);
+        assert_eq!(dest.parent(), Some(std::path::Path::new(&into)), "{name}");
+        assert_eq!(dest.file_name(), Some(std::ffi::OsStr::new(name)), "{name}");
+    }
+}
+
+/// N-0004 AC1: a hand-edited name stops `repo doctor --clone` before any clone:
+/// no event, no git, and the registry files are left as they were.
+#[test]
+fn doctor_clone_refuses_a_bad_name_before_cloning() {
+    let t = Temp::new();
+    let (ws, process, events) = workspace(&t);
+    let repos = concat!(
+        "{\"repos\": {",
+        "\"../outside\": {\"remote\": \"https://example.invalid/x.git\"}, ",
+        "\"ok\": {\"remote\": \"https://example.invalid/ok.git\"}",
+        "}}\n"
+    );
+    t.write("REPOS.json", repos);
+    let into = t.p("clones").to_string_lossy().into_owned();
+
+    let err = ws.repo_doctor(true, Some(&into)).unwrap_err();
+    assert!(
+        matches!(&err, Error::InvalidRepoName { name, path: Some(_) } if name == "../outside"),
+        "{err:?}"
+    );
+    assert!(events.0.borrow().is_empty(), "no clone started");
+    assert!(process.calls.borrow().is_empty(), "no git ran");
+    assert_eq!(t.read("REPOS.json"), repos);
+    assert!(!t.exists(".daiku/paths.json"));
+    assert!(!t.exists("clones"));
+}
+
 #[test]
 fn doctor_clone_skips_present_repos_and_says_when_it_cant_place_one() {
     let t = Temp::new();

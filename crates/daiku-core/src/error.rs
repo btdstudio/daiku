@@ -203,8 +203,10 @@ pub enum Error {
     #[error("getwd: the current folder is unknown")]
     NoCwd,
 
-    #[error("daiku: invalid repo name {} (use lowercase letters, digits, '.', '_' and '-')", gofmt::quote(.name))]
-    InvalidRepoName { name: String },
+    /// A repo name that doesn't match `NAME_RE`. `path` is the file it was read
+    /// from, `None` for a name given to `repo add`.
+    #[error("daiku: {}invalid repo name {} (use lowercase letters, digits, '.', '_' and '-')", file_prefix(.path), gofmt::quote(.name))]
+    InvalidRepoName { name: String, path: Option<String> },
 
     #[error("daiku: repo {} is already registered", gofmt::quote(.name))]
     RepoExists { name: String },
@@ -473,6 +475,11 @@ pub enum Error {
         path: String,
         source: std::io::Error,
     },
+}
+
+/// `"<path>: "` for an error read from a file, or nothing.
+fn file_prefix(path: &Option<String>) -> String {
+    path.as_ref().map(|p| format!("{p}: ")).unwrap_or_default()
 }
 
 /// Go's `gatePolicyAll` refusal: the violations joined by newlines, and the
