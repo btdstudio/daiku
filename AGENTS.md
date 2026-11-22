@@ -29,6 +29,8 @@ against Go, and its behaviour may differ from Go's. Read this before changing co
   notes.
 - `docs/migration.md` — moving a machine from the Go binary to the Rust one.
 - `docs/json.md` — the `--json` contract.
+- `docs/app/design.md` — the desktop app's design: stack, architecture, and what it
+  needs from core.
 
 ## Rules for daiku-core
 
