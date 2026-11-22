@@ -4,7 +4,9 @@ Releases before 0.3.0 were the Go CLI, the last being `v0.2.0`; their notes are 
 this repo's GitHub releases. The `0.3.0-alpha` prereleases were built in
 `btdstudio/daiku-next` before it merged here.
 
-## Unreleased
+## 0.8.0
+
+A pull request template for `daiku pr`.
 
 - **`daiku pr` builds its body from a PR template**: the repo's own
   `pull_request_template.md` (in `.github/`, the repo root or `docs/`), else the
@@ -18,6 +20,9 @@ this repo's GitHub releases. The `0.3.0-alpha` prereleases were built in
   `daiku pr` now refuses an unknown flag or a second argument; both were ignored
   before. A repo template that is a symlink to a file outside the repo is ignored,
   with a warning, so a repo can't make the pull request carry another file.
+
+Run `daiku update` in an existing workspace to add `build/05_ship/`, the new room that
+holds the template and the ship guidance.
 
 ## 0.7.1
 
