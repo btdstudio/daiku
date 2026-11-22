@@ -164,7 +164,7 @@ impl crate::Workspace {
                 .map(|name| {
                     let repo = &reg.repos[&name];
                     RepoRow {
-                        remote: repo.remote.clone(),
+                        remote: repos::redact_remote(&repo.remote),
                         branch: repo.default_branch.clone(),
                         path: reg.paths.get(&name).cloned(),
                         name,
