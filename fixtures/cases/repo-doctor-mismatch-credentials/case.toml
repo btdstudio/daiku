@@ -1,0 +1,8 @@
+args = ["repo", "doctor"]
+workspace = "build-implement"
+git = true
+origin = "https://x-access-token:s3cr3t@github.com/org/other.git"
+
+[expect]
+exit = 1
+stdout = "✗ api: remote mismatch: {ROOT} has origin https://***@github.com/org/other.git, registered as https://example.invalid/api.git\n"

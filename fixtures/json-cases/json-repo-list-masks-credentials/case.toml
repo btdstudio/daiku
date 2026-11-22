@@ -1,0 +1,19 @@
+args = ["repo", "list", "--json"]
+workspace = "init"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": [
+    {
+      "name": "x",
+      "remote": "ssh://***@host.invalid/x.git",
+      "branch": "main",
+      "path": null
+    }
+  ],
+  "warnings": []
+}
+'''

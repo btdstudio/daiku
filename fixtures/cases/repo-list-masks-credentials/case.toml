@@ -1,0 +1,6 @@
+args = ["repo", "list"]
+workspace = "init"
+
+[expect]
+exit = 0
+stdout = "x  ssh://***@host.invalid/x.git  main  (no local path)\n"

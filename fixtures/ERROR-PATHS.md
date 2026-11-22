@@ -409,7 +409,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `repo-list-corrupt-paths`, `repo-list-corrupt-repos`, `repo-list-invalid-repo-name` |
-| other | `repo-list`, `repo-list-empty`, `repo-list-help-flag`, `repo-list-no-path` |
+| other | `repo-list`, `repo-list-empty`, `repo-list-help-flag`, `repo-list-masks-credentials`, `repo-list-no-path` |
 
 ## daiku repo path
 
@@ -431,7 +431,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: --clone's one workspace write is .daiku/paths.json, the writer covered by repo-path-through-symlink |
 | corrupt | `repo-doctor-clone-invalid-repo-name`, `repo-doctor-corrupt-repos` |
-| other | `repo-doctor-clone`, `repo-doctor-clone-no-into`, `repo-doctor-clone-nothing-missing`, `repo-doctor-empty`, `repo-doctor-help-flag`, `repo-doctor-no-origin` |
+| other | `repo-doctor-clone`, `repo-doctor-clone-no-into`, `repo-doctor-clone-nothing-missing`, `repo-doctor-empty`, `repo-doctor-help-flag`, `repo-doctor-mismatch-credentials`, `repo-doctor-no-origin` |
 
 ## daiku env
 
