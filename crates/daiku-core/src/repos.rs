@@ -202,6 +202,11 @@ pub fn check_remote(remote: &str) -> Result<(), Error> {
     {
         return Err(Error::RemoteCredentials);
     }
+    // Any scheme, including http(s) remotes that `url::parse` rejects: a
+    // password in the userinfo, found by the scan `redact_remote` uses.
+    if split_userinfo(remote).is_some_and(|u| u.userinfo.contains(':')) {
+        return Err(Error::RemoteCredentials);
+    }
     Ok(())
 }
 
@@ -249,30 +254,51 @@ static SCP_REMOTE_RE: LazyLock<Regex> =
 /// userinfo can't hide its `@`, and the userinfo runs to the authority's last `@`.
 /// Leading whitespace is kept but doesn't hide the scheme.
 pub fn redact_remote(remote: &str) -> String {
-    let body = remote.trim_start();
-    let lead = &remote[..remote.len() - body.len()];
-    let Some(sep) = body.find("://") else {
+    let Some(u) = split_userinfo(remote) else {
         return remote.to_string();
     };
+    let http = u.scheme.eq_ignore_ascii_case("http") || u.scheme.eq_ignore_ascii_case("https");
+    if !http && !u.userinfo.contains(':') {
+        return remote.to_string();
+    }
+    format!("{}{}://***{}", u.lead, u.scheme, u.rest)
+}
+
+/// The pieces of a `scheme://userinfo@host...` remote, as `split_userinfo` finds them.
+struct Userinfo<'a> {
+    /// Leading whitespace, kept as it was.
+    lead: &'a str,
+    scheme: &'a str,
+    /// Everything before the authority's last `@`.
+    userinfo: &'a str,
+    /// The rest of the remote, starting at that `@`.
+    rest: &'a str,
+}
+
+/// The raw scan shared by `redact_remote` and `check_remote`, so what is masked
+/// when printed and what is refused when stored can't drift apart. `None` when
+/// there is no `://`, the scheme is invalid, or the authority has no `@`.
+fn split_userinfo(remote: &str) -> Option<Userinfo<'_>> {
+    let body = remote.trim_start();
+    let lead = &remote[..remote.len() - body.len()];
+    let sep = body.find("://")?;
     let scheme = &body[..sep];
     let valid_scheme = scheme.starts_with(|c: char| c.is_ascii_alphabetic())
         && scheme
             .bytes()
             .all(|b| b.is_ascii_alphanumeric() || b"+.-".contains(&b));
     if !valid_scheme {
-        return remote.to_string();
+        return None;
     }
     let after = &body[sep + 3..];
     let authority = &after[..after.find('/').unwrap_or(after.len())];
-    let Some(at) = authority.rfind('@') else {
-        return remote.to_string();
-    };
-    let userinfo = &authority[..at];
-    let http = scheme.eq_ignore_ascii_case("http") || scheme.eq_ignore_ascii_case("https");
-    if !http && !userinfo.contains(':') {
-        return remote.to_string();
-    }
-    format!("{lead}{scheme}://***{}", &after[at..])
+    let at = authority.rfind('@')?;
+    Some(Userinfo {
+        lead,
+        scheme,
+        userinfo: &authority[..at],
+        rest: &after[at..],
+    })
 }
 
 /// Go's `normalizeRemote`: the SSH and HTTPS spellings of one repo compare equal.
