@@ -4,15 +4,15 @@ Releases before 0.3.0 were the Go CLI, the last being `v0.2.0`; their notes are 
 this repo's GitHub releases. The `0.3.0-alpha` prereleases were built in
 `btdstudio/daiku-next` before it merged here.
 
-## 0.7.0
+## 0.7.1
 
 Remotes that can't leak their credentials.
 
 - **`daiku repo add` refuses a password in a remote of any scheme**, not only
-  `https://`. `ssh://user:pass@host/x`, `git://…`, `ftp://…` and the like are
-  refused, so the password never reaches the committed `REPOS.json`. A user with no
-  password (`ssh://git@host/x`) and scp-style remotes (`git@host:org/x.git`) are
-  accepted as before.
+  `https://`. An `ssh://`, `git://` or `ftp://` remote with a password in its user
+  part is refused, so the password never reaches the committed `REPOS.json`. A user
+  with no password (`ssh://git@host/x`) and scp-style remotes (`git@host:org/x.git`)
+  are accepted as before.
 - **An `http(s)` remote with any user is refused, even when the URL is malformed.**
   A bare token in the user field, such as ` https://tok@host/x` (a leading space) or
   `https://tok@host name/x`, used to slip through because the URL didn't parse.
@@ -22,8 +22,8 @@ Remotes that can't leak their credentials.
   credentials, from both the check and the mask. A pasted remote with a trailing
   newline is refused too; git can't use one either.
 - **Refusal messages mask credentials.** `invalid remote` and `remote helpers aren't
-  allowed` show any userinfo after `://` as `***`, so `-ssh://u:p@host/x` prints as
-  `-ssh://***@host/x`. That holds on the terminal, in `repo doctor --clone`'s
+  allowed` show any userinfo after `://` as `***`, so a dash-led `ssh://` remote with
+  a password prints as `-ssh://***@host/x`. That holds on the terminal, in `repo doctor --clone`'s
   report, and in the error `daiku-core` hands to other clients.
 - **`repo list` masks more.** A stored remote whose scheme is hidden behind a `-`, a
   `helper::` prefix or a control character now shows its userinfo as `***`.
@@ -33,6 +33,12 @@ Remotes that can't leak their credentials.
 
 `docs/migration.md` lists these as differences from the Go CLI, which accepts all of
 these remotes.
+
+## 0.7.0
+
+Tagged, but published without binaries: the release notes held an example that
+GitHub Actions took for a credential, so the build jobs never ran. Its changes ship in
+0.7.1, unchanged.
 
 ## 0.6.0
 
