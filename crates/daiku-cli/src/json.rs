@@ -55,6 +55,12 @@ pub fn run(command: &str, args: &[String], stdout: &mut impl Write) -> Option<u8
             read(out, workspace().switch_list(all))
         }
         "env" => read(out, workspace().env_view()),
+        // Only the template; opening a pull request is interactive, so it has no
+        // JSON form.
+        "pr" => match rest.as_slice() {
+            ["--template"] => read(out, workspace().pr_template()),
+            _ => usage_err(out, &usage::usage_line(&["pr"])),
+        },
         // Go prints `repo`'s usage before it loads the registry when there's no verb.
         "repo" if rest.is_empty() => usage_err(out, &usage::usage_text(&["repo"])),
         "repo" if rest.first() == Some(&"list") => {

@@ -284,9 +284,9 @@ pub const COMMANDS: &[Command] = &[
     },
     Command {
         path: &["pr"],
-        synopsis: "daiku pr [title]",
+        synopsis: "daiku pr [--template | --body-file <path>] [title]",
         summary: "open a pull request from the active build's repo, linking its ticket",
-        notes: "",
+        notes: "  --template   print the pull request template, with the links in place, and open nothing\n  --body-file  use the text in <path> as the body; the links block is refreshed or added\n\nThe body starts from the first template found: the repo's pull_request_template.md\n(.github/, the repo root, then docs/), the workspace's\nbuild/05_ship/templates/pull-request.md, then daiku's built-in copy.\n",
         raw: "",
     },
     Command {

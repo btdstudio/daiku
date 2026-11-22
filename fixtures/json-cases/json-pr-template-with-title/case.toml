@@ -1,0 +1,14 @@
+args = ["pr", "--template", "My title", "--json"]
+workspace = "build-implement"
+
+[expect]
+exit = 1
+stdout = '''
+{
+  "schema": 1,
+  "error": {
+    "kind": "Usage",
+    "message": "usage: daiku pr [--template | --body-file <path>] [title]"
+  }
+}
+'''

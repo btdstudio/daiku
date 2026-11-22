@@ -3,7 +3,13 @@ args = ["help", "pr"]
 [expect]
 exit = 0
 stdout = '''
-usage: daiku pr [title]
+usage: daiku pr [--template | --body-file <path>] [title]
 
 open a pull request from the active build's repo, linking its ticket
+  --template   print the pull request template, with the links in place, and open nothing
+  --body-file  use the text in <path> as the body; the links block is refreshed or added
+
+The body starts from the first template found: the repo's pull_request_template.md
+(.github/, the repo root, then docs/), the workspace's
+build/05_ship/templates/pull-request.md, then daiku's built-in copy.
 '''

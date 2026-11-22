@@ -1,0 +1,20 @@
+args = ["pr", "--template"]
+workspace = "build-implement"
+git = true
+tools = ["git"]
+skip_on = ["windows"]
+
+[expect]
+exit = 0
+stdout = '''
+from .github
+
+<!-- daiku:links -->
+Implements S-0002: Sign in
+
+- **github:** org/api#12
+- **Plan:** `plan/specs/1-auth-flow/`
+- **Spec:** `plan/specs/1-auth-flow/functional-spec.md`
+<!-- /daiku:links -->
+'''
+stderr = "template: repo .github/PULL_REQUEST_TEMPLATE.md\n"

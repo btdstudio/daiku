@@ -14,6 +14,12 @@ use crate::state::{BUILD_LOOP, Change, overview};
 use crate::ticket::{self, Ticket};
 use crate::{Error, Event, gofmt, inbox};
 
+mod pr_template;
+pub use pr_template::{
+    LINKS_CLOSE, LINKS_OPEN, LINKS_PLACEHOLDER, PrTemplate, TemplateOrigin, WORKSPACE_TEMPLATE,
+    find_repo_template, render_body,
+};
+
 /// One line of `repo list`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -78,6 +84,14 @@ pub struct ShipCommand {
     pub dir: String,
     pub program: String,
     pub args: Vec<String>,
+}
+
+/// What `daiku pr` is given besides the build: a title, and a finished body in place
+/// of the template.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct PrOptions {
+    pub title: Option<String>,
+    pub body: Option<String>,
 }
 
 /// Go's `PRBody`: links a pull request to its ticket: id and title, each
@@ -526,27 +540,94 @@ impl crate::Workspace {
         Ok(Outcome::new(()))
     }
 
-    /// `daiku pr [title]`, first half: Go's `runPR` up to running gh. It reads
-    /// the build's ticket and builds `gh pr create`'s arguments. A branch that
-    /// doesn't include the ticket's id is a warning, which a client shows before
-    /// it runs the command with [`Workspace::run_ship`].
-    pub fn pr_command(&self, args: &[String]) -> Result<Outcome<ShipCommand>, Error> {
+    /// `daiku pr --template`: the template a pull request body starts from, with
+    /// the ticket's links in place. It takes the repo's own template, else the
+    /// workspace's `build/05_ship/templates/pull-request.md`, else the copy
+    /// embedded in the binary.
+    pub fn pr_template(&self) -> Result<Outcome<PrTemplate>, Error> {
+        let (st, dir) = self.active_build()?;
+        let ticket = overview::build_ticket(self.root(), &st);
+        let links = ticket
+            .as_ref()
+            .map_or_else(String::new, |t| pr_body(t, &plan_folder(&st)));
+        let (origin, path, text, warnings) = self.pr_template_source(&dir)?;
+        Ok(Outcome {
+            value: PrTemplate {
+                origin,
+                path,
+                body: render_body(&text, &links),
+            },
+            warnings,
+        })
+    }
+
+    /// The first template that exists, before the links go in: its origin, path and
+    /// text.
+    fn pr_template_source(
+        &self,
+        repo_dir: &std::path::Path,
+    ) -> Result<(TemplateOrigin, String, String, Vec<crate::Warning>), Error> {
+        let Outcome {
+            value: found,
+            warnings,
+        } = find_repo_template(repo_dir)?;
+        if let Some((path, text)) = found {
+            return Ok((TemplateOrigin::Repo, path, text, warnings));
+        }
+        match std::fs::read_to_string(self.root().join(WORKSPACE_TEMPLATE)) {
+            Ok(text) => {
+                return Ok((
+                    TemplateOrigin::Workspace,
+                    WORKSPACE_TEMPLATE.into(),
+                    text,
+                    warnings,
+                ));
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => {
+                return Err(Error::CannotRead {
+                    path: WORKSPACE_TEMPLATE.into(),
+                    detail: e.to_string(),
+                });
+            }
+        }
+        let text = crate::scaffold::engine::template(WORKSPACE_TEMPLATE)
+            .expect("the PR template is embedded");
+        Ok((
+            TemplateOrigin::Default,
+            WORKSPACE_TEMPLATE.into(),
+            text.into(),
+            warnings,
+        ))
+    }
+
+    /// `daiku pr [--body-file <path>] [title]`, first half: Go's `runPR` up to
+    /// running gh. It reads the build's ticket and builds `gh pr create`'s
+    /// arguments. The body is `opts.body` when given, else the chosen template
+    /// (see [`Workspace::pr_template`]), with the ticket's links put in either
+    /// way. A branch that doesn't include the ticket's id is a warning, which a
+    /// client shows before it runs the command with [`Workspace::run_ship`].
+    pub fn pr_command(&self, opts: &PrOptions) -> Result<Outcome<ShipCommand>, Error> {
         let (st, dir) = self.active_build()?;
         let env = self.env();
         let ticket = overview::build_ticket(self.root(), &st);
         let mut gh = vec!["pr".to_string(), "create".to_string()];
-        let mut title = args
-            .first()
-            .filter(|a| !a.starts_with('-'))
-            .cloned()
-            .unwrap_or_default();
+        let mut title = opts.title.clone().unwrap_or_default();
         let mut warnings = Vec::new();
         if let Some(t) = &ticket {
             if title.is_empty() {
                 title = format!("[{}] {}", t.id, t.title);
             }
+            let text = match &opts.body {
+                Some(body) => body.clone(),
+                None => {
+                    let (_, _, text, found) = self.pr_template_source(&dir)?;
+                    warnings.extend(found);
+                    text
+                }
+            };
             gh.push("--body".into());
-            gh.push(pr_body(t, &plan_folder(&st)));
+            gh.push(render_body(&text, &pr_body(t, &plan_folder(&st))));
             let branch = Cmd::new("git").args(["branch", "--show-current"]).dir(&dir);
             if let Ok(o) = env.process.output(&branch)
                 && o.code == Some(0)
@@ -561,6 +642,9 @@ impl crate::Workspace {
                     });
                 }
             }
+        } else if let Some(body) = &opts.body {
+            gh.push("--body".into());
+            gh.push(body.clone());
         }
         if !title.is_empty() {
             gh.push("--title".into());

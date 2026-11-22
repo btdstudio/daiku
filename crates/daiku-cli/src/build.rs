@@ -5,7 +5,7 @@
 
 use std::io::Write;
 
-use daiku_core::build::CloneStep;
+use daiku_core::build::{CloneStep, PrOptions};
 
 use crate::display::field;
 use crate::{VERSION, finish, report, usage, workspace};
@@ -212,11 +212,87 @@ pub fn commit(args: &[String], stderr: &mut impl Write) -> u8 {
     finish(workspace().commit(args), stderr, |()| {})
 }
 
-/// Go's `runPR`: the warning about the branch reaches stderr before gh takes the
-/// terminal.
-pub fn pr(args: &[String], stderr: &mut impl Write) -> u8 {
+/// What `daiku pr`'s arguments ask for.
+enum PrArgs {
+    /// `--template`: print the chosen template.
+    Template,
+    /// Open a pull request, with a title and a finished body file, either optional.
+    Open {
+        title: Option<String>,
+        body_file: Option<String>,
+    },
+}
+
+/// Parses `pr`'s arguments: `--template`, `--body-file <path>` (or
+/// `--body-file=<path>`) and at most one title. `Err` is a usage error.
+fn parse_pr(args: &[String]) -> Result<PrArgs, ()> {
+    let (mut template, mut title, mut body_file) = (false, None, None);
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        if a == "--template" {
+            template = true;
+        } else if a == "--body-file" {
+            match it.next() {
+                Some(p) if body_file.is_none() => body_file = Some(p.clone()),
+                _ => return Err(()),
+            }
+        } else if let Some(p) = a.strip_prefix("--body-file=") {
+            if body_file.is_some() {
+                return Err(());
+            }
+            body_file = Some(p.to_string());
+        } else if a.starts_with('-') || title.is_some() {
+            return Err(());
+        } else {
+            title = Some(a.clone());
+        }
+    }
+    if body_file.as_deref() == Some("") {
+        return Err(());
+    }
+    if template {
+        return if title.is_none() && body_file.is_none() {
+            Ok(PrArgs::Template)
+        } else {
+            Err(())
+        };
+    }
+    Ok(PrArgs::Open { title, body_file })
+}
+
+/// Go's `runPR`, with N-0019's `--template` and `--body-file`: the warning about
+/// the branch reaches stderr before gh takes the terminal. `--template` prints the
+/// body to stdout and the template's origin to stderr, and doesn't run gh.
+pub fn pr(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
+    let Ok(parsed) = parse_pr(args) else {
+        return fail(stderr, &usage::usage_line(&["pr"]));
+    };
     let ws = workspace();
-    let outcome = match ws.pr_command(args) {
+    let (title, body_file) = match parsed {
+        PrArgs::Template => {
+            return match ws.pr_template() {
+                Ok(o) => {
+                    for w in &o.warnings {
+                        let _ = writeln!(stderr, "warning: {w}");
+                    }
+                    let t = o.value;
+                    let _ = write!(stdout, "{}", t.body);
+                    let _ = writeln!(stderr, "template: {} {}", t.origin.as_str(), field(&t.path));
+                    0
+                }
+                Err(e) => fail(stderr, &report(&e)),
+            };
+        }
+        PrArgs::Open { title, body_file } => (title, body_file),
+    };
+    let body = match body_file {
+        None => None,
+        Some(path) => match std::fs::read_to_string(&path) {
+            Ok(b) => Some(b),
+            Err(e) => return fail(stderr, &format!("daiku: cannot read {}: {e}", field(&path))),
+        },
+    };
+    let outcome = match ws.pr_command(&PrOptions { title, body }) {
         Ok(o) => o,
         Err(e) => return fail(stderr, &report(&e)),
     };
