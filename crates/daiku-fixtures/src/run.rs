@@ -199,6 +199,10 @@ pub fn run_case_with_timeout(
 
     let base = if case.spec.git {
         let base = git_base(&sb.root, &env)?;
+        if let Some(url) = &case.spec.origin {
+            git(&sb.root, &env, &["remote", "add", "origin", url])
+                .map_err(|e| Error::at(&sb.root, e))?;
+        }
         stage(case, &sb, &env)?;
         Some(base)
     } else {
