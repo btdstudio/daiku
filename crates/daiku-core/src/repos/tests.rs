@@ -488,7 +488,13 @@ fn redact_remote_masks_userinfo_for_display() {
         ("/srv/git/api.git", "/srv/git/api.git"),
         ("C:\\src\\api", "C:\\src\\api"),
         ("file:///srv/git/api.git", "file:///srv/git/api.git"),
-        ("1x://u:p@host/x", "1x://u:p@host/x"),
+        // `1x` isn't a valid scheme, so the fallback masks it (N-0018 D5).
+        ("1x://u:p@host/x", "1x://***@host/x"),
+        // An unreadable scheme is masked, whatever hides it (N-0018).
+        ("-ssh://u:p@h/x", "-ssh://***@h/x"),
+        ("ext::https://tok@h/x", "ext::https://***@h/x"),
+        ("\u{1}https://tok@h/x", "\u{1}https://***@h/x"),
+        ("-ssh://git@h/x", "-ssh://***@h/x"),
         ("", ""),
     ] {
         assert_eq!(redact_remote(remote), want, "{remote}");
@@ -896,6 +902,26 @@ fn clone_refuses_a_committed_remote_with_a_password() {
 }
 
 #[test]
+fn clone_refuses_a_committed_control_character_remote_masked() {
+    let t = Temp::new();
+    let d = dirs("/h", Some(t.path().to_str().unwrap()));
+    let mut r = Registry::default();
+    r.repos.insert(
+        "x".into(),
+        Repo {
+            remote: "\u{1}https://tok@h/x".into(),
+            default_branch: "main".into(),
+            ..Repo::default()
+        },
+    );
+    let p = ScriptedProcess::default();
+    let err = r.clone_repo("x", "x", &d, &p).unwrap_err();
+    assert!(matches!(&err, Error::InvalidRemote { remote } if remote == "\u{1}https://***@h/x"));
+    assert!(!err.to_string().contains("tok@"));
+    assert!(p.calls.borrow().is_empty());
+}
+
+#[test]
 fn clone_refuses_a_committed_http_remote_with_a_token_user() {
     let t = Temp::new();
     let d = dirs("/h", Some(t.path().to_str().unwrap()));
@@ -995,7 +1021,6 @@ fn check_remote_agrees_with_go_on_the_distinguishing_classes() {
         ("https://h/x?u@h", false),
         ("https://u@h?x", true),
         ("https://u@h#x", true),
-        ("\u{1}https://u@h/x", false),
         ("https://u@h/x ", true),
         ("", true),
         ("-x", true),
@@ -1112,4 +1137,87 @@ fn an_http_user_is_refused_whether_or_not_the_url_parses() {
     let mut r = Registry::default();
     assert!(r.add("x", "https://tok@h b/x", "").is_err());
     assert!(r.repos.is_empty());
+}
+
+/// Where the port refuses more than Go, on purpose (N-0018). Go accepts a remote
+/// holding an ASCII control character, and one led by a control character hides
+/// its scheme from the credentials check. The port refuses it, last, with the
+/// remote masked.
+#[test]
+fn a_control_character_in_a_remote_is_refused_unlike_go() {
+    for (remote, want) in [
+        (
+            "\u{1}https://tok@h/x",
+            "daiku: invalid remote \"\\x01https://***@h/x\"",
+        ),
+        (
+            "https://h/x\u{1}",
+            "daiku: invalid remote \"https://h/x\\x01\"",
+        ),
+        ("\thttps://h/x", "daiku: invalid remote \"\\thttps://h/x\""),
+        ("https://h/x\n", "daiku: invalid remote \"https://h/x\\n\""),
+    ] {
+        let got = check_remote(remote).unwrap_err().to_string();
+        assert_eq!(got, want, "{remote:?}");
+        assert!(!got.contains("tok@"), "{remote:?}");
+    }
+    // A readable http(s) userinfo still gets the credentials message.
+    for remote in ["https://tok@h\u{1}/x", "\thttps://tok@h/x"] {
+        assert_eq!(
+            check_remote(remote).unwrap_err().to_string(),
+            "daiku: remote has credentials in it, and REPOS.json is committed — remove them",
+            "{remote:?}"
+        );
+    }
+    let mut r = Registry::default();
+    assert!(r.add("x", "\u{1}https://tok@h/x", "").is_err());
+    assert!(r.repos.is_empty());
+}
+
+/// N-0018: the refusals that run before the credentials check mask the remote.
+#[test]
+fn refusals_before_the_credentials_check_mask_the_remote() {
+    for (remote, want) in [
+        ("-ssh://u:p@h/x", "daiku: invalid remote \"-ssh://***@h/x\""),
+        ("-ssh://git@h/x", "daiku: invalid remote \"-ssh://***@h/x\""),
+        (
+            "-https://tok@h/x",
+            "daiku: invalid remote \"-https://***@h/x\"",
+        ),
+        (
+            "ext::https://tok@h/x",
+            "daiku: remote helpers aren't allowed: \"ext::https://***@h/x\"",
+        ),
+        // Without userinfo the message is as it was.
+        ("-x", "daiku: invalid remote \"-x\""),
+        (
+            "--upload-pack=x",
+            "daiku: invalid remote \"--upload-pack=x\"",
+        ),
+    ] {
+        assert_eq!(
+            check_remote(remote).unwrap_err().to_string(),
+            want,
+            "{remote}"
+        );
+    }
+}
+
+#[test]
+fn mask_userinfo_masks_every_authority_after_a_scheme_separator() {
+    for (remote, want) in [
+        (
+            "ext::sh -c \"git clone https://tok@h/x; git clone ssh://u:p@g/y\"",
+            "ext::sh -c \"git clone https://***@h/x; git clone ssh://***@g/y\"",
+        ),
+        ("a://u@h/x b://v@h", "a://***@h/x b://***@h"),
+        ("git@github.com:org/x.git", "git@github.com:org/x.git"),
+        ("https://h/x", "https://h/x"),
+        ("-ssh://h", "-ssh://h"),
+        ("https://h/a@b", "https://h/a@b"),
+        ("https://a@b@h/x", "https://***@h/x"),
+        ("", ""),
+    ] {
+        assert_eq!(mask_userinfo(remote), want, "{remote}");
+    }
 }

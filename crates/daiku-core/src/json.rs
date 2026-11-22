@@ -294,4 +294,30 @@ mod tests {
         let v: serde_json::Value = serde_json::from_str(r#"{"z":1,"a":2}"#).unwrap();
         assert_eq!(to_pretty(&v).unwrap(), b"{\n  \"a\": 2,\n  \"z\": 1\n}\n");
     }
+
+    /// N-0018: the wire message is the masked Display text.
+    #[test]
+    fn error_body_carries_the_masked_remote() {
+        for (err, kind, message) in [
+            (
+                Error::InvalidRemote {
+                    remote: "-ssh://***@h/x".into(),
+                },
+                "InvalidRemote",
+                "daiku: invalid remote \"-ssh://***@h/x\"",
+            ),
+            (
+                Error::RemoteHelper {
+                    remote: "ext::https://***@h/x".into(),
+                },
+                "RemoteHelper",
+                "daiku: remote helpers aren't allowed: \"ext::https://***@h/x\"",
+            ),
+        ] {
+            let body = error_body(&err);
+            assert_eq!(body.kind, kind);
+            assert_eq!(body.message, message);
+            assert_eq!(body.message, err.to_string());
+        }
+    }
 }

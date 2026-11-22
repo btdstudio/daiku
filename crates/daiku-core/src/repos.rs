@@ -188,12 +188,12 @@ pub fn check_remote(remote: &str) -> Result<(), Error> {
     }
     if remote.starts_with('-') {
         return Err(Error::InvalidRemote {
-            remote: remote.into(),
+            remote: mask_userinfo(remote),
         });
     }
     if HELPER_RE.is_match(remote) {
         return Err(Error::RemoteHelper {
-            remote: remote.into(),
+            remote: mask_userinfo(remote),
         });
     }
     // The same predicate `redact_remote` masks by, from the raw scan so it holds
@@ -205,7 +205,40 @@ pub fn check_remote(remote: &str) -> Result<(), Error> {
             return Err(Error::RemoteCredentials);
         }
     }
+    // Last, so a readable http(s) userinfo still gets `RemoteCredentials`. A byte
+    // test: non-ASCII characters are multi-byte and never below 0x80.
+    if remote.bytes().any(|b| b < 0x20 || b == 0x7f) {
+        return Err(Error::InvalidRemote {
+            remote: mask_userinfo(remote),
+        });
+    }
     Ok(())
+}
+
+/// `remote` with the userinfo of every `://` authority replaced by `***`, whatever
+/// comes before it: for a remote that can't be judged (a `-`, `helper::` or
+/// control-character prefix hides its scheme). The authority runs to the next `/`
+/// or the end, and its userinfo to its last `@`. Keys only on `://`, so scp-style
+/// remotes and anything without one come back as they were.
+fn mask_userinfo(remote: &str) -> String {
+    let mut out = String::with_capacity(remote.len());
+    let mut rest = remote;
+    while let Some(i) = rest.find("://") {
+        let (head, tail) = rest.split_at(i + 3);
+        out.push_str(head);
+        let end = tail.find('/').unwrap_or(tail.len());
+        let authority = &tail[..end];
+        match authority.rfind('@') {
+            Some(at) => {
+                out.push_str("***");
+                out.push_str(&tail[at..end]);
+            }
+            None => out.push_str(authority),
+        }
+        rest = &tail[end..];
+    }
+    out.push_str(rest);
+    out
 }
 
 /// Go's `filepath.Abs` for a path: absolute paths are cleaned, and relative ones
@@ -250,10 +283,12 @@ static SCP_REMOTE_RE: LazyLock<Regex> =
 /// A raw scan rather than `url::parse`, which gives up on exactly the inputs that
 /// must still be masked. Only `/` ends the authority, so a `?` or `#` inside the
 /// userinfo can't hide its `@`, and the userinfo runs to the authority's last `@`.
-/// Leading whitespace is kept but doesn't hide the scheme.
+/// Leading whitespace is kept but doesn't hide the scheme. When the scheme can't
+/// be read (a `-`, `helper::` or control-character prefix), `mask_userinfo` masks
+/// any userinfo after a `://` instead.
 pub fn redact_remote(remote: &str) -> String {
     let Some(u) = split_userinfo(remote) else {
-        return remote.to_string();
+        return mask_userinfo(remote);
     };
     let http = u.scheme.eq_ignore_ascii_case("http") || u.scheme.eq_ignore_ascii_case("https");
     if !http && !u.userinfo.contains(':') {
