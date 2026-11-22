@@ -231,6 +231,9 @@ impl crate::Workspace {
         let reg = repos::load(self.root())?;
         let mut registered = Vec::new();
         for a in args {
+            if reg.is_archived(a) {
+                return Err(Error::RepoIsArchived { name: a.clone() });
+            }
             if reg.repos.contains_key(a) {
                 registered.push(a.clone());
             } else if args.len() > 1 {

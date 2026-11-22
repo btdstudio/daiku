@@ -11,7 +11,7 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use crate::env::{Cmd, Dirs, Process};
-use crate::gojson::decode::{At, Kind, Reader, fold, mismatch, string, string_map};
+use crate::gojson::decode::{At, Kind, Reader, boolean, fold, mismatch, string, string_map};
 use crate::json;
 use crate::state::store::{at, read_file, shown};
 use crate::write;
@@ -27,6 +27,13 @@ pub static NAME_RE: LazyLock<Regex> =
 pub struct Repo {
     pub remote: String,
     pub default_branch: String,
+    /// Retired: kept for its builds' history, but not cloned and not given new
+    /// work (N-0008). Written only when set, so a live entry is unchanged.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub archived: bool,
+    /// Why, when `repo archive --reason` gave one.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub archived_reason: String,
 }
 
 /// The registry: every repo and its local path, if set.
@@ -137,6 +144,10 @@ fn repo(r: &mut Reader) -> Result<Repo, String> {
                     "REMOTE" => string(r, &mut repo.remote, f("repos.remote"))?,
                     "DEFAULTBRANCH" => {
                         string(r, &mut repo.default_branch, f("repos.defaultBranch"))?
+                    }
+                    "ARCHIVED" => boolean(r, &mut repo.archived, f("repos.archived"))?,
+                    "ARCHIVEDREASON" => {
+                        string(r, &mut repo.archived_reason, f("repos.archivedReason"))?
                     }
                     _ => r.skip(),
                 }
@@ -327,6 +338,7 @@ impl Registry {
             Repo {
                 remote: remote.into(),
                 default_branch: branch.into(),
+                ..Repo::default()
             },
         );
         Ok(())
@@ -346,9 +358,49 @@ impl Registry {
         Ok(())
     }
 
+    /// Marks `name` archived, with an optional reason folded to one line (N-0008).
+    pub fn archive(&mut self, name: &str, reason: &str) -> Result<(), Error> {
+        let Some(repo) = self.repos.get_mut(name) else {
+            return Err(Error::UnknownRepo { name: name.into() });
+        };
+        if repo.archived {
+            return Err(Error::RepoAlreadyArchived { name: name.into() });
+        }
+        repo.archived = true;
+        repo.archived_reason = crate::text::fold_reason(reason).trim().to_string();
+        Ok(())
+    }
+
+    /// Makes an archived repo live again, dropping its reason (N-0008).
+    pub fn unarchive(&mut self, name: &str) -> Result<(), Error> {
+        let Some(repo) = self.repos.get_mut(name) else {
+            return Err(Error::UnknownRepo { name: name.into() });
+        };
+        if !repo.archived {
+            return Err(Error::RepoNotArchived { name: name.into() });
+        }
+        repo.archived = false;
+        repo.archived_reason.clear();
+        Ok(())
+    }
+
+    /// How many repos aren't archived: what `repo doctor` checks.
+    pub fn live_count(&self) -> usize {
+        self.repos.values().filter(|r| !r.archived).count()
+    }
+
+    /// Whether `name` is registered and archived.
+    pub fn is_archived(&self, name: &str) -> bool {
+        self.repos.get(name).is_some_and(|r| r.archived)
+    }
+
     /// Go's `Save`: writes `REPOS.json` and `.daiku/paths.json` through the write
-    /// guard.
+    /// guard, checking both first.
     pub fn save(&self, root: &Path) -> Result<(), Error> {
+        // Both files pass the write guard before either is written, so a refused
+        // `.daiku/paths.json` can't leave `REPOS.json` half-updated (N-0008).
+        write::check_path(root, &at(root, "REPOS.json"))?;
+        write::check_path(root, &at(root, ".daiku/paths.json"))?;
         let repos = json::to_pretty(&RegistryFile { repos: &self.repos })
             .expect("the registry always serializes");
         write::write_file(root, &at(root, "REPOS.json"), &repos)?;
@@ -367,13 +419,20 @@ impl Registry {
             });
         };
         for name in self.names() {
+            // An archived repo isn't expected on disk, so only a checkout that's
+            // still there is checked, for a swapped remote (N-0008).
+            let archived = self.is_archived(&name);
             let Ok(path) = self.resolve(&name, dirs) else {
-                add(&name, "no local path".into());
+                if !archived {
+                    add(&name, "no local path".into());
+                }
                 continue;
             };
             let shown = path.to_string_lossy().into_owned();
             if !is_dir(&path) {
-                add(&name, format!("missing on disk: {shown}"));
+                if !archived {
+                    add(&name, format!("missing on disk: {shown}"));
+                }
                 continue;
             }
             let cmd = Cmd::new("git")
@@ -384,7 +443,9 @@ impl Registry {
                     String::from_utf8_lossy(&out.stdout).trim().to_string()
                 }
                 _ => {
-                    add(&name, format!("not a git checkout with an origin: {shown}"));
+                    if !archived {
+                        add(&name, format!("not a git checkout with an origin: {shown}"));
+                    }
                     continue;
                 }
             };

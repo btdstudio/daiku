@@ -211,6 +211,15 @@ pub enum Error {
     #[error("daiku: repo {} is already registered", gofmt::quote(.name))]
     RepoExists { name: String },
 
+    #[error("daiku: repo {} is already archived", gofmt::quote(.name))]
+    RepoAlreadyArchived { name: String },
+
+    #[error("daiku: repo {} isn't archived", gofmt::quote(.name))]
+    RepoNotArchived { name: String },
+
+    #[error("daiku: repo {} is archived — run `daiku repo unarchive {name}` to work on it", gofmt::quote(.name))]
+    RepoIsArchived { name: String },
+
     #[error("daiku: a remote is required")]
     RemoteRequired,
 
