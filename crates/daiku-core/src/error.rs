@@ -223,9 +223,11 @@ pub enum Error {
     #[error("daiku: a remote is required")]
     RemoteRequired,
 
+    /// `remote` holds the remote with any userinfo masked.
     #[error("daiku: invalid remote {}", gofmt::quote(.remote))]
     InvalidRemote { remote: String },
 
+    /// `remote` holds the remote with any userinfo masked.
     #[error("daiku: remote helpers aren't allowed: {}", gofmt::quote(.remote))]
     RemoteHelper { remote: String },
 
