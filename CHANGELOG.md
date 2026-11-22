@@ -4,6 +4,29 @@ Releases before 0.3.0 were the Go CLI, the last being `v0.2.0`; their notes are 
 this repo's GitHub releases. The `0.3.0-alpha` prereleases were built in
 `btdstudio/daiku-next` before it merged here.
 
+## 0.6.0
+
+Model routing that acts, and a `CLAUDE.md` that imports AGENTS.md.
+
+- **`CLAUDE.md` imports AGENTS.md.** A new workspace's `CLAUDE.md` is the single line
+  `@AGENTS.md`, so Claude Code loads AGENTS.md at the start of every session instead
+  of being asked to read it. That loads the whole file, about 21 KB with every room
+  present, each time. `daiku update` replaces an unedited `CLAUDE.md` and skips one
+  you edited. A harness that doesn't expand `@` imports sees only that line.
+- **A workflow rule routes model tiers to subagents.** AGENTS.md's `## Workflow
+  rules` gains a rule: for a `fast` or `standard` task, when the session isn't on that
+  tier's model, hand the work to a subagent on that model, briefed with the routing
+  row's persona and `Read` and `Skip` lists. A subagent never runs `daiku gate`,
+  `reopen`, `switch`, `change close`, `commit` or `pr`; it proposes, and the session
+  runs them once you approve. `deep` tasks stay in the session, and the agent says so
+  if the session isn't on the `deep` model. If a tier has no model mapped, or the
+  harness can't set a subagent's model, the work stays in the session. `daiku update`
+  adds the rule to an existing workspace.
+- **New workspaces get a clearer `## Model routing` paragraph** and an intro that says
+  `CLAUDE.md` imports AGENTS.md. Both are text you own, so `daiku update` leaves an
+  existing workspace's as it is; edit yours by hand to match. To save usage, keep the
+  session on your `standard` model and switch to the `deep` one for `deep` tasks.
+
 ## 0.5.0
 
 Safer output from shared files, archived repos, and stricter checks on what a
