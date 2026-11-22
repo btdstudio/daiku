@@ -1068,7 +1068,7 @@ fn pr_template_picks_repo_then_workspace_then_default() {
     };
     t.write(
         "build/05_ship/templates/pull-request.md",
-        "workspace {{links}}\n",
+        "workspace\n\n{{links}}\n",
     );
     t.write("code/api/.github/pull_request_template.md", "repo\n");
     let got = pick(&ws);
@@ -1082,7 +1082,7 @@ fn pr_template_picks_repo_then_workspace_then_default() {
     let got = pick(&ws);
     assert_eq!(got.origin, TemplateOrigin::Workspace);
     assert_eq!(got.path, "build/05_ship/templates/pull-request.md");
-    assert!(got.body.starts_with("workspace <!-- daiku:links -->\n"));
+    assert!(got.body.starts_with("workspace\n\n<!-- daiku:links -->\n"));
     std::fs::remove_file(t.p("build/05_ship/templates/pull-request.md")).unwrap();
     let got = pick(&ws);
     assert_eq!(got.origin, TemplateOrigin::Default);
@@ -1144,7 +1144,7 @@ fn a_repo_template_linked_outside_the_repo_is_ignored_with_a_warning() {
     .unwrap();
     t.write(
         "build/05_ship/templates/pull-request.md",
-        "workspace {{links}}\n",
+        "workspace\n\n{{links}}\n",
     );
     let r = find_repo_template(&t.p("code/api")).unwrap();
     let (found, warnings) = (r.value, r.warnings);
@@ -1180,4 +1180,41 @@ fn a_repo_template_linked_inside_the_repo_is_used() {
         Some((".github/pull_request_template.md".into(), "inside\n".into()))
     );
     assert!(warnings.is_empty());
+}
+
+/// PR #28: a mention of a marker or the placeholder inside prose is just text.
+#[test]
+fn render_body_ignores_mentions_that_are_not_alone_on_a_line() {
+    let prose = "Summary: `<!-- daiku:links -->` marks the block and `{{links}}` is its slot.\n\n## Changes\n\n- one\n- two\n";
+    let text = format!("{prose}\n<!-- daiku:links -->\nstale\n<!-- /daiku:links -->\n\nAfter.\n");
+    let out = render_body(&text, "new\n");
+    assert_eq!(
+        out,
+        format!("{prose}\n<!-- daiku:links -->\nnew\n<!-- /daiku:links -->\n\nAfter.\n")
+    );
+    // Only mentions: a block is appended and the mentions stay.
+    let out = render_body(prose, "new\n");
+    assert_eq!(
+        out,
+        format!("{prose}\n<!-- daiku:links -->\nnew\n<!-- /daiku:links -->\n")
+    );
+}
+
+#[test]
+fn render_body_refreshes_the_last_of_two_blocks_and_keeps_line_endings() {
+    let text = "<!-- daiku:links -->\r\nfirst\r\n<!-- /daiku:links -->\r\nmid\r\n  <!-- daiku:links -->  \r\nsecond\r\n<!-- /daiku:links -->\r\nend\r\n";
+    let out = render_body(text, "new\n");
+    assert_eq!(
+        out,
+        "<!-- daiku:links -->\r\nfirst\r\n<!-- /daiku:links -->\r\nmid\r\n<!-- daiku:links -->\nnew\n<!-- /daiku:links -->\r\nend\r\n"
+    );
+}
+
+#[test]
+fn render_body_replaces_a_placeholder_line_with_spaces_around_it() {
+    let out = render_body("## L\n\n   {{links}}  \n\nsee {{links}} here\n", "x\n");
+    assert_eq!(
+        out,
+        "## L\n\n<!-- daiku:links -->\nx\n<!-- /daiku:links -->\n\nsee {{links}} here\n"
+    );
 }
