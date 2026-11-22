@@ -45,6 +45,19 @@ fn ok() -> Output {
     }
 }
 
+/// N-0005 AC5: `repo list` shows a remote's password masked, and leaves
+/// REPOS.json as it is.
+#[test]
+fn repo_list_masks_credentials() {
+    let t = Temp::new();
+    let (ws, _, _) = workspace(&t);
+    let repos = "{\"repos\": {\"x\": {\"remote\": \"ssh://u:p@host.invalid/x.git\"}}}\n";
+    t.write("REPOS.json", repos);
+    let rows = ws.repo_list().unwrap().value;
+    assert_eq!(rows[0].remote, "ssh://***@host.invalid/x.git");
+    assert_eq!(t.read("REPOS.json"), repos);
+}
+
 #[test]
 fn repo_add_list_and_path() {
     let t = Temp::new();

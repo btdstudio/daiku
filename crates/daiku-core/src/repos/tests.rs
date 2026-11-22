@@ -404,6 +404,56 @@ fn save_refuses_symlinks() {
     assert!(!outside.exists("r.json"), "nothing was written through it");
 }
 
+/// N-0005 AC2, AC4: what `redact_remote` masks and what it leaves alone.
+#[test]
+fn redact_remote_masks_userinfo_for_display() {
+    for (remote, want) in [
+        // http(s): any userinfo.
+        (
+            "https://x-access-token:s3cr3t@github.com/org/api.git",
+            "https://***@github.com/org/api.git",
+        ),
+        (
+            "https://tok@github.com/org/api.git",
+            "https://***@github.com/org/api.git",
+        ),
+        (
+            "http://user:pa%40ss@host:8080/x?y=1",
+            "http://***@host:8080/x?y=1",
+        ),
+        ("HTTPS://u:p@Host/x", "HTTPS://***@Host/x"),
+        // Userinfo url::parse rejects, and a '#' before the '@'.
+        ("https://u:p w@host/x", "https://***@host/x"),
+        ("https://u:p#ss@host/x", "https://***@host/x"),
+        // Leading whitespace is kept, and doesn't hide the scheme.
+        (" https://u:p@host/x", " https://***@host/x"),
+        ("\thttps://u:p@host/x", "\thttps://***@host/x"),
+        // Two '@'s: masked up to the last.
+        ("https://a@b:c@host/x", "https://***@host/x"),
+        // Other schemes: only with a password.
+        (
+            "ssh://git@github.com/org/api.git",
+            "ssh://git@github.com/org/api.git",
+        ),
+        ("ssh://u:p@host/x", "ssh://***@host/x"),
+        ("git://u:p@host/x", "git://***@host/x"),
+        // Unchanged.
+        ("git@github.com:org/api.git", "git@github.com:org/api.git"),
+        (
+            "https://github.com/org/api.git",
+            "https://github.com/org/api.git",
+        ),
+        ("https://github.com/org/a@b", "https://github.com/org/a@b"),
+        ("/srv/git/api.git", "/srv/git/api.git"),
+        ("C:\\src\\api", "C:\\src\\api"),
+        ("file:///srv/git/api.git", "file:///srv/git/api.git"),
+        ("1x://u:p@host/x", "1x://u:p@host/x"),
+        ("", ""),
+    ] {
+        assert_eq!(redact_remote(remote), want, "{remote}");
+    }
+}
+
 #[test]
 fn names_are_folder_safe() {
     for ok in ["a", "api", "a.b", "a_b", "a-b", "0x", "a1.2_3-4"] {
@@ -463,6 +513,47 @@ fn normalize_remote_makes_spellings_equal() {
         normalize_remote("https://github.com/org/y")
     );
     assert_eq!(normalize_remote("/local/path/x.git"), "/local/path/x");
+}
+
+/// N-0005 AC1, AC3: a credentialed origin is masked in the mismatch line, and
+/// still compares by its raw value.
+#[test]
+fn doctor_masks_credentials_in_a_mismatch() {
+    let t = Temp::new();
+    std::fs::create_dir_all(t.p("api")).unwrap();
+    let d = dirs("/h", Some(t.path().to_str().unwrap()));
+    let at = t.p("api").to_string_lossy().into_owned();
+    for (origin, secret) in [
+        (
+            "https://x-access-token:s3cr3t@github.com/org/other.git",
+            "s3cr3t",
+        ),
+        ("https://user:pa%40ss@github.com/org/other.git", "pa%40ss"),
+        ("https://tok@github.com/org/other.git", "tok"),
+    ] {
+        let mut r = Registry::default();
+        r.add("api", "https://github.com/org/api", "").unwrap();
+        r.paths.insert("api".into(), at.clone());
+        let p = ScriptedProcess::default();
+        p.reply(ok_out(&format!("{origin}\n")));
+        let got = r.doctor(&d, &p);
+        assert_eq!(got.len(), 1, "{origin}: {got:?}");
+        assert_eq!(
+            got[0].detail,
+            format!(
+                "remote mismatch: {at} has origin https://***@github.com/org/other.git, registered as https://github.com/org/api"
+            )
+        );
+        assert!(!got[0].detail.contains(secret), "{origin}");
+    }
+
+    // Credentials aside, the same repo: not a mismatch.
+    let mut r = Registry::default();
+    r.add("api", "https://github.com/org/api", "").unwrap();
+    r.paths.insert("api".into(), at.clone());
+    let p = ScriptedProcess::default();
+    p.reply(ok_out("https://tok@github.com/org/api.git\n"));
+    assert_eq!(r.doctor(&d, &p), []);
 }
 
 #[test]

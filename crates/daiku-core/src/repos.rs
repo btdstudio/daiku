@@ -229,6 +229,41 @@ pub struct RepoProblem {
 static SCP_REMOTE_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(?:[^@/]+@)?([^:/]+):([^/].*)$").expect("valid pattern"));
 
+/// `remote` for display: a `scheme://` URL's userinfo becomes `***` when the
+/// scheme is http(s), or when the userinfo holds a password (`:`). Everything
+/// else, including scp-style remotes, is returned as it is (N-0005).
+///
+/// A raw scan rather than `url::parse`, which gives up on exactly the inputs that
+/// must still be masked. Only `/` ends the authority, so a `?` or `#` inside the
+/// userinfo can't hide its `@`, and the userinfo runs to the authority's last `@`.
+/// Leading whitespace is kept but doesn't hide the scheme.
+pub fn redact_remote(remote: &str) -> String {
+    let body = remote.trim_start();
+    let lead = &remote[..remote.len() - body.len()];
+    let Some(sep) = body.find("://") else {
+        return remote.to_string();
+    };
+    let scheme = &body[..sep];
+    let valid_scheme = scheme.starts_with(|c: char| c.is_ascii_alphabetic())
+        && scheme
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b"+.-".contains(&b));
+    if !valid_scheme {
+        return remote.to_string();
+    }
+    let after = &body[sep + 3..];
+    let authority = &after[..after.find('/').unwrap_or(after.len())];
+    let Some(at) = authority.rfind('@') else {
+        return remote.to_string();
+    };
+    let userinfo = &authority[..at];
+    let http = scheme.eq_ignore_ascii_case("http") || scheme.eq_ignore_ascii_case("https");
+    if !http && !userinfo.contains(':') {
+        return remote.to_string();
+    }
+    format!("{lead}{scheme}://***{}", &after[at..])
+}
+
 /// Go's `normalizeRemote`: the SSH and HTTPS spellings of one repo compare equal.
 pub fn normalize_remote(remote: &str) -> String {
     let trimmed = remote.trim();
@@ -358,7 +393,9 @@ impl Registry {
                 add(
                     &name,
                     format!(
-                        "remote mismatch: {shown} has origin {origin}, registered as {registered}"
+                        "remote mismatch: {shown} has origin {}, registered as {}",
+                        redact_remote(&origin),
+                        redact_remote(registered),
                     ),
                 );
             }
