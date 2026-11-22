@@ -203,17 +203,20 @@ below; each is deliberate and small.
   them raw. Tabs print as they are, and so do newlines in whole files (`adr show`,
   `idea show`, `source show`). The files themselves keep their bytes, and `--json`
   output is unchanged.
-- **`daiku repo add` and `daiku repo doctor --clone` refuse more remotes that carry
-  credentials**, which Go lets through:
+- **`daiku repo add` and `daiku repo doctor --clone` refuse more remotes**, which Go
+  lets through:
   - an `https://` remote with credentials whose host name holds a percent-escaped
     letter (`h%41`);
   - a password in the userinfo of a remote in any scheme, such as
     `ssh://user:pass@host/x`;
   - any userinfo in an `http(s)://` remote that Go's URL parser rejects, such as
-    ` https://tok@host/x` with a leading space, or `https://tok@host name/x`.
+    ` https://tok@host/x` with a leading space, or `https://tok@host name/x`;
+  - a remote holding an ASCII control character, a tab or newline included, which Go
+    accepts.
 
-  A `REPOS.json` that already holds such a remote still loads and lists it masked;
-  only the clone is refused.
+  Refusal messages show any userinfo in the remote as `***`, where Go prints it as
+  written. A `REPOS.json` that already holds such a remote still loads and lists it
+  masked; only the clone is refused.
 - **`--json`** is new. Every read command (`status`, `switch`, `settings`,
   `source`, `adr`, `idea` and `tickets` reads, `repo list`, `references check`, `env`
   and `version`) accepts it, and writes one versioned JSON document instead of its
