@@ -46,6 +46,14 @@ pub fn load(root: &Path) -> Result<Registry, Error> {
             path: shown(root, "REPOS.json"),
             detail,
         })?;
+        // The file is shared, so a name can come from a hand edit: check it as
+        // `add` does before anything uses it as a folder name (N-0004).
+        if let Some(name) = reg.repos.keys().find(|n| !NAME_RE.is_match(n)) {
+            return Err(Error::InvalidRepoName {
+                name: name.clone(),
+                path: Some(shown(root, "REPOS.json")),
+            });
+        }
     }
     if let Some(data) = read(root, ".daiku/paths.json")? {
         reg.paths = decode_paths(&data).map_err(|detail| Error::StateParse {
@@ -265,7 +273,10 @@ impl Registry {
     /// Go's `Add`: registers a repo. An empty branch means [`DEFAULT_BRANCH`].
     pub fn add(&mut self, name: &str, remote: &str, branch: &str) -> Result<(), Error> {
         if !NAME_RE.is_match(name) {
-            return Err(Error::InvalidRepoName { name: name.into() });
+            return Err(Error::InvalidRepoName {
+                name: name.into(),
+                path: None,
+            });
         }
         if self.repos.contains_key(name) {
             return Err(Error::RepoExists { name: name.into() });

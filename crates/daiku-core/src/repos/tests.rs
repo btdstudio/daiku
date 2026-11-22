@@ -326,6 +326,74 @@ fn a_corrupt_registry_is_left_alone() {
     assert_eq!(t.read("REPOS.json"), "{");
 }
 
+/// `REPOS.json` holding `ok` and `bad`, each with a plain remote.
+fn registry_json(bad: &str) -> String {
+    let entry = r#"{"remote": "https://example.invalid/r.git", "defaultBranch": "main"}"#;
+    format!(
+        "{{\"repos\": {{\"ok\": {entry}, {}: {entry}}}}}\n",
+        serde_json::to_string(bad).unwrap()
+    )
+}
+
+/// N-0004 AC1: a hand-edited name that `add` would refuse fails the load, with the
+/// file named, and nothing is written.
+#[test]
+fn load_refuses_a_bad_name() {
+    for bad in ["../outside", "a/b", ".hidden", "Web", ""] {
+        let t = crate::testutil::Temp::new();
+        let json = registry_json(bad);
+        t.write("REPOS.json", &json);
+        let err = load(t.path()).unwrap_err();
+        assert!(
+            matches!(&err, Error::InvalidRepoName { name, path: Some(_) } if name == bad),
+            "{bad:?}: {err:?}"
+        );
+        let want = format!(
+            "daiku: {}: invalid repo name {} (use lowercase letters, digits, '.', '_' and '-')",
+            t.path()
+                .join("REPOS.json")
+                .to_string_lossy()
+                .replace('\\', "/"),
+            crate::gofmt::quote(bad)
+        );
+        assert_eq!(err.to_string(), want, "{bad:?}");
+        assert_eq!(t.read("REPOS.json"), json, "{bad:?}: left as it was");
+        assert!(!t.exists(".daiku/paths.json"), "{bad:?}: nothing written");
+    }
+}
+
+/// N-0004 AC5: a parse error comes before the name check, and the first bad name
+/// in sorted order is the one reported.
+#[test]
+fn load_reports_parse_errors_first_then_the_first_bad_name() {
+    let t = crate::testutil::Temp::new();
+    t.write("REPOS.json", "{\"repos\": {\"../x\": {}, ");
+    let err = load(t.path()).unwrap_err();
+    assert!(matches!(err, Error::StateParse { .. }), "{err:?}");
+
+    let entry = r#"{"remote": "https://example.invalid/r.git"}"#;
+    t.write(
+        "REPOS.json",
+        &format!("{{\"repos\": {{\"Zed\": {entry}, \"ok\": {entry}, \"Abe\": {entry}}}}}"),
+    );
+    match load(t.path()).unwrap_err() {
+        Error::InvalidRepoName { name, .. } => assert_eq!(name, "Abe"),
+        other => panic!("{other:?}"),
+    }
+}
+
+/// N-0004 AC4: `add` still says nothing about a file.
+#[test]
+fn add_refuses_a_bad_name_without_a_path() {
+    let err = Registry::default()
+        .add("../x", "https://github.com/org/x", "")
+        .unwrap_err();
+    assert!(
+        matches!(err, Error::InvalidRepoName { path: None, .. }),
+        "{err:?}"
+    );
+}
+
 #[cfg(unix)]
 #[test]
 fn save_refuses_symlinks() {
