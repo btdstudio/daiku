@@ -8,11 +8,13 @@ use serde::Serialize;
 use crate::outcome::Outcome;
 use crate::{Error, Warning};
 
-/// Where a template's links go: every occurrence is replaced by the marked block.
+/// Where a template's links go, alone on a line: each such line is replaced by the
+/// marked block.
 pub const LINKS_PLACEHOLDER: &str = "{{links}}";
-/// The start of the links block in a rendered body. GitHub doesn't show it.
+/// The start of the links block in a rendered body, alone on a line. GitHub doesn't
+/// show it.
 pub const LINKS_OPEN: &str = "<!-- daiku:links -->";
-/// The end of the links block.
+/// The end of the links block, alone on a line.
 pub const LINKS_CLOSE: &str = "<!-- /daiku:links -->";
 /// The workspace's template, and where the embedded default would be written.
 pub const WORKSPACE_TEMPLATE: &str = "build/05_ship/templates/pull-request.md";
@@ -50,15 +52,18 @@ pub struct PrTemplate {
     pub body: String,
 }
 
-/// Puts `links` into `text`, which is a template or a body an agent filled in:
+/// Puts `links` into `text`, which is a template or a body an agent filled in. The
+/// markers and `{{links}}` count only when alone on their line (surrounding spaces
+/// ignored); a mention in prose or backticks is ordinary text.
 ///
-/// 1. a marked block (`<!-- daiku:links -->` … `<!-- /daiku:links -->`) has its
-///    contents replaced;
-/// 2. else every `{{links}}` is replaced by the marked block;
+/// 1. a marked block (a `<!-- daiku:links -->` line, then a `<!-- /daiku:links -->`
+///    line) has its contents replaced; with several, the last one is refreshed;
+/// 2. else every `{{links}}` line is replaced by the marked block;
 /// 3. else the marked block is appended after a blank line.
 ///
-/// Empty `links` add no markers: a placeholder is removed and nothing else changes.
-/// The result ends with one newline.
+/// The text outside the block is kept as it is. Empty `links` add no markers: a
+/// placeholder line is emptied and nothing else changes. The result ends with one
+/// newline.
 pub fn render_body(text: &str, links: &str) -> String {
     let links = links.trim_matches('\n');
     let marked = || format!("{LINKS_OPEN}\n{links}\n{LINKS_CLOSE}");
@@ -66,15 +71,23 @@ pub fn render_body(text: &str, links: &str) -> String {
         if links.is_empty() {
             text.to_string()
         } else {
-            format!("{head}{LINKS_OPEN}\n{links}\n{LINKS_CLOSE}{tail}")
+            format!("{head}{}{tail}", marked())
         }
-    } else if text.contains(LINKS_PLACEHOLDER) {
+    } else if text.lines().any(|l| l.trim() == LINKS_PLACEHOLDER) {
         let block = if links.is_empty() {
             String::new()
         } else {
             marked()
         };
-        text.replace(LINKS_PLACEHOLDER, &block)
+        text.split_inclusive('\n')
+            .map(|l| {
+                if l.trim() == LINKS_PLACEHOLDER {
+                    format!("{block}{}", &l[l.trim_end_matches(['\n', '\r']).len()..])
+                } else {
+                    l.to_string()
+                }
+            })
+            .collect()
     } else if links.is_empty() {
         text.to_string()
     } else {
@@ -88,11 +101,23 @@ pub fn render_body(text: &str, links: &str) -> String {
     format!("{}\n", out.trim_end_matches('\n'))
 }
 
-/// The text before the first marked block and the text after it.
+/// The text before the last marked block and the text after it. The block runs
+/// from the start of its opening line to the end of its closing line's content, so
+/// the line ending that follows stays in the second part.
 fn split_block(text: &str) -> Option<(&str, &str)> {
-    let open = text.find(LINKS_OPEN)?;
-    let close = text[open + LINKS_OPEN.len()..].find(LINKS_CLOSE)? + open + LINKS_OPEN.len();
-    Some((&text[..open], &text[close + LINKS_CLOSE.len()..]))
+    let (mut open, mut found, mut at) = (None, None, 0);
+    for line in text.split_inclusive('\n') {
+        let content = line.trim_end_matches(['\n', '\r']);
+        if content.trim() == LINKS_OPEN {
+            open = Some(at);
+        } else if content.trim() == LINKS_CLOSE
+            && let Some(start) = open.take()
+        {
+            found = Some((start, at + content.len()));
+        }
+        at += line.len();
+    }
+    found.map(|(start, end)| (&text[..start], &text[end..]))
 }
 
 /// The repo's own template: the first regular file named `pull_request_template.md`
