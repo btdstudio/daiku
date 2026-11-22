@@ -17,7 +17,7 @@ fn loads_cases_sorted_and_by_name() {
     write(&dir.path().join("b/case.toml"), "args = [\"x\"]\n");
     write(
         &dir.path().join("a/case.toml"),
-        "args = [\"y\", \"z\"]\nunordered_stdout = true\ngit = true\nskip_on = [\"windows\"]\nenv = { K = \"{ROOT}/v\" }\ndeviations = \"none\"\n",
+        "args = [\"y\", \"z\"]\nunordered_stdout = true\ngit = true\nskip_on = [\"windows\"]\nenv = { K = \"{ROOT}/v\" }\n",
     );
     std::fs::create_dir_all(dir.path().join("not-a-case")).unwrap();
 
@@ -29,7 +29,6 @@ fn loads_cases_sorted_and_by_name() {
     assert!(a.unordered_stdout && a.git);
     assert_eq!(a.skip_on, [Os::Windows]);
     assert_eq!(a.env["K"], "{ROOT}/v");
-    assert_eq!(a.deviations, "none");
 
     let b = &all[1].spec;
     assert!(!b.unordered_stdout && !b.git && b.skip_on.is_empty() && b.env.is_empty());
@@ -48,7 +47,12 @@ fn rejects_bad_cases() {
     );
     write(&dir.path().join("key/case.toml"), "args = []\nbogus = 1\n");
     write(&dir.path().join("noargs/case.toml"), "git = true\n");
-    for name in ["os", "key", "noargs", "missing"] {
+    // `deviations` was removed (N-0011): a leftover one is an unknown key.
+    write(
+        &dir.path().join("leftover-deviations/case.toml"),
+        "args = []\ndeviations = \"x\"\n",
+    );
+    for name in ["os", "key", "noargs", "leftover-deviations", "missing"] {
         let err = load_cases(dir.path(), &[name.to_string()]).unwrap_err();
         assert!(
             err.to_string().contains(name),
