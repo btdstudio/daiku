@@ -1,0 +1,14 @@
+args = ["repo", "list", "--json"]
+workspace = "init"
+
+[expect]
+exit = 1
+stdout = '''
+{
+  "schema": 1,
+  "error": {
+    "kind": "InvalidRepoName",
+    "message": "daiku: REPOS.json: invalid repo name \"../outside\" (use lowercase letters, digits, '.', '_' and '-')"
+  }
+}
+'''
