@@ -60,7 +60,8 @@ Usage:
   daiku repo unarchive <name>             make an archived repo live again
   daiku env                                print harness flags for the active change's repos
   daiku commit [git commit args]           commit what's staged in the active build's repo
-  daiku pr [title]                         open a pull request from the active build's repo, linking its ticket
+  daiku pr [--template | --body-file <path>] [title]
+                                           open a pull request from the active build's repo, linking its ticket
   daiku check                              validate the embedded scaffold
   daiku version                            print the version
   daiku help [<command> [<verb>]]          this help, or one command's

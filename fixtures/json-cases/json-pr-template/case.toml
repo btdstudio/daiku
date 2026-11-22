@@ -1,0 +1,19 @@
+args = ["pr", "--template", "--json"]
+workspace = "build-implement"
+git = true
+tools = ["git"]
+skip_on = ["windows"]
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "origin": "workspace",
+    "path": "build/05_ship/templates/pull-request.md",
+    "body": "## Summary\n\n<!-- What this PR changes and why, in two or three sentences. -->\n\n## Changes\n\n<!-- The main changes, one bullet each. Follow tasks.json; cite files where it helps. -->\n\n## Testing\n\n<!-- How it was tested: commands run and their result, from test-results.md. -->\n\n## Review and security\n\n<!-- Findings from code-review.md and security-review.md, and how each was handled. -->\n\n## Links\n\n<!-- daiku:links -->\nImplements S-0002: Sign in\n\n- **github:** org/api#12\n- **Plan:** `plan/specs/1-auth-flow/`\n- **Spec:** `plan/specs/1-auth-flow/functional-spec.md`\n<!-- /daiku:links -->\n"
+  },
+  "warnings": []
+}
+'''

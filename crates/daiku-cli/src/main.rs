@@ -61,7 +61,7 @@ fn run(args: &[String]) -> u8 {
         "env" => build::env(&mut stdout, &mut stderr),
         "build" => build::build(&args[1..], &mut stdout, &mut stderr),
         "commit" => build::commit(&args[1..], &mut stderr),
-        "pr" => build::pr(&args[1..], &mut stderr),
+        "pr" => build::pr(&args[1..], &mut stdout, &mut stderr),
         c => {
             let _ = write!(
                 stderr,

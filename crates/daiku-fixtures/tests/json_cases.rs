@@ -21,6 +21,7 @@ use serde_json::Value;
 /// case, when it hasn't.
 const FORMS: &[(&str, Option<&str>, Option<&str>)] = &[
     ("status", None, None),
+    ("pr", None, None),
     ("status <plan>", None, None),
     ("switch", None, None),
     ("settings", None, None),

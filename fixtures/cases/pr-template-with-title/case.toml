@@ -1,0 +1,6 @@
+args = ["pr", "--template", "My title"]
+workspace = "build-implement"
+
+[expect]
+exit = 1
+stderr = "usage: daiku pr [--template | --body-file <path>] [title]\n"

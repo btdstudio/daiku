@@ -1,0 +1,7 @@
+args = ["pr", "--body-file", "nope.md"]
+workspace = "build-implement"
+skip_on = ["windows"]  # the OS error text differs
+
+[expect]
+exit = 1
+stderr = "daiku: cannot read nope.md: No such file or directory (os error 2)\n"

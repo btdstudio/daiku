@@ -481,12 +481,12 @@ The classes:
 
 | Class | Cases |
 | --- | --- |
-| args | n/a: only a leading title is read; the rest is ignored |
+| args | `pr-template-with-title` |
 | context | `pr-no-active-build`, `pr-not-a-checkout`, `pr-outside-workspace` |
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: daiku writes nothing; gh opens the pull request |
 | corrupt | `pr-corrupt-state` |
-| other | `pr-gh-missing`, `pr-help-flag`, `pr-title-gh-missing` |
+| other | `pr-body-file-gh-missing`, `pr-body-file-missing`, `pr-gh-missing`, `pr-help-flag`, `pr-template`, `pr-template-repo`, `pr-template-repo-precedence`, `pr-title-gh-missing` |
 
 ## daiku check
 

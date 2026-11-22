@@ -816,6 +816,9 @@ fn commit_refuses_when_nothing_is_staged_and_reports_a_failed_commit() {
     assert_eq!(ws.commit(&[]).unwrap_err().to_string(), "exit status 1");
 }
 
+/// The default template with S-0014's links in place.
+const PLAIN_BODY: &str = "## Summary\n\n<!-- What this PR changes and why, in two or three sentences. -->\n\n## Changes\n\n<!-- The main changes, one bullet each. Follow tasks.json; cite files where it helps. -->\n\n## Testing\n\n<!-- How it was tested: commands run and their result, from test-results.md. -->\n\n## Review and security\n\n<!-- Findings from code-review.md and security-review.md, and how each was handled. -->\n\n## Links\n\n<!-- daiku:links -->\nImplements S-0014: Add release workflow\n\n- **github:** org/app#7\n- **Plan:** `plan/specs/1-x/`\n- **Spec:** `plan/specs/1-x/functional-spec.md`\n- **ADRs:** ADR-0004\n<!-- /daiku:links -->\n";
+
 /// AC3: `pr` makes Go's calls: rev-parse, the branch, then gh with Go's body and
 /// title, attached.
 #[test]
@@ -825,7 +828,7 @@ fn pr_runs_gh_with_the_body_and_title() {
     let (ws, p) = build_in_a_checkout(&t, "plan/specs/1-x/tickets/S-0014.md", &ticket, "S-0014");
     reply(&p, 0, "true\n"); // rev-parse
     reply(&p, 0, "s-0014-add-release-workflow\n"); // branch --show-current
-    let out = ws.pr_command(&[]).unwrap();
+    let out = ws.pr_command(&PrOptions::default()).unwrap();
     assert!(out.warnings.is_empty(), "the branch includes the id");
     let cmd = out.value;
     assert_eq!(cmd.program, "gh");
@@ -836,7 +839,7 @@ fn pr_runs_gh_with_the_body_and_title() {
             "pr",
             "create",
             "--body",
-            "Implements S-0014: Add release workflow\n\n- **github:** org/app#7\n- **Plan:** `plan/specs/1-x/`\n- **Spec:** `plan/specs/1-x/functional-spec.md`\n- **ADRs:** ADR-0004\n",
+            PLAIN_BODY,
             "--title",
             "[S-0014] Add release workflow",
         ]
@@ -867,7 +870,10 @@ fn pr_uses_a_given_title_and_warns_about_a_branch_without_the_id() {
     reply(&p, 0, "true\n");
     reply(&p, 0, "main\n");
     let out = ws
-        .pr_command(&["My title".into(), "--draft".into()])
+        .pr_command(&PrOptions {
+            title: Some("My title".into()),
+            body: None,
+        })
         .unwrap();
     assert_eq!(out.warnings.len(), 1);
     assert_eq!(
@@ -878,7 +884,7 @@ fn pr_uses_a_given_title_and_warns_about_a_branch_without_the_id() {
     // A flag first means no title argument, so the ticket's is used.
     reply(&p, 0, "true\n");
     reply(&p, 1, ""); // no branch (detached HEAD): no warning
-    let out = ws.pr_command(&["--draft".into()]).unwrap();
+    let out = ws.pr_command(&PrOptions::default()).unwrap();
     assert!(out.warnings.is_empty());
     assert_eq!(out.value.args[5], "[S-0014] Add release workflow");
 }
@@ -911,7 +917,9 @@ fn commit_and_pr_need_an_active_build_in_a_usable_checkout() {
         "daiku: commit and pr need an active build — run `daiku build new <ticket-id>`"
     );
     assert_eq!(
-        ws.pr_command(&[]).unwrap_err().to_string(),
+        ws.pr_command(&PrOptions::default())
+            .unwrap_err()
+            .to_string(),
         "daiku: commit and pr need an active build — run `daiku build new <ticket-id>`"
     );
     assert!(p.calls.borrow().is_empty());
@@ -953,4 +961,223 @@ fn repo_dir_must_be_a_folder_inside_a_git_work_tree() {
             "daiku: api has no usable local path ({checkout}) — run `daiku repo path api <dir>`"
         )
     );
+}
+
+// ---- the PR template (N-0019) ----
+
+const LINKS: &str = "Implements N-1: Title\n\n- **Spec:** `s.md`\n";
+
+#[test]
+fn render_body_replaces_the_placeholder_with_a_marked_block() {
+    let out = render_body("## A\n\n{{links}}\n\n## B\n\n{{links}}\n", LINKS);
+    let block =
+        "<!-- daiku:links -->\nImplements N-1: Title\n\n- **Spec:** `s.md`\n<!-- /daiku:links -->";
+    assert_eq!(out, format!("## A\n\n{block}\n\n## B\n\n{block}\n"));
+}
+
+#[test]
+fn render_body_appends_the_block_when_there_is_no_slot() {
+    let out = render_body("Done.\n\n\n", LINKS);
+    assert_eq!(
+        out,
+        "Done.\n\n<!-- daiku:links -->\nImplements N-1: Title\n\n- **Spec:** `s.md`\n<!-- /daiku:links -->\n"
+    );
+    assert!(render_body("", "x\n").starts_with(LINKS_OPEN));
+}
+
+#[test]
+fn render_body_refreshes_an_edited_block_instead_of_duplicating_it() {
+    let text = "Top\n\n<!-- daiku:links -->\nold, edited text\n<!-- /daiku:links -->\n\nBottom {{links}}\n";
+    let out = render_body(text, "new\n");
+    assert_eq!(out.matches(LINKS_OPEN).count(), 1);
+    assert!(out.contains("<!-- daiku:links -->\nnew\n<!-- /daiku:links -->\n\nBottom {{links}}"));
+    assert!(!out.contains("old, edited"));
+    // The same text rendered again doesn't change.
+    assert_eq!(render_body(&out, "new\n"), out);
+}
+
+#[test]
+fn render_body_with_no_links_adds_no_markers() {
+    assert_eq!(render_body("## L\n\n{{links}}\n", ""), "## L\n");
+    assert_eq!(render_body("Body\n", ""), "Body\n");
+    let marked = "a\n<!-- daiku:links -->\nx\n<!-- /daiku:links -->\n";
+    assert_eq!(render_body(marked, ""), marked);
+}
+
+/// The lookup's match, without its warnings.
+fn found(dir: &std::path::Path) -> Option<(String, String)> {
+    find_repo_template(dir).unwrap().value
+}
+
+#[test]
+fn repo_template_lookup_follows_github_precedence() {
+    let t = Temp::new();
+    assert_eq!(found(t.path()), None);
+    t.write("docs/pull_request_template.md", "docs");
+    assert_eq!(
+        found(t.path()),
+        Some(("docs/pull_request_template.md".into(), "docs".into()))
+    );
+    t.write("Pull_Request_Template.MD", "root");
+    assert_eq!(
+        found(t.path()),
+        Some(("Pull_Request_Template.MD".into(), "root".into()))
+    );
+    t.write(".github/PULL_REQUEST_TEMPLATE.md", "github");
+    assert_eq!(
+        found(t.path()),
+        Some((".github/PULL_REQUEST_TEMPLATE.md".into(), "github".into()))
+    );
+}
+
+#[test]
+fn repo_template_lookup_ignores_a_folder_of_templates() {
+    let t = Temp::new();
+    t.write(".github/PULL_REQUEST_TEMPLATE/a.md", "a");
+    t.write(
+        "pull_request_template.md/x",
+        "a directory named like a template",
+    );
+    assert_eq!(found(t.path()), None);
+}
+
+#[test]
+fn repo_template_that_isnt_utf8_is_an_error_naming_the_path() {
+    let t = Temp::new();
+    std::fs::write(t.p("pull_request_template.md"), [0xff, 0xfe]).unwrap();
+    let err = find_repo_template(t.path()).unwrap_err().to_string();
+    assert!(
+        err.starts_with("daiku: cannot read pull_request_template.md: "),
+        "{err}"
+    );
+}
+
+/// AC2: the repo's template, then the workspace's, then the embedded default.
+#[test]
+fn pr_template_picks_repo_then_workspace_then_default() {
+    let t = Temp::new();
+    let (ws, p) = build_in_a_checkout(
+        &t,
+        "build/tickets/N-0001.md",
+        &native("N-0001", "api"),
+        "N-0001",
+    );
+    let pick = |ws: &Workspace| {
+        reply(&p, 0, "true\n");
+        ws.pr_template().unwrap().value
+    };
+    t.write(
+        "build/05_ship/templates/pull-request.md",
+        "workspace {{links}}\n",
+    );
+    t.write("code/api/.github/pull_request_template.md", "repo\n");
+    let got = pick(&ws);
+    assert_eq!(got.origin, TemplateOrigin::Repo);
+    assert_eq!(got.path, ".github/pull_request_template.md");
+    assert!(
+        got.body
+            .starts_with("repo\n\n<!-- daiku:links -->\nImplements N-0001: ")
+    );
+    std::fs::remove_file(t.p("code/api/.github/pull_request_template.md")).unwrap();
+    let got = pick(&ws);
+    assert_eq!(got.origin, TemplateOrigin::Workspace);
+    assert_eq!(got.path, "build/05_ship/templates/pull-request.md");
+    assert!(got.body.starts_with("workspace <!-- daiku:links -->\n"));
+    std::fs::remove_file(t.p("build/05_ship/templates/pull-request.md")).unwrap();
+    let got = pick(&ws);
+    assert_eq!(got.origin, TemplateOrigin::Default);
+    assert_eq!(got.path, "build/05_ship/templates/pull-request.md");
+    assert!(got.body.starts_with("## Summary\n"));
+    assert_eq!(got.body.matches(LINKS_OPEN).count(), 1);
+}
+
+/// AC4: a finished body gets the links when it lacks them, and a stale block is
+/// refreshed.
+#[test]
+fn pr_command_with_a_body_adds_or_refreshes_the_links() {
+    let t = Temp::new();
+    let (ws, p) = build_in_a_checkout(
+        &t,
+        "build/tickets/N-0001.md",
+        &native("N-0001", "api"),
+        "N-0001",
+    );
+    let run = |body: &str| {
+        reply(&p, 0, "true\n");
+        reply(&p, 0, "n-0001\n");
+        let o = PrOptions {
+            title: None,
+            body: Some(body.into()),
+        };
+        ws.pr_command(&o).unwrap().value.args[3].clone()
+    };
+    let got = run("My summary\n");
+    assert!(
+        got.starts_with("My summary\n\n<!-- daiku:links -->\nImplements N-0001: "),
+        "{got}"
+    );
+    let got = run("x\n<!-- daiku:links -->\nstale\n<!-- /daiku:links -->\ny\n");
+    assert!(!got.contains("stale"));
+    assert_eq!(got.matches(LINKS_OPEN).count(), 1);
+    assert!(got.ends_with("<!-- /daiku:links -->\ny\n"));
+}
+
+/// S1: a template symlinked to a file outside the repo is skipped with a warning,
+/// and the lookup falls through to the workspace's template.
+#[cfg(unix)]
+#[test]
+fn a_repo_template_linked_outside_the_repo_is_ignored_with_a_warning() {
+    let t = Temp::new();
+    let (ws, p) = build_in_a_checkout(
+        &t,
+        "build/tickets/N-0001.md",
+        &native("N-0001", "api"),
+        "N-0001",
+    );
+    let outside = Temp::new();
+    outside.write("secret.txt", "TOP SECRET\n");
+    std::fs::create_dir_all(t.p("code/api/.github")).unwrap();
+    std::os::unix::fs::symlink(
+        outside.p("secret.txt"),
+        t.p("code/api/.github/pull_request_template.md"),
+    )
+    .unwrap();
+    t.write(
+        "build/05_ship/templates/pull-request.md",
+        "workspace {{links}}\n",
+    );
+    let r = find_repo_template(&t.p("code/api")).unwrap();
+    let (found, warnings) = (r.value, r.warnings);
+    assert_eq!(found, None);
+    assert_eq!(
+        warnings[0].message,
+        "pr template .github/pull_request_template.md points outside the repo; ignored"
+    );
+    reply(&p, 0, "true\n");
+    let out = ws.pr_template().unwrap();
+    assert_eq!(out.value.origin, TemplateOrigin::Workspace);
+    assert!(!out.value.body.contains("SECRET"));
+    assert_eq!(out.warnings.len(), 1);
+    reply(&p, 0, "true\n");
+    reply(&p, 0, "n-0001\n");
+    let out = ws.pr_command(&PrOptions::default()).unwrap();
+    assert!(!out.value.args.iter().any(|a| a.contains("SECRET")));
+    assert_eq!(out.warnings.len(), 1);
+}
+
+/// S1: a link that stays inside the repo is used, under the link's own path.
+#[cfg(unix)]
+#[test]
+fn a_repo_template_linked_inside_the_repo_is_used() {
+    let t = Temp::new();
+    t.write("docs/pr.md", "inside\n");
+    std::fs::create_dir_all(t.p(".github")).unwrap();
+    std::os::unix::fs::symlink("../docs/pr.md", t.p(".github/pull_request_template.md")).unwrap();
+    let r = find_repo_template(t.path()).unwrap();
+    let (found, warnings) = (r.value, r.warnings);
+    assert_eq!(
+        found,
+        Some((".github/pull_request_template.md".into(), "inside\n".into()))
+    );
+    assert!(warnings.is_empty());
 }
