@@ -657,6 +657,23 @@ mod tests {
         assert_eq!(front.matches("\nchanges:").count(), 1);
     }
 
+    /// N-0006 R6: a reason with `\r\n` and a lone `\r` is one line in both the
+    /// summary and `log.md`.
+    #[test]
+    fn a_reason_stays_on_one_line_in_the_log() {
+        let t = Temp::new();
+        let i = new_idea(&t, "An idea");
+        let log = format!("{}/log.md", i.dir);
+        let before = t.read(&log);
+        let got = park(t.path(), 1, "a\r\nb\rc", DAY2).unwrap();
+        assert_eq!(got.reason, "a b c");
+        let raw = t.read(&format!("{}/summary.md", i.dir));
+        assert!(raw.contains("\nreason: a b c\n"), "{raw}");
+        let added = &t.read(&log)[before.len()..];
+        assert_eq!(added.lines().count(), 1, "{added:?}");
+        assert!(added.trim_end().ends_with("parked: a b c"), "{added:?}");
+    }
+
     // Go's TestReopen.
     #[test]
     fn reopen_returns_to_open() {

@@ -273,6 +273,32 @@ fn recording_verbs_run_no_git_under_vcs_none() {
     assert_eq!(t.read("LOG.md").lines().count(), 4);
 }
 
+/// N-0006 AC3, AC4: a multi-line reason is one LOG.md line, and one that's only
+/// line breaks is refused before anything is read or written.
+#[test]
+fn unfreeze_keeps_its_reason_on_one_line() {
+    let t = Temp::new();
+    let (ws, _) = workspace(&t, PUBLISHING, r#", "vcs": "none""#);
+    let path = "plan/specs/1-x/tickets/S-0001.md";
+    t.write(path, &ticket_text("S-0001", "draft", READY_BODY));
+    ws.tickets_ready(&ids(&["S-0001"]), false).unwrap();
+    ws.tickets_mark_published("S-0001", "jira", "PROJ-7", false)
+        .unwrap();
+    let (ticket, log) = (t.read(path), t.read("LOG.md"));
+
+    let err = ws.tickets_unfreeze("S-0001", " \r\n ").unwrap_err();
+    assert!(matches!(err, Error::ReasonRequired), "{err:?}");
+    assert_eq!((t.read(path), t.read("LOG.md")), (ticket, log.clone()));
+
+    ws.tickets_unfreeze("S-0001", "a\nb\r\n- 2026-01-01 1-x: ship → complete")
+        .unwrap();
+    let added = &t.read("LOG.md")[log.len()..];
+    assert_eq!(
+        added,
+        format!("{STAMP}1-x: S-0001 unfrozen (a b - 2026-01-01 1-x: ship → complete)\n")
+    );
+}
+
 #[test]
 fn new_goes_to_the_inbox_without_an_open_plan_change() {
     let t = Temp::new();

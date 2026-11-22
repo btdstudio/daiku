@@ -15,6 +15,7 @@ use crate::state::{
     self, BUILD_LOOP, Change, Known, NO_REPO_REASON, PLAN_DIR, PLAN_LOOP, SINGLE_REPO_REASON,
     Store, machine_for,
 };
+use crate::text::fold_reason;
 use crate::{Error, Outcome, Warning, gofmt, lock, repos, settings};
 
 /// What `change new` created.
@@ -146,6 +147,7 @@ impl crate::Workspace {
         reason: &str,
         force: bool,
     ) -> Result<Outcome<Change>, Error> {
+        let reason = &*fold_reason(reason);
         let reader = self.reader();
         let st = reader.load_state()?;
         let mut notes = Vec::new();
@@ -193,6 +195,7 @@ impl crate::Workspace {
 
     /// `daiku reopen <phase>`: Go's `runReopen` after parsing.
     pub fn reopen(&self, phase: &str, reason: &str, force: bool) -> Result<Outcome<Change>, Error> {
+        let reason = &*fold_reason(reason);
         let reader = self.reader();
         let active = reader.load_state()?;
         if !active.name.is_empty() {
@@ -212,6 +215,7 @@ impl crate::Workspace {
 
     /// `daiku change close <change>`: Go's `runChangeClose` after parsing.
     pub fn change_close(&self, name: &str, reason: &str) -> Result<Outcome<Change>, Error> {
+        let reason = &*fold_reason(reason);
         overview::check_close(&self.reader(), name)?;
         let store = Store::at(self.root(), self.env())?;
         let c = store.close(name, reason)?;
