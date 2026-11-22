@@ -181,6 +181,71 @@ fn merge_real_scaffold_keeps_owner_sections() {
     assert_eq!(merge_s(&got, &real).unwrap(), got);
 }
 
+/// The v0.5.0 table and example line of `## Model routing`, which N-0016 keeps.
+const MODEL_ROUTING_TABLE: &str = "| Tier | Use for | Model |
+|---|---|---|
+| `deep` | judgment: ideas, synthesis, specs, architecture, breakdown, design, review, security | <FILL IN> |
+| `standard` | most work: research, exploring repos, settling tickets, requirements, code | <FILL IN> |
+| `fast` | mechanical steps: intake, publishing, running tests, shipping | <FILL IN> |
+
+For example, in Claude Code: `opus`, `sonnet`, `haiku`.";
+
+/// N-0016 AC2, AC3, AC4, N1: the intro says `CLAUDE.md` imports AGENTS.md; the
+/// workflow rule routes tiers to subagents and names no model; Model routing keeps its
+/// table and example line.
+#[test]
+fn root_text_routes_tiers_and_names_no_model() {
+    let real = assemble(&["plan", "build"]);
+    let doc = parse(real.as_bytes());
+    let pre = joined(&doc.preamble);
+    assert!(pre.contains("`CLAUDE.md` imports"), "{pre}");
+    assert!(!pre.contains("just points"), "{pre}");
+
+    let body_of = |h: &str| joined(&doc.sections.iter().find(|s| s.heading == h).unwrap().body);
+    let rules = body_of("Workflow rules");
+    for want in [
+        "`fast`",
+        "`standard`",
+        "`deep`",
+        "subagent",
+        "`## Model routing`",
+        "`daiku gate`",
+        "`daiku reopen`",
+        "`daiku change close`",
+        "`daiku switch`",
+        "`daiku commit`",
+        "`daiku pr`",
+        "persona",
+        "`Read` and `Skip`",
+    ] {
+        assert!(rules.contains(want), "Workflow rules lacks {want}");
+    }
+    let routing = body_of("Model routing");
+    assert!(routing.contains("subagent"), "{routing}");
+    assert!(routing.contains(MODEL_ROUTING_TABLE), "{routing}");
+
+    let words = |text: &str| {
+        text.to_lowercase()
+            .split(|c: char| !c.is_alphanumeric())
+            .map(str::to_string)
+            .collect::<Vec<_>>()
+    };
+    for sec in &doc.sections {
+        if sec.heading == "Model routing" {
+            continue;
+        }
+        let w = words(&joined(&sec.body));
+        for id in ["opus", "sonnet", "haiku"] {
+            assert!(!w.iter().any(|x| x == id), "{} names {id}", sec.heading);
+        }
+    }
+    let w = words(&pre);
+    assert!(
+        !w.iter()
+            .any(|x| ["opus", "sonnet", "haiku"].contains(&x.as_str()))
+    );
+}
+
 #[test]
 fn scaffold_headings_are_unique() {
     for rooms in [&[][..], &["plan"], &["build"], &["plan", "build"]] {
