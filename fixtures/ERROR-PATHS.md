@@ -57,7 +57,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `status-corrupt-state` |
-| other | `status-build-change`, `status-git-workspace`, `status-help-flag`, `status-path-newline`, `status-plan-argument`, `status-plan-change`, `status-repo-explore-skipped`, `status-unknown-plan` |
+| other | `status-build-archived-repo`, `status-build-change`, `status-git-workspace`, `status-help-flag`, `status-path-newline`, `status-plan-argument`, `status-plan-change`, `status-repo-explore-skipped`, `status-unknown-plan` |
 
 ## daiku settings
 
@@ -152,7 +152,7 @@ The classes:
 | Class | Cases |
 | --- | --- |
 | args | `build-new-extra-argument`, `build-new-missing-id`, `build-new-unknown-flag` |
-| context | `build-new-outside-workspace`, `build-new-unregistered-repo` |
+| context | `build-new-archived-repo`, `build-new-outside-workspace`, `build-new-unregistered-repo` |
 | order | `build-new-draft-ticket` |
 | unsafe | `build-new-through-symlink` |
 | corrupt | `build-new-corrupt-front-matter`, `build-new-corrupt-repos`, `build-new-corrupt-state`, `build-new-invalid-global` |
@@ -167,7 +167,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | `change-new-through-symlink` |
 | corrupt | `change-new-corrupt-state`, `change-new-invalid-global` |
-| other | `change-new`, `change-new-body-rev`, `change-new-git`, `change-new-help-flag`, `change-new-registered-repo`, `change-new-repo-path`, `change-new-second`, `change-new-two-repos-with-path`, `change-new-unknown-repo-name` |
+| other | `change-new`, `change-new-archived-repo`, `change-new-body-rev`, `change-new-git`, `change-new-help-flag`, `change-new-registered-repo`, `change-new-repo-path`, `change-new-second`, `change-new-two-repos-with-path`, `change-new-unknown-repo-name` |
 
 ## daiku change close
 
@@ -178,7 +178,7 @@ The classes:
 | order | `change-close-already-closed` |
 | unsafe | `change-close-through-symlink` |
 | corrupt | `change-close-corrupt-state` |
-| other | `change-close`, `change-close-build`, `change-close-git`, `change-close-help-flag`, `change-close-reason-multiline`, `change-close-unknown` |
+| other | `change-close`, `change-close-build`, `change-close-build-archived-repo`, `change-close-git`, `change-close-help-flag`, `change-close-reason-multiline`, `change-close-unknown` |
 
 ## daiku gate
 
@@ -409,7 +409,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | `repo-list-corrupt-paths`, `repo-list-corrupt-repos`, `repo-list-invalid-repo-name` |
-| other | `repo-list`, `repo-list-control-chars`, `repo-list-empty`, `repo-list-help-flag`, `repo-list-masks-credentials`, `repo-list-no-path` |
+| other | `repo-list`, `repo-list-archived`, `repo-list-control-chars`, `repo-list-empty`, `repo-list-help-flag`, `repo-list-masks-credentials`, `repo-list-no-path` |
 
 ## daiku repo path
 
@@ -431,7 +431,29 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: --clone's one workspace write is .daiku/paths.json, the writer covered by repo-path-through-symlink |
 | corrupt | `repo-doctor-clone-invalid-repo-name`, `repo-doctor-corrupt-repos` |
-| other | `repo-doctor-clone`, `repo-doctor-clone-no-into`, `repo-doctor-clone-nothing-missing`, `repo-doctor-empty`, `repo-doctor-help-flag`, `repo-doctor-mismatch-credentials`, `repo-doctor-no-origin` |
+| other | `repo-doctor-clone`, `repo-doctor-clone-no-into`, `repo-doctor-clone-nothing-missing`, `repo-doctor-empty`, `repo-doctor-help-flag`, `repo-doctor-mismatch-credentials`, `repo-doctor-no-origin`, `repo-doctor-skips-archived` |
+
+## daiku repo archive
+
+| Class | Cases |
+| --- | --- |
+| args | `repo-archive-missing-name` |
+| context | `repo-archive-outside-workspace` |
+| order | `repo-archive-already` |
+| unsafe | `repo-archive-through-symlink` |
+| corrupt | `repo-archive-corrupt-repos` |
+| other | `repo-archive`, `repo-archive-reason`, `repo-archive-unknown` |
+
+## daiku repo unarchive
+
+| Class | Cases |
+| --- | --- |
+| args | `repo-unarchive-missing-name` |
+| context | `repo-unarchive-outside-workspace` |
+| order | `repo-unarchive-not-archived` |
+| unsafe | `repo-unarchive-through-symlink` |
+| corrupt | `repo-unarchive-corrupt-repos` |
+| other | `repo-unarchive` |
 
 ## daiku env
 
@@ -497,7 +519,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: writes nothing |
 | corrupt | n/a: reads no workspace state |
-| other | `help`, `help-adr`, `help-adr-list`, `help-adr-new`, `help-adr-show`, `help-build`, `help-build-new`, `help-change`, `help-change-close`, `help-change-new`, `help-check`, `help-commit`, `help-env`, `help-flag`, `help-flag-after-arguments`, `help-flag-after-double-dash`, `help-gate`, `help-help`, `help-help-flag`, `help-idea`, `help-idea-drop`, `help-idea-list`, `help-idea-new`, `help-idea-park`, `help-idea-promote`, `help-idea-reopen`, `help-idea-show`, `help-init`, `help-overview`, `help-pr`, `help-references`, `help-references-check`, `help-reopen`, `help-repo`, `help-repo-add`, `help-repo-doctor`, `help-repo-list`, `help-repo-path`, `help-settings`, `help-short-flag`, `help-source`, `help-source-list`, `help-source-new`, `help-source-show`, `help-status`, `help-switch`, `help-tickets`, `help-tickets-check`, `help-tickets-mark-published`, `help-tickets-new`, `help-tickets-order`, `help-tickets-pull`, `help-tickets-ready`, `help-tickets-status`, `help-tickets-unfreeze`, `help-update`, `help-verb-flag`, `help-version` |
+| other | `help`, `help-adr`, `help-adr-list`, `help-adr-new`, `help-adr-show`, `help-build`, `help-build-new`, `help-change`, `help-change-close`, `help-change-new`, `help-check`, `help-commit`, `help-env`, `help-flag`, `help-flag-after-arguments`, `help-flag-after-double-dash`, `help-gate`, `help-help`, `help-help-flag`, `help-idea`, `help-idea-drop`, `help-idea-list`, `help-idea-new`, `help-idea-park`, `help-idea-promote`, `help-idea-reopen`, `help-idea-show`, `help-init`, `help-overview`, `help-pr`, `help-references`, `help-references-check`, `help-reopen`, `help-repo`, `help-repo-add`, `help-repo-archive`, `help-repo-doctor`, `help-repo-list`, `help-repo-path`, `help-repo-unarchive`, `help-settings`, `help-short-flag`, `help-source`, `help-source-list`, `help-source-new`, `help-source-show`, `help-status`, `help-switch`, `help-tickets`, `help-tickets-check`, `help-tickets-mark-published`, `help-tickets-new`, `help-tickets-order`, `help-tickets-pull`, `help-tickets-ready`, `help-tickets-status`, `help-tickets-unfreeze`, `help-update`, `help-verb-flag`, `help-version` |
 
 ## daiku adr (no verb, or an unknown one)
 

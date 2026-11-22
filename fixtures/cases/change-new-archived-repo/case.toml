@@ -1,0 +1,6 @@
+args = ["change", "new", "API work", "--repo", "api"]
+workspace = "plan-published"
+
+[expect]
+exit = 1
+stderr = "daiku: repo \"api\" is archived — run `daiku repo unarchive api` to work on it\n"

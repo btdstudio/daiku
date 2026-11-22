@@ -1,0 +1,16 @@
+args = ["help", "repo", "archive"]
+
+[expect]
+exit = 0
+stdout = '''
+usage:
+  daiku repo add <name> <remote> [--path <p>] [--branch <b>]
+                                          register a repo
+  daiku repo list                          list repos and their local paths
+  daiku repo path <name> <path>            set a repo's local path
+  daiku repo doctor [--clone] [--into <dir>]
+                                          check repos; --clone fetches missing ones
+  daiku repo archive <name> [--reason <r>]
+                                          mark a repo archived: no clones, no new builds
+  daiku repo unarchive <name>             make an archived repo live again
+'''

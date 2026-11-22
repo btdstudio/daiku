@@ -1,0 +1,6 @@
+args = ["repo", "unarchive", "api"]
+workspace = "build-implement"
+
+[expect]
+exit = 1
+stderr = "daiku: repo \"api\" isn't archived\n"

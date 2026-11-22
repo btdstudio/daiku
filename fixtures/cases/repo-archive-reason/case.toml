@@ -1,0 +1,9 @@
+args = ["repo", "archive", "api", "--reason", "merged into daiku"]
+workspace = "build-implement"
+
+[expect]
+exit = 0
+stdout = "api: archived\n"
+changes = [
+  "~ f REPOS.json",
+]

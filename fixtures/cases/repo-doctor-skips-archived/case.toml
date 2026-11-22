@@ -1,0 +1,6 @@
+args = ["repo", "doctor", "--clone", "--into", "{HOME}/clones"]
+workspace = "build-implement"
+
+[expect]
+exit = 0
+stdout = "0 repos ok\n"
