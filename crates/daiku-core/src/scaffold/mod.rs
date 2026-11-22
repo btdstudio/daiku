@@ -169,12 +169,18 @@ fn shown_root(root: &Path) -> String {
     crate::gofmt::to_slash(&root.to_string_lossy())
 }
 
+/// Whether `text` holds `{{`, other than the `{{links}}` placeholder that `daiku pr`
+/// fills in a PR template.
+fn has_template_syntax(text: &str) -> bool {
+    text.replace("{{links}}", "").contains("{{")
+}
+
 /// Go's `icm.Check`: template syntax in any scaffold file, then the term lint.
 pub fn check() -> Vec<String> {
     let mut problems = Vec::new();
     for (t, prefix) in [("root", ""), ("build", "build"), ("plan", "plan")] {
         for (rel, data) in engine::walk_tree(t, prefix, false) {
-            if String::from_utf8_lossy(data).contains("{{") {
+            if has_template_syntax(&String::from_utf8_lossy(data)) {
                 problems.push(format!("{rel}: contains template syntax"));
             }
         }

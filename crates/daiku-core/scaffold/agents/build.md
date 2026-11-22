@@ -18,7 +18,9 @@ gated, and security can be skipped with a reason.
 - **security** (security) — vulnerabilities and security debt. Read-only. Skippable,
   with a reason.
 - **ship** — a branch named as `daiku status` suggests, micro-commits, and a pull
-  request linking the ticket, its external ids, and its spec and ADRs.
+  request whose body starts from the PR template (lookup order in
+  `build/05_ship/context.md`) and links the ticket, its external ids, and its spec
+  and ADRs.
 
 A test failure, or a critical or high finding, loops back with
 `daiku reopen implement --reason <r>`. That clears test and review, which then run
@@ -37,7 +39,7 @@ holder.
 | `daiku build new <ticket-id>` | create a build change for a ticket, named by its id, in its repo; creates `build/` the first time. The ticket is read where it is: `plan/specs/<n>-<slug>/tickets/` for a ready or published planned ticket, or `build/tickets/` |
 | `daiku tickets pull <file>` | record a ticket an agent fetched from a PM tool (through `sync.md`) as `build/tickets/X-<pm-id>.md`; pulling the same item again replaces it |
 | `daiku commit [git commit args]` | commit what's staged in the active build's repo. Split work into reviewed micro-commits: propose the groups, stage one, commit it with a conventional message, repeat |
-| `daiku pr [title]` | open a pull request from the active build's repo, linking the ticket, its external ids, its plan folder, spec and ADRs; warns when the branch lacks the ticket id |
+| `daiku pr [--template \| --body-file <path>] [title]` | open a pull request from the active build's repo, its body started from the PR template and linking the ticket, its external ids, its plan folder, spec and ADRs; warns when the branch lacks the ticket id. `--template` prints the template (repo's, else `build/05_ship/templates/pull-request.md`, else daiku's own) with the links in place; fill it in, then pass it back with `--body-file` |
 
 `gate`, `reopen`, `status`, `switch`, `change close` and `env` act on the active build too.
 
@@ -53,7 +55,7 @@ holder.
 | Test | `build/03_testing/` | qa | `fast` | `build/03_testing/context.md`, the repo and its `AGENTS.md`, `build/<repo>/changes/<ticket-id>/requirements.md` | `build/tickets/*` |
 | Review | `build/04_refactoring/` | reviewer | `deep` | `build/04_refactoring/context.md`, the repo and its `AGENTS.md`, `build/<repo>/changes/<ticket-id>/*` | `build/tickets/*` |
 | Security pass | `build/04_refactoring/` | security | `deep` | `build/04_refactoring/context.md`, the repo and its `AGENTS.md` | `build/tickets/*` |
-| Ship | the repo | — | `fast` | `build/<repo>/changes/<ticket-id>/tasks.json`, the build's ticket | `build/02_implementation/*` |
+| Ship | `build/05_ship/` | — | `fast` | `build/05_ship/context.md`, `build/<repo>/changes/<ticket-id>/tasks.json`, `test-results.md`, `code-review.md` and `security-review.md`, the build's ticket | `build/02_implementation/*` |
 
 ## Build naming
 
@@ -62,7 +64,7 @@ holder.
   pulled from a PM tool. Planned tickets stay in `plan/specs/<n>-<slug>/tickets/`
   and are read in place.
 - Personas: `build/<stage>/personas/<name>.md`
-- Templates: `build/01_design/templates/<artifact>.md`
+- Templates: `build/01_design/templates/<artifact>.md`, `build/05_ship/templates/pull-request.md`
 
 ## Build directory map
 
@@ -73,5 +75,6 @@ build/
 ├── 02_implementation/    # coder
 ├── 03_testing/           # qa
 ├── 04_refactoring/       # reviewer + security
+├── 05_ship/              # ship: the PR template
 └── <repo>/changes/       # one folder per build, named by its ticket id
 ```

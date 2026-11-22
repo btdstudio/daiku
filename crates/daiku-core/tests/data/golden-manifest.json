@@ -19,6 +19,8 @@
     "build/04_refactoring/personas/reviewer.md": "ffb96fd1fa5baef70a2c17f531b909aca983732c8ba482a770628ff9f2f85ad7",
     "build/04_refactoring/personas/security.md": "a256fa50b211a592a87baf1c949a8ed7a8444f28c7fc37cb595ffeb9e07b0eee",
     "build/04_refactoring/reviews/.gitkeep": "790adf5783174ecfbec10f4a852c99f75bdf1925a077b19137f3784e5b3d4724",
+    "build/05_ship/context.md": "d9a947f9e91ba40eb3c82d1e89316fd658fc61bb524390cdc426e026ece41b80",
+    "build/05_ship/templates/pull-request.md": "9f419a267c0781629dc27a0b3b26db1071bc8df4d2fa6a646d268d197317943b",
     "build/tickets/.gitkeep": "34972c9510fd73a81db00cb8b71513c4b6a659f7de6ca7d5ed086fb4a2d00fba",
     "ideas/context.md": "4fc79f9c3731a2a75e1dca4ccf0040b075929f978810627c2023d0ac7d6f4fc9",
     "ideas/personas/facilitator.md": "ce8ef5e42c2e8fdf3ebdc3b4c75369bc90ff83095d3b5209b6d70c12a0e3ab03",
