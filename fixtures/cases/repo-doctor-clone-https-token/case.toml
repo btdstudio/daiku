@@ -1,0 +1,7 @@
+args = ["repo", "doctor", "--clone", "--into", "{HOME}/clones"]
+workspace = "init"
+
+[expect]
+exit = 1
+stdout = "✗ x: no local path\n"
+stderr = "daiku: remote has credentials in it, and REPOS.json is committed — remove them\n"
