@@ -1,0 +1,26 @@
+args = ["adr", "show", "2"]
+workspace = "adrs"
+
+[expect]
+exit = 0
+stdout = '''
+# 0002 — Session tokens
+
+- Status: proposed
+- Date: 2026-01-15
+- Deciders: 
+
+## Context
+
+
+
+Tab	here, ESC \x1b[31mred\x1b[0m, CR\rover.
+
+## Decision
+
+
+
+## Consequences
+
+
+'''

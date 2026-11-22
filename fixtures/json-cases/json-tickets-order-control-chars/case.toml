@@ -1,0 +1,21 @@
+args = ["tickets", "order", "--json"]
+workspace = "plan-architecture-approved"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": [
+    {
+      "id": "E-0001",
+      "title": "Accounts"
+    },
+    {
+      "id": "S-0002",
+      "title": "Sign \u001b[2J in"
+    }
+  ],
+  "warnings": []
+}
+'''

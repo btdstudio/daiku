@@ -1,0 +1,6 @@
+args = ["adr", "show", "2"]
+workspace = "adrs"
+
+[expect]
+exit = 0
+stdout = "# 0002 — Session tokens\r\n\r\n- Status: proposed\r\n- Date: 2026-01-15\r\n- Deciders: \r\n\r\n## Context\r\n\r\n\r\n\r\n## Decision\r\n\r\n\r\n\r\n## Consequences\r\n\r\n\r\n"
