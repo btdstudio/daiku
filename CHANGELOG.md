@@ -4,6 +4,47 @@ Releases before 0.3.0 were the Go CLI, the last being `v0.2.0`; their notes are 
 this repo's GitHub releases. The `0.3.0-alpha` prereleases were built in
 `btdstudio/daiku-next` before it merged here.
 
+## 0.5.0
+
+Safer output from shared files, archived repos, and stricter checks on what a
+workspace's files can make daiku do.
+
+- **Printed text can't act on your terminal.** Text from workspace files (ticket
+  titles, idea reasons, repo remotes and branches, paths, whole ADR, idea and source
+  files) now shows control characters as visible escapes: ESC as `\x1b`, a carriage
+  return as `\r`, NEL as `\u0085`, a bidi override as `\u202e`, and invisible tag
+  characters as `\U000e0041`. Each byte that isn't valid UTF-8 shows as `\xNN`, where
+  it used to be printed raw. Tabs, emoji and every script print as they are, and so do
+  newlines in whole files. The files themselves keep their bytes, and `--json` output
+  is unchanged. See
+  [`docs/migration.md`](https://github.com/btdstudio/daiku/blob/v0.5.0/docs/migration.md#what-differs).
+- **Archive a repo.** `daiku repo archive <name> [--reason <r>]` marks a repo in
+  `REPOS.json` as archived, and `daiku repo unarchive <name>` makes it live again. An
+  archived repo keeps its entry for its builds' history, but it's never cloned, and
+  `build new`, `change new --repo` and `idea promote --repo` refuse new work on it.
+  Existing builds on it still read and close. `repo list` shows the state, in text and
+  in `--json` (`archived`, `archivedReason`). `repo doctor` skips what's expected of a
+  retired repo, but still checks a checkout that's on disk for a changed remote. Older
+  CLIs ignore the new fields.
+- **Credentials in remotes are masked.** `repo doctor`'s remote-mismatch line and
+  `repo list` replace the userinfo of an `http(s)://` remote with `***`, and do the
+  same for other `scheme://` remotes that carry a password, so a token stored in a
+  checkout's origin no longer reaches the terminal or CI logs. Comparison and cloning
+  still use the real value.
+- **Repo names in `REPOS.json` are checked when it's read.** A hand-edited name like
+  `../outside` used to let `repo doctor --clone --into <dir>` clone outside `<dir>`.
+  Now every command that reads the registry fails first, with
+  `daiku: REPOS.json: invalid repo name "../outside" (…)`.
+- **`--reason` stays on one line.** A reason with line breaks, given to `gate`,
+  `reopen`, `change close` or `tickets unfreeze`, is folded to one line before it's
+  stored, so it can't add a forged entry to `LOG.md` or the commit message. A reason
+  that's only line breaks counts as missing.
+- **A failed `repo` command no longer leaves `REPOS.json` half-written** when
+  `.daiku/paths.json` is a symlink: both files are checked before either is written.
+- **The desktop app's design** is in
+  [`docs/app/design.md`](https://github.com/btdstudio/daiku/blob/v0.5.0/docs/app/design.md): Tauri 2 with a React frontend, a
+  read-only viewer first.
+
 ## 0.4.0
 
 Model tiers in a workspace's AGENTS.md, and the Rust CLI as its own reference.
