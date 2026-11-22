@@ -1,0 +1,19 @@
+args = ["gate", "research", "skipped", "--reason", "x\n- 2026-01-01 S-0001: ship → complete"]
+workspace = "git-plan-spec-ready"
+git = true
+
+[expect]
+exit = 0
+stdout = "1-auth-flow: research = skipped\n"
+git_log = '''
+daiku: 1-auth-flow: research → skipped (x - 2026-01-01 S-0001: ship → complete)
+
+M	LOG.md
+M	STATE.json
+M	plan/specs/1-auth-flow/README.md
+'''
+changes = [
+  "~ f LOG.md",
+  "~ f STATE.json",
+  "~ f plan/specs/1-auth-flow/README.md",
+]

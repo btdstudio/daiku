@@ -173,12 +173,12 @@ The classes:
 
 | Class | Cases |
 | --- | --- |
-| args | `change-close-missing-change`, `change-close-missing-reason`, `change-close-unknown-flag` |
+| args | `change-close-blank-reason`, `change-close-missing-change`, `change-close-missing-reason`, `change-close-unknown-flag` |
 | context | `change-close-outside-workspace` |
 | order | `change-close-already-closed` |
 | unsafe | `change-close-through-symlink` |
 | corrupt | `change-close-corrupt-state` |
-| other | `change-close`, `change-close-build`, `change-close-git`, `change-close-help-flag`, `change-close-unknown` |
+| other | `change-close`, `change-close-build`, `change-close-git`, `change-close-help-flag`, `change-close-reason-multiline`, `change-close-unknown` |
 
 ## daiku gate
 
@@ -189,7 +189,7 @@ The classes:
 | order | `gate-architecture-no-diagrams`, `gate-build-out-of-order`, `gate-build-repo-held`, `gate-build-repo-held-forced`, `gate-build-repo-held-prompt`, `gate-build-skip-out-of-order`, `gate-out-of-order-auto`, `gate-out-of-order-blocked`, `gate-out-of-order-forced`, `gate-out-of-order-global-overridden`, `gate-out-of-order-global-prompt`, `gate-out-of-order-prompt`, `gate-publish-complete-unpublished`, `gate-spec-artifact-forced`, `gate-spec-artifact-problems`, `gate-violations-listed-together` |
 | unsafe | `gate-log-through-symlink`, `gate-through-symlink` |
 | corrupt | `gate-corrupt-state`, `gate-out-of-order-invalid-global`, `gate-out-of-order-invalid-project` |
-| other | `gate-breakdown-approved`, `gate-build-implement-complete`, `gate-build-plan-phase`, `gate-build-ship-complete`, `gate-build-ticket-approved`, `gate-git-breakdown`, `gate-git-build-implement`, `gate-git-intake`, `gate-git-refused-commits-nothing`, `gate-git-ship-complete`, `gate-git-spec`, `gate-help-flag`, `gate-intake-approved`, `gate-intake-await-approval`, `gate-publish-in-progress`, `gate-refresh-keeps-non-utf8`, `gate-research-skipped`, `gate-spec-approved` |
+| other | `gate-approved-reason-multiline`, `gate-breakdown-approved`, `gate-build-implement-complete`, `gate-build-plan-phase`, `gate-build-ship-complete`, `gate-build-ticket-approved`, `gate-git-breakdown`, `gate-git-build-implement`, `gate-git-intake`, `gate-git-refused-commits-nothing`, `gate-git-ship-complete`, `gate-git-spec`, `gate-help-flag`, `gate-intake-approved`, `gate-intake-await-approval`, `gate-publish-in-progress`, `gate-refresh-keeps-non-utf8`, `gate-research-skipped`, `gate-skip-reason-multiline-git`, `gate-spec-approved` |
 
 ## daiku reopen
 
@@ -200,7 +200,7 @@ The classes:
 | order | `reopen-not-started` |
 | unsafe | `reopen-through-symlink` |
 | corrupt | `reopen-corrupt-state` |
-| other | `reopen-build-design`, `reopen-build-implement`, `reopen-git`, `reopen-help-flag`, `reopen-intake-keeps-skips`, `reopen-spec` |
+| other | `reopen-build-design`, `reopen-build-implement`, `reopen-git`, `reopen-help-flag`, `reopen-intake-keeps-skips`, `reopen-reason-multiline`, `reopen-spec` |
 
 ## daiku tickets new
 
@@ -283,7 +283,7 @@ The classes:
 
 | Class | Cases |
 | --- | --- |
-| args | `tickets-unfreeze-missing-reason` |
+| args | `tickets-unfreeze-blank-reason`, `tickets-unfreeze-missing-reason` |
 | context | `tickets-unfreeze-outside-workspace` |
 | order | `tickets-unfreeze-not-frozen` |
 | unsafe | `tickets-unfreeze-through-symlink` |
