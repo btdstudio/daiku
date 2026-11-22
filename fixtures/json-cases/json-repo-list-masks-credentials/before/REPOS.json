@@ -1,0 +1,1 @@
+{"repos": {"x": {"remote": "ssh://u:p@host.invalid/x.git", "defaultBranch": "main"}}}
