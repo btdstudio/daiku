@@ -1,0 +1,6 @@
+args = ["repo", "list"]
+workspace = "build-implement"
+
+[expect]
+exit = 0
+stdout = "api  https://example.invalid/api\\u202e.git  ma\\nin  {ROOT}\n"

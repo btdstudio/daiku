@@ -3,7 +3,7 @@ workspace = "plan-intake-draft"
 
 [expect]
 exit = 0
-stdout_bytes = '''
+stdout = '''
 # 1-auth-flow caf\xe9
 
 <!-- daiku:narrative -->

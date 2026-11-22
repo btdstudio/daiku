@@ -1,0 +1,6 @@
+args = ["env"]
+workspace = "build-implement"
+
+[expect]
+exit = 1
+stderr = "daiku: repo \"api\" is missing on disk: /gone\\x1b[2J — run `daiku repo doctor`\n"
