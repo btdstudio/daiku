@@ -1,0 +1,6 @@
+args = ["tickets", "unfreeze", "S-0002", "--reason", " \r\n "]
+workspace = "plan-published"
+
+[expect]
+exit = 1
+stderr = "daiku: a reason is required\n"
