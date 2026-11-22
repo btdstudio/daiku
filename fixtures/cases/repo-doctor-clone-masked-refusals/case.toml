@@ -1,0 +1,7 @@
+args = ["repo", "doctor", "--clone", "--into", "{HOME}/clones"]
+workspace = "init"
+
+[expect]
+exit = 1
+stdout = "✗ a: no local path\n✗ b: no local path\n✗ c: no local path\n"
+stderr = "daiku: invalid remote \"-ssh://***@host.invalid/a.git\"\ndaiku: remote helpers aren't allowed: \"ext::https://***@host.invalid/b.git\"\ndaiku: invalid remote \"\\x01https://***@host.invalid/c.git\"\n"

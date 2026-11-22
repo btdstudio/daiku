@@ -1,0 +1,6 @@
+args = ["repo", "add", "web", "\u0001https://tok@host.invalid/x.git"]
+workspace = "init"
+
+[expect]
+exit = 1
+stderr = "daiku: invalid remote \"\\x01https://***@host.invalid/x.git\"\n"

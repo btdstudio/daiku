@@ -1,0 +1,6 @@
+args = ["repo", "list"]
+workspace = "init"
+
+[expect]
+exit = 0
+stdout = "a  -ssh://***@host.invalid/a.git  main  (no local path)\nb  ext::https://***@host.invalid/b.git  main  (no local path)\nc  \\x01https://***@host.invalid/c.git  main  (no local path)\n"
