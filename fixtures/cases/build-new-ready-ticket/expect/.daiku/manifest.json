@@ -2,7 +2,7 @@
   "version": "dev",
   "files": {
     ".gitignore": "0cd0f6da3164ed8f0f1afced0b9f42589749a32571ad6df50e327b53664f95a0",
-    "CLAUDE.md": "b7e2c49d980126d99a4f2853bd6c40d216c7a710f0265d729de39aa692d8f25b",
+    "CLAUDE.md": "336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49",
     "README.md": "040c6ad1a825cd8fe04365f921d1898c3cbd3534b778ffbf3faeba4eec5310a8",
     "build/01_design/context.md": "6c602ca1b57dc0ec4025158616e06816e4feaf4004d9e8d2085083b8317ad02a",
     "build/01_design/personas/analyst.md": "650bc13aeea56fa0575b71ae7ed6a38905b5a2e6b8536e6fcaab29d21a15b294",
