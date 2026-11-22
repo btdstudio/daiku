@@ -47,6 +47,8 @@ used yet has no sections here.
 | `daiku repo add <name> <remote> [--path <p>] [--branch <b>]` | register a repo this workspace works with |
 | `daiku repo list` | list repos and their local paths |
 | `daiku repo path <name> <path>` | set a repo's local path |
+| `daiku repo archive <name> [--reason <r>]` | mark a repo archived: kept for its history, but not cloned and given no new builds |
+| `daiku repo unarchive <name>` | make an archived repo live again |
 | `daiku repo doctor [--clone] [--into <dir>]` | check repos; `--clone` fetches missing ones |
 | `daiku env` | print harness flags (`--add-dir <path>`) for the active change's repos |
 | `daiku check` | validate the embedded scaffold |
