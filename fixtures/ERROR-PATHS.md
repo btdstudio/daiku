@@ -398,7 +398,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | `repo-add-through-symlink` |
 | corrupt | `repo-add-corrupt-repos` |
-| other | `repo-add`, `repo-add-dash-remote`, `repo-add-existing-name`, `repo-add-help-flag`, `repo-add-home-path`, `repo-add-invalid-name`, `repo-add-path-branch`, `repo-add-relative-path`, `repo-add-remote-credentials`, `repo-add-remote-helper` |
+| other | `repo-add`, `repo-add-dash-remote`, `repo-add-existing-name`, `repo-add-help-flag`, `repo-add-home-path`, `repo-add-invalid-name`, `repo-add-path-branch`, `repo-add-relative-path`, `repo-add-remote-credentials`, `repo-add-remote-helper`, `repo-add-ssh-password` |
 
 ## daiku repo list
 
@@ -431,7 +431,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: --clone's one workspace write is .daiku/paths.json, the writer covered by repo-path-through-symlink |
 | corrupt | `repo-doctor-clone-invalid-repo-name`, `repo-doctor-corrupt-repos` |
-| other | `repo-doctor-clone`, `repo-doctor-clone-no-into`, `repo-doctor-clone-nothing-missing`, `repo-doctor-empty`, `repo-doctor-help-flag`, `repo-doctor-mismatch-credentials`, `repo-doctor-no-origin`, `repo-doctor-skips-archived` |
+| other | `repo-doctor-clone`, `repo-doctor-clone-no-into`, `repo-doctor-clone-nothing-missing`, `repo-doctor-clone-ssh-password`, `repo-doctor-empty`, `repo-doctor-help-flag`, `repo-doctor-mismatch-credentials`, `repo-doctor-no-origin`, `repo-doctor-skips-archived` |
 
 ## daiku repo archive
 
