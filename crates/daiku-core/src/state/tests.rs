@@ -617,6 +617,35 @@ fn advance_and_reopen_need_an_active_folder() {
     );
 }
 
+/// N-0006 (security review): the store folds any line it logs, so a caller that
+/// skips the Workspace fold still can't add a line to LOG.md or the commit message.
+#[test]
+fn the_store_keeps_every_log_line_and_subject_on_one_line() {
+    let t = Temp::new();
+    git_repo(&t);
+    let env = testutil::env(&t, Box::new(RealProcess));
+    let s = Store::at(t.path(), &env).unwrap();
+    s.seed("1-x", PLAN_LOOP, opts()).unwrap();
+    let before = t.read("LOG.md").lines().count();
+    s.advance("intake", APPROVED, "", &["override: a\nb".into()])
+        .unwrap();
+    s.reopen("intake", "c\r\n- 2026-01-01 1-x: ship → complete", &[])
+        .unwrap();
+    let log = t.read("LOG.md");
+    assert_eq!(log.lines().count(), before + 3, "{log}");
+    assert!(log.contains("1-x: override: a b\n"), "{log}");
+    assert!(
+        log.contains("1-x: reopened intake (c - 2026-01-01 1-x: ship → complete)\n"),
+        "{log}"
+    );
+    assert!(!log.contains('\r'));
+    let message = git(t.path(), &["log", "-1", "--format=%B"]);
+    assert_eq!(
+        message.trim_end(),
+        "daiku: 1-x: reopened intake (c - 2026-01-01 1-x: ship → complete)"
+    );
+}
+
 #[test]
 fn advance_logs_notes_and_close_clears_only_its_pointer() {
     let t = Temp::new();

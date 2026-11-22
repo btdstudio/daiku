@@ -7,6 +7,30 @@
 
 use std::borrow::Cow;
 use std::fmt;
+use std::sync::LazyLock;
+
+use regex::Regex;
+
+/// A run of whitespace that holds a line break: `\n`, `\r\n`, or a lone `\r`.
+static LINE_BREAK_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"[\t\n\x0C\r ]*[\r\n]+[\t\n\x0C\r ]*").expect("valid pattern"));
+
+/// Go's `oneLine`, widened to a lone `\r` (N-0006): line breaks and the whitespace
+/// around them become one space, and the ends are trimmed. Whitespace away from a
+/// break is kept.
+pub fn one_line(s: &str) -> String {
+    LINE_BREAK_RE.replace_all(s, " ").trim().to_string()
+}
+
+/// A `--reason` as core stores and logs it: unchanged when it has no line break,
+/// otherwise [`one_line`] of it, so it can't add a line to `LOG.md` (N-0006).
+pub fn fold_reason(reason: &str) -> Cow<'_, str> {
+    if reason.contains(['\r', '\n']) {
+        Cow::Owned(one_line(reason))
+    } else {
+        Cow::Borrowed(reason)
+    }
+}
 
 /// A parsed field (a title, a body, a reason) as the file holds it.
 #[derive(Clone, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -112,6 +136,34 @@ mod tests {
         assert_eq!(json, "\"Caf\u{fffd} \\\"q\\\"\"");
         let back: String = serde_json::from_str(&json).unwrap();
         assert_eq!(back, "Caf\u{fffd} \"q\"");
+    }
+
+    #[test]
+    fn one_line_folds_line_breaks() {
+        for (s, want) in [
+            ("  a \r\n\n  b\nc  ", "a b c"),
+            ("a\rb", "a b"),
+            ("a\r\nb", "a b"),
+            ("a \t\n\t b", "a b"),
+            ("a\n\r\n\rb", "a b"),
+            ("\na\n", "a"),
+            ("a  b\tc", "a  b\tc"),
+            ("\n", ""),
+        ] {
+            assert_eq!(one_line(s), want, "{s:?}");
+        }
+    }
+
+    #[test]
+    fn fold_reason_only_touches_reasons_with_a_break() {
+        assert!(matches!(fold_reason(" a  b "), Cow::Borrowed(" a  b ")));
+        assert_eq!(
+            fold_reason("x\n- 2026-01-01 S-0001: ship → complete"),
+            "x - 2026-01-01 S-0001: ship → complete"
+        );
+        assert_eq!(fold_reason("a\rb"), "a b");
+        assert_eq!(fold_reason("\n"), "");
+        assert_eq!(fold_reason(" \r\n "), "");
     }
 
     #[test]

@@ -681,12 +681,14 @@ impl<'a> Store<'a> {
     }
 
     /// Go's `Log`: one `LOG.md` line.
+    /// A line with a line break is folded first, so whatever a caller passes,
+    /// `LOG.md` gains exactly one line (N-0006, security review).
     pub fn log(&self, line: &str) -> Result<(), Error> {
         super::changelog::append(
             self.root,
             &at(self.root, "LOG.md"),
             self.env.clock.now(),
-            line,
+            &crate::text::fold_reason(line),
         )
     }
 
@@ -701,7 +703,8 @@ impl<'a> Store<'a> {
         }
         let mut all = vec!["STATE.json".to_string(), "LOG.md".to_string()];
         all.extend(paths.iter().cloned());
-        self.commit(&format!("daiku: {}", lines[0]), &all)
+        let subject = crate::text::fold_reason(&lines[0]);
+        self.commit(&format!("daiku: {subject}"), &all)
     }
 
     /// Go's `commit`: stage the paths, keep those whose staged diff isn't empty,

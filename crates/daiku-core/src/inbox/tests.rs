@@ -94,11 +94,6 @@ fn a_planned_ticket_in_the_inbox_is_reported() {
     assert!(problems[0].to_string().contains("plan/specs/"));
 }
 
-#[test]
-fn one_line_titles() {
-    assert_eq!(one_line("  a \r\n\n  b\nc  "), "a b c");
-}
-
 fn draft(external: &str, title: &str) -> Vec<u8> {
     format!(
         "---\nschema: 1\nid: DRAFT\ntype: task\ntitle: {title}\nrepo: api\nchange: 7-gateway\nlabels: [bug]\nstatus: draft\n{external}origin:\n  workspace: w\n  path: p\n---\n\nThe body.\n"

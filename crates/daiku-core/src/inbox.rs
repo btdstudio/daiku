@@ -3,11 +3,9 @@
 //! (`X-`) are recorded here. Planned tickets stay under `plan/specs/`.
 
 use std::path::{Path, PathBuf};
-use std::sync::LazyLock;
-
-use regex::Regex;
 
 use crate::state::store::{at, shown};
+use crate::text::one_line;
 use crate::ticket::{self, NATIVE_PREFIX, NewTicket, PULLED_PREFIX, Problem, TASK, Ticket};
 use crate::{Error, write};
 
@@ -55,14 +53,6 @@ pub struct NewInbox {
     pub repo: String,
     pub labels: Vec<String>,
     pub body: String,
-}
-
-static LINE_BREAK_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"[\t\n\x0C\r ]*\r?\n+[\t\n\x0C\r ]*").expect("valid pattern"));
-
-/// Go's `oneLine`: line breaks and the space around them become one space.
-fn one_line(s: &str) -> String {
-    LINE_BREAK_RE.replace_all(s, " ").trim().to_string()
 }
 
 /// Go's `New`: a draft native task with the next `N-` id, counted over the inbox

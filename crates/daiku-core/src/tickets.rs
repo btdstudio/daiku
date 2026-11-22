@@ -713,6 +713,12 @@ impl crate::Workspace {
 
     /// `daiku tickets unfreeze`: Go's `ticketsUnfreeze` after parsing.
     pub fn tickets_unfreeze(&self, id: &str, reason: &str) -> Result<Outcome<String>, Error> {
+        // One line in LOG.md, and a reason that was only line breaks is missing
+        // (N-0006).
+        let reason = crate::text::fold_reason(reason);
+        if reason.is_empty() {
+            return Err(Error::ReasonRequired);
+        }
         let mut t = self.find_ticket(id)?;
         t.unfreeze().map_err(|e| match e {
             Error::Ticket { message } => Error::TicketRefused { message },
