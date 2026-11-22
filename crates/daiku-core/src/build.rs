@@ -23,6 +23,10 @@ pub struct RepoRow {
     pub branch: String,
     /// The path as stored in `paths.json` (a `~/` path unexpanded), if any.
     pub path: Option<String>,
+    /// Archived: kept in the registry, but not cloned or given new work.
+    pub archived: bool,
+    /// Why it was archived, or empty.
+    pub archived_reason: String,
 }
 
 /// What `repo doctor --clone` did for one repo, in the order Go printed it.
@@ -167,6 +171,8 @@ impl crate::Workspace {
                         remote: repos::redact_remote(&repo.remote),
                         branch: repo.default_branch.clone(),
                         path: reg.paths.get(&name).cloned(),
+                        archived: repo.archived,
+                        archived_reason: repo.archived_reason.clone(),
                         name,
                     }
                 })
@@ -175,6 +181,22 @@ impl crate::Workspace {
     }
 
     /// `daiku repo path <name> <path>`: records the path and returns it as stored.
+    /// `daiku repo archive <name> [--reason <r>]` (N-0008).
+    pub fn repo_archive(&self, name: &str, reason: &str) -> Result<Outcome<String>, Error> {
+        let mut reg = self.registry()?;
+        reg.archive(name, reason)?;
+        reg.save(self.root())?;
+        Ok(Outcome::new(name.to_string()))
+    }
+
+    /// `daiku repo unarchive <name>` (N-0008).
+    pub fn repo_unarchive(&self, name: &str) -> Result<Outcome<String>, Error> {
+        let mut reg = self.registry()?;
+        reg.unarchive(name)?;
+        reg.save(self.root())?;
+        Ok(Outcome::new(name.to_string()))
+    }
+
     pub fn repo_path(&self, name: &str, path: &str) -> Result<Outcome<String>, Error> {
         let mut reg = self.registry()?;
         reg.set_path(name, path, &self.env().dirs)?;
@@ -195,6 +217,10 @@ impl crate::Workspace {
         let mut clones = Vec::new();
         if clone {
             for name in reg.names() {
+                // An archived repo is never cloned (N-0008).
+                if reg.is_archived(&name) {
+                    continue;
+                }
                 let recorded = reg.paths.get(&name).cloned();
                 if let Ok(path) = reg.resolve(&name, &env.dirs)
                     && std::fs::metadata(&path).is_ok_and(|m| m.is_dir())
@@ -233,7 +259,7 @@ impl crate::Workspace {
                     return Ok(Outcome::new(DoctorReport {
                         clones,
                         problems: Vec::new(),
-                        count: reg.repos.len(),
+                        count: reg.live_count(),
                         aborted: true,
                     }));
                 }
@@ -245,7 +271,7 @@ impl crate::Workspace {
         Ok(Outcome::new(DoctorReport {
             clones,
             problems,
-            count: reg.repos.len(),
+            count: reg.live_count(),
             aborted: false,
         }))
     }
@@ -408,10 +434,16 @@ impl crate::Workspace {
         if t.repo.is_empty() {
             return Err(Error::NoBuildRepo { id: t.id.clone() });
         }
-        if !repos::load(self.root())?.repos.contains_key(&t.repo) {
+        let reg = repos::load(self.root())?;
+        if !reg.repos.contains_key(&t.repo) {
             return Err(Error::BuildRepoNotRegistered {
                 id: t.id.clone(),
                 repo: t.repo.clone(),
+            });
+        }
+        if reg.is_archived(&t.repo) {
+            return Err(Error::RepoIsArchived {
+                name: t.repo.clone(),
             });
         }
         Ok(())

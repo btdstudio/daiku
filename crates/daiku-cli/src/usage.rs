@@ -24,6 +24,9 @@ const REPO_USAGE: &str = "  daiku repo add <name> <remote> [--path <p>] [--branc
   daiku repo path <name> <path>            set a repo's local path
   daiku repo doctor [--clone] [--into <dir>]
                                           check repos; --clone fetches missing ones
+  daiku repo archive <name> [--reason <r>]
+                                          mark a repo archived: no clones, no new builds
+  daiku repo unarchive <name>             make an archived repo live again
 ";
 
 pub const COMMANDS: &[Command] = &[

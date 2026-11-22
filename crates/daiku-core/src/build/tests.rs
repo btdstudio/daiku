@@ -80,12 +80,16 @@ fn repo_add_list_and_path() {
                 remote: "git@example.invalid:org/api.git".into(),
                 branch: "trunk".into(),
                 path: Some("~/code/api".into()),
+                archived: false,
+                archived_reason: String::new(),
             },
             RepoRow {
                 name: "web".into(),
                 remote: "https://example.invalid/web.git".into(),
                 branch: "main".into(),
                 path: None,
+                archived: false,
+                archived_reason: String::new(),
             },
         ]
     );
@@ -306,6 +310,87 @@ fn doctor_clone_refuses_a_bad_name_before_cloning() {
     assert_eq!(t.read("REPOS.json"), repos);
     assert!(!t.exists(".daiku/paths.json"));
     assert!(!t.exists("clones"));
+}
+
+/// N-0008 AC2, AC4: `repo list` carries the state, `repo path` keeps it, and new
+/// work on an archived repo is refused.
+#[test]
+fn archived_repos_are_listed_kept_and_refused() {
+    let t = Temp::new();
+    let (ws, _, _) = workspace(&t);
+    ws.repo_add("old", "https://example.invalid/old.git", None, "")
+        .unwrap();
+    ws.repo_archive("old", "merged\ninto daiku").unwrap();
+    ws.repo_path("old", "/srv/old").unwrap();
+    let row = &ws.repo_list().unwrap().value[0];
+    assert!(row.archived);
+    assert_eq!(row.archived_reason, "merged into daiku");
+    assert!(matches!(
+        ws.repo_archive("old", ""),
+        Err(Error::RepoAlreadyArchived { .. })
+    ));
+    ws.repo_unarchive("old").unwrap();
+    let row = &ws.repo_list().unwrap().value[0];
+    assert!(!row.archived && row.archived_reason.is_empty());
+}
+
+/// N-0008 AC3: an archived repo isn't reported, cloned or counted, with or
+/// without `--clone`; a live one still is.
+#[test]
+fn doctor_skips_archived_repos() {
+    let t = Temp::new();
+    let (ws, process, events) = workspace(&t);
+    ws.repo_add("old", "https://example.invalid/old.git", None, "")
+        .unwrap();
+    ws.repo_add(
+        "gone",
+        "https://example.invalid/gone.git",
+        Some("nowhere"),
+        "",
+    )
+    .unwrap();
+    ws.repo_add("live", "https://example.invalid/live.git", None, "")
+        .unwrap();
+    ws.repo_archive("old", "").unwrap();
+    ws.repo_archive("gone", "retired").unwrap();
+
+    let report = ws.repo_doctor(false, None).unwrap().value;
+    let repos: Vec<&str> = report.problems.iter().map(|p| p.repo.as_str()).collect();
+    assert_eq!(repos, ["live"], "{:?}", report.problems);
+    assert_eq!(report.count, 1);
+
+    process.reply(ok());
+    let into = t.p("clones").to_string_lossy().into_owned();
+    let report = ws.repo_doctor(true, Some(&into)).unwrap().value;
+    let cloned: Vec<&str> = report
+        .clones
+        .iter()
+        .map(|c| match c {
+            CloneStep::Cloned { repo, .. } => repo.as_str(),
+            other => panic!("{other:?}"),
+        })
+        .collect();
+    assert_eq!(cloned, ["live"]);
+    // The only git call is the live repo's clone.
+    let calls = process.calls.borrow();
+    assert_eq!(
+        calls.len(),
+        1,
+        "{:?}",
+        calls.iter().map(|c| &c.args).collect::<Vec<_>>()
+    );
+    assert!(calls[0].args.iter().any(|a| a.contains("live.git")));
+    drop(calls);
+    let started: Vec<String> = events
+        .0
+        .borrow()
+        .iter()
+        .filter_map(|e| match e {
+            Event::CloneStarted { repo, .. } => Some(repo.clone()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(started, ["live"]);
 }
 
 #[test]

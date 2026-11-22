@@ -301,6 +301,21 @@ pub fn string(r: &mut Reader, into: &mut String, at: At) -> Result<(), String> {
     }
 }
 
+/// Decodes into a Go `bool`: `null` leaves it as it was.
+pub fn boolean(r: &mut Reader, into: &mut bool, at: At) -> Result<(), String> {
+    match r.kind() {
+        Kind::Null => {
+            r.literal();
+            Ok(())
+        }
+        Kind::Bool => {
+            *into = r.literal() == "true";
+            Ok(())
+        }
+        k => Err(mismatch(r, k, at, "bool")),
+    }
+}
+
 /// Decodes into a Go `map[string]string` (`None` is nil): `null` sets nil, an
 /// object merges into the map, each value decoded fresh.
 pub fn string_map(

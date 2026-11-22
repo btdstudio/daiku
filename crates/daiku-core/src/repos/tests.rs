@@ -404,6 +404,21 @@ fn save_refuses_symlinks() {
     assert!(!outside.exists("r.json"), "nothing was written through it");
 }
 
+/// N-0008: a symlinked `.daiku/paths.json` is refused before `REPOS.json` is
+/// touched, so a refused save writes nothing.
+#[cfg(unix)]
+#[test]
+fn save_checks_both_files_before_writing() {
+    let (t, outside) = (Temp::new(), Temp::new());
+    t.write("REPOS.json", "{}\n");
+    std::fs::create_dir_all(t.p(".daiku")).unwrap();
+    std::os::unix::fs::symlink(outside.p("p.json"), t.p(".daiku/paths.json")).unwrap();
+    let err = registry_with("x").save(t.path()).unwrap_err().to_string();
+    assert!(err.contains("is a symlink"), "{err}");
+    assert_eq!(t.read("REPOS.json"), "{}\n", "REPOS.json is untouched");
+    assert!(!outside.exists("p.json"));
+}
+
 /// N-0005 AC2, AC4: what `redact_remote` masks and what it leaves alone.
 #[test]
 fn redact_remote_masks_userinfo_for_display() {
@@ -452,6 +467,77 @@ fn redact_remote_masks_userinfo_for_display() {
     ] {
         assert_eq!(redact_remote(remote), want, "{remote}");
     }
+}
+
+/// N-0008 D1, AC1: the archived fields are read, written only when set, and kept
+/// by every later save.
+#[test]
+fn archived_fields_round_trip_and_survive_saves() {
+    let t = crate::testutil::Temp::new();
+    let live = "{\n  \"repos\": {\n    \"api\": {\n      \"remote\": \"https://example.invalid/api.git\",\n      \"defaultBranch\": \"main\"\n    }\n  }\n}\n";
+    t.write("REPOS.json", live);
+    let mut reg = load(t.path()).unwrap();
+    reg.save(t.path()).unwrap();
+    assert_eq!(
+        t.read("REPOS.json"),
+        live,
+        "a live registry saves byte for byte"
+    );
+
+    reg.archive("api", "old\nrepo").unwrap();
+    reg.save(t.path()).unwrap();
+    let saved = t.read("REPOS.json");
+    assert!(
+        saved.contains("\"defaultBranch\": \"main\",\n      \"archived\": true,\n      \"archivedReason\": \"old repo\""),
+        "{saved}"
+    );
+
+    // A later `repo add` of another repo and a `repo path` keep the state.
+    let d = dirs("/h", Some(t.path().to_str().unwrap()));
+    let mut reg = load(t.path()).unwrap();
+    reg.add("web", "https://example.invalid/web.git", "")
+        .unwrap();
+    reg.set_path("api", "/srv/api", &d).unwrap();
+    reg.save(t.path()).unwrap();
+    let back = load(t.path()).unwrap();
+    assert!(back.is_archived("api") && !back.is_archived("web"));
+    assert_eq!(back.repos["api"].archived_reason, "old repo");
+}
+
+/// N-0008 R1–R3: archive and unarchive, and their refusals.
+#[test]
+fn archive_and_unarchive() {
+    let mut r = registry_with("api");
+    assert_eq!(
+        r.unarchive("api").unwrap_err().to_string(),
+        "daiku: repo \"api\" isn't archived"
+    );
+    r.archive("api", "  ").unwrap();
+    assert!(r.is_archived("api"));
+    assert_eq!(
+        r.repos["api"].archived_reason, "",
+        "a blank reason is no reason"
+    );
+    assert_eq!(
+        r.archive("api", "x").unwrap_err().to_string(),
+        "daiku: repo \"api\" is already archived"
+    );
+    r.unarchive("api").unwrap();
+    assert!(!r.is_archived("api"));
+    for err in [r.archive("nope", ""), r.unarchive("nope")] {
+        assert!(matches!(err, Err(Error::UnknownRepo { .. })), "{err:?}");
+    }
+    assert!(!r.is_archived("nope"));
+}
+
+/// N-0008 D1: a `null` archived field reads as live, and a wrong type is an error.
+#[test]
+fn archived_decodes_like_go() {
+    let entry =
+        |v: &str| format!("{{\"repos\": {{\"a\": {{\"remote\": \"r\", \"archived\": {v}}}}}}}");
+    assert!(!decode_repos(entry("null").as_bytes()).unwrap()["a"].archived);
+    assert!(decode_repos(entry("true").as_bytes()).unwrap()["a"].archived);
+    assert!(decode_repos(entry("\"yes\"").as_bytes()).is_err());
 }
 
 #[test]
@@ -554,6 +640,38 @@ fn doctor_masks_credentials_in_a_mismatch() {
     let p = ScriptedProcess::default();
     p.reply(ok_out("https://tok@github.com/org/api.git\n"));
     assert_eq!(r.doctor(&d, &p), []);
+}
+
+/// N-0008 security review: an archived repo whose checkout is still on disk is
+/// still checked for a swapped remote; everything else about it is skipped.
+#[test]
+fn doctor_still_checks_an_archived_checkout_for_a_swapped_remote() {
+    let t = Temp::new();
+    for d in ["kept", "notgit"] {
+        std::fs::create_dir_all(t.p(d)).unwrap();
+    }
+    let d = dirs("/h", Some(t.path().to_str().unwrap()));
+    let at = |d: &str| t.p(d).to_string_lossy().into_owned();
+    let mut r = Registry::default();
+    for name in ["a-nopath", "b-gone", "c-notgit", "d-kept"] {
+        r.add(name, "https://evil.invalid/x.git", "").unwrap();
+        r.archive(name, "").unwrap();
+    }
+    r.paths.insert("b-gone".into(), at("gone"));
+    r.paths.insert("c-notgit".into(), at("notgit"));
+    r.paths.insert("d-kept".into(), at("kept"));
+    let p = ScriptedProcess::default();
+    // get-url for c-notgit (fails), then d-kept (the real origin).
+    p.reply(failed(128, "fatal: not a git repository"));
+    p.reply(ok_out("https://github.com/org/x.git\n"));
+    let got = r.doctor(&d, &p);
+    assert_eq!(got.len(), 1, "{got:?}");
+    assert_eq!(got[0].repo, "d-kept");
+    assert!(
+        got[0].detail.starts_with("remote mismatch:"),
+        "{}",
+        got[0].detail
+    );
 }
 
 #[test]
@@ -715,6 +833,7 @@ fn clone_refuses_a_hostile_committed_remote() {
         Repo {
             remote: "--upload-pack=touch pwned".into(),
             default_branch: "main".into(),
+            ..Repo::default()
         },
     );
     let p = ScriptedProcess::default();

@@ -4,11 +4,21 @@
   "description": "One line of `repo list`.",
   "type": "object",
   "required": [
+    "archived",
+    "archivedReason",
     "branch",
     "name",
     "remote"
   ],
   "properties": {
+    "archived": {
+      "description": "Archived: kept in the registry, but not cloned or given new work.",
+      "type": "boolean"
+    },
+    "archivedReason": {
+      "description": "Why it was archived, or empty.",
+      "type": "string"
+    },
     "branch": {
       "type": "string"
     },

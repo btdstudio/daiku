@@ -38,9 +38,14 @@ pub fn repo(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -
             for r in rows {
                 // Free text from REPOS.json and paths.json (ADR-0008, Field).
                 let path = r.path.as_deref().map_or("(no local path)".into(), field);
+                let archived = match (r.archived, r.archived_reason.as_str()) {
+                    (false, _) => String::new(),
+                    (true, "") => "  (archived)".into(),
+                    (true, why) => format!("  (archived: {})", field(why)),
+                };
                 let _ = writeln!(
                     stdout,
-                    "{}  {}  {}  {path}",
+                    "{}  {}  {}  {path}{archived}",
                     r.name,
                     field(&r.remote),
                     field(&r.branch)
@@ -56,6 +61,15 @@ pub fn repo(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -
             })
         }
         "doctor" => repo_doctor(rest, stdout, stderr),
+        "archive" => repo_archive(rest, stdout, stderr),
+        "unarchive" => {
+            if rest.len() != 1 || rest[0].starts_with("--") {
+                return repo_usage(stderr);
+            }
+            finish(ws.repo_unarchive(&rest[0]), stderr, |name| {
+                let _ = writeln!(stdout, "{name}: unarchived");
+            })
+        }
         _ => repo_usage(stderr),
     }
 }
@@ -88,6 +102,30 @@ fn repo_add(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -
             let _ = writeln!(stdout, "added {name} — commit REPOS.json to share it");
         },
     )
+}
+
+/// `daiku repo archive <name> [--reason <r>]` (N-0008).
+fn repo_archive(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
+    let (mut pos, mut reason) = (Vec::new(), String::new());
+    let mut i = 0;
+    while i < args.len() {
+        let a = args[i].as_str();
+        if a == "--reason" && i + 1 < args.len() {
+            i += 1;
+            reason = args[i].clone();
+        } else if a.starts_with("--") {
+            return repo_usage(stderr);
+        } else {
+            pos.push(a);
+        }
+        i += 1;
+    }
+    if pos.len() != 1 {
+        return repo_usage(stderr);
+    }
+    finish(workspace().repo_archive(pos[0], &reason), stderr, |name| {
+        let _ = writeln!(stdout, "{name}: archived");
+    })
 }
 
 /// Go's `runDoctor`.
