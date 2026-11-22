@@ -11,7 +11,9 @@ stdout = '''
       "name": "x",
       "remote": "ssh://***@host.invalid/x.git",
       "branch": "main",
-      "path": null
+      "path": null,
+      "archived": false,
+      "archivedReason": ""
     }
   ],
   "warnings": []

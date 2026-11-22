@@ -11,7 +11,9 @@ stdout = '''
       "name": "api",
       "remote": "https://example.invalid/api.git",
       "branch": "main",
-      "path": "{ROOT}"
+      "path": "{ROOT}",
+      "archived": false,
+      "archivedReason": ""
     }
   ],
   "warnings": []
