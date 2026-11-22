@@ -84,6 +84,18 @@ repo, but writes no `.gitattributes` or `.gitkeep`.
 - Each phase stops at a gate for human approval — never proceed past a gate on
   your own. Record transitions with `daiku gate <phase> <status>`. `--force`
   overrides the order check and is logged; only use it when a human says so.
+- Run each task on its routing row's model tier, mapped in `## Model routing`.
+  For a `fast` or `standard` task, when the session isn't on that tier's model,
+  hand the task's work to a subagent on that model, and give it the row's
+  persona and its `Read` and `Skip` lists. The subagent does the work and
+  returns; a question it can't settle, or a step that needs the human's
+  approval, comes back to the session, which asks the human. A subagent never
+  runs `daiku gate`, `daiku reopen`, `daiku switch`, `daiku change close`,
+  `daiku commit` or `daiku pr`: it proposes, and the session runs them once the
+  human approves. A `deep` task runs in the session: if the session isn't on
+  the `deep` model, say so before starting. If a tier has no model mapped, or
+  the harness can't set a subagent's model, do the work in the session and say
+  so.
 - Read only the files the routing names for your task; skip the rest. Any
   phase may also open a file listed in `references/index.md`: reference material such
   as notes, designs and exported chats. `references/context.md` has the index format.
@@ -105,9 +117,11 @@ repo, but writes no `.gitattributes` or `.gitkeep`.
 ## Model routing
 
 Each routing row names a model tier. Map each tier to a model your harness
-offers; this section is yours, and `daiku update` keeps it. A tier applies when
-an agent hands a phase to a subagent, or when you pick the model at the start
-of a phase. Reading this file doesn't switch the current session's model.
+offers; this section is yours, and `daiku update` keeps it. The workflow rules
+hand `fast` and `standard` tasks to a subagent on their tier's model, and run
+`deep` tasks in the session. So put the session on the `standard` model, and
+switch it to the `deep` one for `deep` tasks. Reading this file
+doesn't switch the current session's model.
 
 | Tier | Use for | Model |
 |---|---|---|
