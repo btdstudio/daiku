@@ -7,6 +7,7 @@ use std::io::Write;
 
 use daiku_core::build::CloneStep;
 
+use crate::display::field;
 use crate::{VERSION, finish, report, usage, workspace};
 
 fn fail(stderr: &mut impl Write, message: &str) -> u8 {
@@ -35,8 +36,15 @@ pub fn repo(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -
         "add" => repo_add(rest, stdout, stderr),
         "list" => finish(ws.repo_list(), stderr, |rows| {
             for r in rows {
-                let path = r.path.as_deref().unwrap_or("(no local path)");
-                let _ = writeln!(stdout, "{}  {}  {}  {path}", r.name, r.remote, r.branch);
+                // Free text from REPOS.json and paths.json (ADR-0008, Field).
+                let path = r.path.as_deref().map_or("(no local path)".into(), field);
+                let _ = writeln!(
+                    stdout,
+                    "{}  {}  {}  {path}",
+                    r.name,
+                    field(&r.remote),
+                    field(&r.branch)
+                );
             }
         }),
         "path" => {
@@ -114,7 +122,7 @@ fn repo_doctor(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write
                 let _ = writeln!(stderr, "{error}");
             }
             CloneStep::Cloned { repo, path } => {
-                let _ = writeln!(stdout, "cloned {repo} to {path}");
+                let _ = writeln!(stdout, "cloned {repo} to {}", field(path));
             }
         }
     }
@@ -161,6 +169,8 @@ pub fn build(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) 
 
 /// Go's `runCommit`: the arguments go to `git commit` as they are.
 pub fn commit(args: &[String], stderr: &mut impl Write) -> u8 {
+    // git takes the terminal next: nothing of ours may still be held back.
+    let _ = stderr.flush();
     finish(workspace().commit(args), stderr, |()| {})
 }
 
@@ -175,6 +185,7 @@ pub fn pr(args: &[String], stderr: &mut impl Write) -> u8 {
     for w in &outcome.warnings {
         let _ = writeln!(stderr, "warning: {w}");
     }
+    let _ = stderr.flush();
     match ws.run_ship(&outcome.value) {
         Ok(()) => 0,
         Err(e) => fail(stderr, &report(&e)),

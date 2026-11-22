@@ -2,6 +2,7 @@
 //! printed as their `Display` and nothing else (R12).
 
 mod build;
+mod display;
 mod env;
 mod json;
 mod room;
@@ -55,6 +56,11 @@ fn run(args: &[String]) -> u8 {
     if let Some(code) = json::run(command, &args[1..], &mut stdout) {
         return code;
     }
+    // Text output from here on shows control characters as escapes (ADR-0008).
+    let (mut stdout, mut stderr) = (
+        display::DisplayWriter::new(stdout),
+        display::DisplayWriter::new(stderr),
+    );
     match command.as_str() {
         "version" | "--version" | "-v" => {
             let _ = writeln!(stdout, "daiku {}", env!("DAIKU_VERSION"));
@@ -450,7 +456,12 @@ fn status(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> 
                     let code: Vec<String> = a
                         .code
                         .iter()
-                        .map(|(n, p)| format!("{n}={}", p.as_deref().unwrap_or("(not set)")))
+                        .map(|(n, p)| {
+                            format!(
+                                "{n}={}",
+                                p.as_deref().map_or("(not set)".into(), display::field)
+                            )
+                        })
                         .collect();
                     out.push_str(&format!("code:     {}\n", code.join(" ")));
                 }

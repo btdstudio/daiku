@@ -196,6 +196,13 @@ below; each is deliberate and small.
 
   `daiku tickets unfreeze` refuses a ticket whose frontmatter isn't valid UTF-8, where
   Go would write it back.
+- **On the terminal, control characters and invalid UTF-8 show as visible escapes**
+  (after `v0.4.0`, ADR-0008). A title holding ESC prints as `\x1b`, a NEL as
+  `\u0085`, a bidi override as `\u202e`, an invisible tag character as
+  `\U000e0041`, and each byte that isn't valid UTF-8 as `\xNN`, where Go printed
+  them raw. Tabs print as they are, and so do newlines in whole files (`adr show`,
+  `idea show`, `source show`). The files themselves keep their bytes, and `--json`
+  output is unchanged.
 - **`daiku repo add`** refuses an `https://` remote that carries credentials even when
   its host name holds a percent-escaped letter (`h%41`), which Go lets through.
 - **`--json`** is new. Every read command (`status`, `switch`, `settings`,

@@ -97,6 +97,13 @@ A `Failure` carries a `kind` and a message (`daiku_core::json::error_kind`). The
 view that asked shows it inline and keeps its last good data. Core's `Warning`s
 come back in the envelope's `warnings` and are shown with the data.
 
+### Workspace text
+
+Titles, names, reasons and file bodies are shown through `Text::display`
+(ADR-0008), the rule the CLI applies to its output, so a control character or an
+invalid byte in a workspace file shows as an escape in both clients and can't act
+on the view.
+
 ### View state
 
 The app keeps only view state: recent workspaces, the last workspace and view
