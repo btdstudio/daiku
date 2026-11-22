@@ -57,6 +57,52 @@ fn rejects_bad_cases() {
     }
 }
 
+/// N-0005 D4: `origin` is for git cases, and only as a plain URL.
+#[test]
+fn origin_is_checked() {
+    let dir = tempfile::tempdir().unwrap();
+    let ok = "args = []\ngit = true\norigin = \"https://u:p@example.invalid/x.git\"\n";
+    write(&dir.path().join("ok/case.toml"), ok);
+    let loaded = load_cases(dir.path(), &["ok".to_string()]).unwrap();
+    assert_eq!(
+        loaded[0].spec.origin.as_deref(),
+        Some("https://u:p@example.invalid/x.git")
+    );
+    for (name, toml, want) in [
+        (
+            "nogit",
+            "args = []\norigin = \"https://example.invalid/x\"\n",
+            "needs git = true",
+        ),
+        (
+            "empty",
+            "args = []\ngit = true\norigin = \"\"\n",
+            "must not be empty",
+        ),
+        (
+            "dash",
+            "args = []\ngit = true\norigin = \"--upload-pack=x\"\n",
+            "must not start with '-'",
+        ),
+        (
+            "ctrl",
+            "args = []\ngit = true\norigin = \"https://x/\\u001b\"\n",
+            "control characters",
+        ),
+        (
+            "helper",
+            "args = []\ngit = true\norigin = \"ext::sh -c x\"\n",
+            "remote helper",
+        ),
+    ] {
+        write(&dir.path().join(name).join("case.toml"), toml);
+        let err = load_cases(dir.path(), &[name.to_string()])
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains(want) && err.contains(name), "{name}: {err}");
+    }
+}
+
 // ---- helpers for running the stub ----
 
 use daiku_fixtures::{Case, Observation, run_case, run_case_with_timeout};

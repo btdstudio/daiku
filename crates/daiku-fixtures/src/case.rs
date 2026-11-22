@@ -52,6 +52,10 @@ pub struct CaseSpec {
     /// Run in a git repo and record `git-log`.
     #[serde(default)]
     pub git: bool,
+    /// Git cases only: the run's repo gets this `origin` remote after the base
+    /// commit (`git remote add origin`). The one remote setting a case can make.
+    #[serde(default)]
+    pub origin: Option<String>,
     /// Operating systems the case doesn't run on.
     #[serde(default)]
     pub skip_on: Vec<Os>,
@@ -203,6 +207,12 @@ impl Case {
         for key in spec.env.keys() {
             reserved_env(key).map_err(|e| Error::at(&file, e))?;
         }
+        if let Some(url) = &spec.origin {
+            if !spec.git {
+                return Err(Error::at(&file, "origin needs git = true"));
+            }
+            origin_url(url).map_err(|e| Error::at(&file, format!("origin: {e}")))?;
+        }
         no_git_config(&dir.join("config"))?;
         for tool in &spec.tools {
             plain_name(tool).map_err(|e| Error::at(&file, format!("tools: {e}")))?;
@@ -298,6 +308,30 @@ pub(crate) fn plain_name(name: &str) -> Result<(), String> {
         || name.contains('\0')
     {
         return Err(format!("{name:?} must be a plain name"));
+    }
+    Ok(())
+}
+
+/// Refuses an `origin` that could reach git as anything but a URL: empty, an
+/// option (`-…`), control characters, or a remote helper (`ext::…`), which a
+/// fetch would run as a command.
+pub(crate) fn origin_url(url: &str) -> Result<(), String> {
+    if url.is_empty() {
+        return Err("must not be empty".into());
+    }
+    if url.starts_with('-') {
+        return Err(format!("{url:?} must not start with '-'"));
+    }
+    if url.chars().any(char::is_control) {
+        return Err(format!("{url:?} must not hold control characters"));
+    }
+    if let Some((scheme, _)) = url.split_once("::")
+        && scheme.starts_with(|c: char| c.is_ascii_alphabetic())
+        && scheme
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b"+.-".contains(&b))
+    {
+        return Err(format!("{url:?} is a remote helper"));
     }
     Ok(())
 }

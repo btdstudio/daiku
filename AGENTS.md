@@ -91,6 +91,7 @@ workspace = "plan-intake-draft"         # optional: a shared starting workspace
 # env = { KEY = "{ROOT}/x" }            # extra variables (see the rules below)
 # unordered_stdout = false              # compare stdout lines sorted
 # git = false                           # run in a git repo, record git_log
+# origin = "<url>"                      # git cases: the run's repo gets this origin
 # skip_on = ["windows"]                 # macos, linux, windows
 # tools = ["git"]                       # PATH holds only these (Unix only)
 # deviations = ""                       # recorded differences from Go
@@ -153,9 +154,11 @@ into a run or into `expect/`.
 Case data may not reach git's configuration, which can name commands for git to run:
 every process in a run gets an empty global git config (`GIT_CONFIG_GLOBAL`) and
 `GIT_CONFIG_NOSYSTEM=1`; a `config/` folder may not contain `git/`; no starting file
-may be named `.git`; and a case's `env` may not set `PATH`, `HOME`, `TZ`, `LANG`,
-`LC_ALL`, `USERPROFILE`, `SystemRoot`, or anything starting with `XDG_`, `GIT_`, `LD_`
-or `DYLD_`.
+may be named `.git`; the one git setting a case can make is `origin`, which the
+runner adds after the base commit and refuses when it's empty, starts with `-`,
+holds a control character, or names a remote helper (`ext::…`); and a case's `env`
+may not set `PATH`, `HOME`, `TZ`, `LANG`, `LC_ALL`, `USERPROFILE`, `SystemRoot`, or
+anything starting with `XDG_`, `GIT_`, `LD_` or `DYLD_`.
 
 A case that writes through a symlink, or uses `tools`, carries `skip_on = ["windows"]`.
 `daiku pr` cases that get as far as running `gh` use `tools = ["git"]`, so `gh` is
