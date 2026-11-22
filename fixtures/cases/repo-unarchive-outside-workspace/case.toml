@@ -1,0 +1,5 @@
+args = ["repo", "unarchive", "api"]
+
+[expect]
+exit = 1
+stderr = "daiku: unknown repo \"api\" — run `daiku repo add`\n"

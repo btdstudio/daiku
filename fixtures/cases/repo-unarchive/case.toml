@@ -1,0 +1,9 @@
+args = ["repo", "unarchive", "api"]
+workspace = "build-implement"
+
+[expect]
+exit = 0
+stdout = "api: unarchived\n"
+changes = [
+  "~ f REPOS.json",
+]

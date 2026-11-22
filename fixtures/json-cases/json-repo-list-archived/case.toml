@@ -1,0 +1,21 @@
+args = ["repo", "list", "--json"]
+workspace = "build-implement"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": [
+    {
+      "name": "api",
+      "remote": "https://example.invalid/api.git",
+      "branch": "main",
+      "path": "{ROOT}",
+      "archived": true,
+      "archivedReason": "merged into daiku"
+    }
+  ],
+  "warnings": []
+}
+'''
