@@ -196,16 +196,14 @@ pub fn check_remote(remote: &str) -> Result<(), Error> {
             remote: remote.into(),
         });
     }
-    if let Some(u) = url::parse(remote)
-        && u.has_user
-        && (u.scheme == "http" || u.scheme == "https")
-    {
-        return Err(Error::RemoteCredentials);
-    }
-    // Any scheme, including http(s) remotes that `url::parse` rejects: a
-    // password in the userinfo, found by the scan `redact_remote` uses.
-    if split_userinfo(remote).is_some_and(|u| u.userinfo.contains(':')) {
-        return Err(Error::RemoteCredentials);
+    // The same predicate `redact_remote` masks by, from the raw scan so it holds
+    // when `url::parse` rejects the remote: any userinfo for http(s), a userinfo
+    // with a password (`:`) for any other scheme.
+    if let Some(u) = split_userinfo(remote) {
+        let http = u.scheme.eq_ignore_ascii_case("http") || u.scheme.eq_ignore_ascii_case("https");
+        if http || u.userinfo.contains(':') {
+            return Err(Error::RemoteCredentials);
+        }
     }
     Ok(())
 }

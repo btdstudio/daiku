@@ -896,6 +896,27 @@ fn clone_refuses_a_committed_remote_with_a_password() {
 }
 
 #[test]
+fn clone_refuses_a_committed_http_remote_with_a_token_user() {
+    let t = Temp::new();
+    let d = dirs("/h", Some(t.path().to_str().unwrap()));
+    let mut r = Registry::default();
+    r.repos.insert(
+        "x".into(),
+        Repo {
+            remote: "https://tok@h b/x".into(),
+            default_branch: "main".into(),
+            ..Repo::default()
+        },
+    );
+    let p = ScriptedProcess::default();
+    assert_eq!(
+        r.clone_repo("x", "x", &d, &p).unwrap_err().to_string(),
+        "daiku: remote has credentials in it, and REPOS.json is committed — remove them"
+    );
+    assert!(p.calls.borrow().is_empty());
+}
+
+#[test]
 fn env_flags_quote_and_refuse_partial_lists() {
     let t = Temp::new();
     std::fs::create_dir_all(t.p("plain")).unwrap();
@@ -949,27 +970,18 @@ fn check_remote_agrees_with_go_on_the_distinguishing_classes() {
         ("https://u:@h/x", true),
         ("https://u:p:q@h/x", true),
         ("https://a%40b:c@h/x", true),
-        ("https://a%zzb@h/x", false),
-        ("https://u v@h/x", false),
         ("https://u@v@h/x", true),
         ("https://u!$&'()*+,;=@h/x", true),
         ("https://u/x@h/y", false),
-        ("https://ü@h/x", false),
         ("HTTPS://U:P@H/x", true),
         ("HtTp://u@h/x", true),
         ("git://u@h/x", false),
         ("file://u@h/x", false),
         ("https://u@[::1]/x", true),
         ("https://u@[::1]:80/x", true),
-        ("https://u@[::1/x", false),
         ("https://u@h:80/x", true),
-        ("https://u@h:x/x", false),
         ("https://u@h:/x", true),
-        ("https://u@h b/x", false),
         ("https://u@h<x/x", true),
-        ("https://u@h{x/x", false),
-        ("https://u@h%zz/x", false),
-        ("https://u@h%/x", false),
         ("https://u@/x", true),
         ("https://u@ü/x", true),
         ("https:u@h/x", false),
@@ -984,10 +996,7 @@ fn check_remote_agrees_with_go_on_the_distinguishing_classes() {
         ("https://u@h?x", true),
         ("https://u@h#x", true),
         ("\u{1}https://u@h/x", false),
-        ("https://u@h\u{7f}/x", false),
-        (" https://u@h/x", false),
         ("https://u@h/x ", true),
-        ("https://u@h/x\n", false),
         ("", true),
         ("-x", true),
         ("--upload-pack=x", true),
@@ -1000,8 +1009,9 @@ fn check_remote_agrees_with_go_on_the_distinguishing_classes() {
 }
 
 /// One place the port is stricter than Go, kept on purpose (S-0008 review,
-/// finding 1; `a_password_in_any_scheme_is_refused_unlike_go`, N-0015, is
-/// another). Go's `url.Parse` rejects a percent-escaped ASCII character in a
+/// finding 1; `a_password_in_any_scheme_is_refused_unlike_go` (N-0015) and
+/// `a_user_in_an_unparsed_http_remote_is_refused_unlike_go` (N-0017) are
+/// others). Go's `url.Parse` rejects a percent-escaped ASCII character in a
 /// host (`%41`), and `checkRemote` only looks for credentials when the parse
 /// succeeds, so Go accepts these and writes the credentials into the committed
 /// `REPOS.json`. The port refuses them.
@@ -1037,4 +1047,69 @@ fn a_password_in_any_scheme_is_refused_unlike_go() {
             "{remote}"
         );
     }
+}
+
+/// Where the port refuses more than Go, on purpose (N-0017). Go's parser rejects
+/// each of these http(s) URLs (a bad escape, a space or other character in the
+/// user or host, a bad port, an unclosed bracket, a leading space, a trailing
+/// newline), and `checkRemote` only looks for credentials after a successful
+/// parse, so Go never checks them. The port refuses what `redact_remote` masks:
+/// any userinfo of an http(s) remote, whether or not the URL parses.
+#[test]
+fn a_user_in_an_unparsed_http_remote_is_refused_unlike_go() {
+    for remote in [
+        "https://a%zzb@h/x",
+        "https://u v@h/x",
+        "https://ü@h/x",
+        "https://u@[::1/x",
+        "https://u@h:x/x",
+        "https://u@h b/x",
+        "https://u@h{x/x",
+        "https://u@h%zz/x",
+        "https://u@h%/x",
+        "https://u@h\u{7f}/x",
+        " https://u@h/x",
+        "https://u@h/x\n",
+    ] {
+        assert_eq!(
+            check_remote(remote).unwrap_err().to_string(),
+            "daiku: remote has credentials in it, and REPOS.json is committed — remove them",
+            "{remote:?}"
+        );
+    }
+}
+
+/// N-0017: any http(s) userinfo is refused, parsed or not, and an `@` with none
+/// in the authority is not userinfo.
+#[test]
+fn an_http_user_is_refused_whether_or_not_the_url_parses() {
+    for remote in [
+        " https://tok@h/x",
+        "https://tok@h b/x",
+        "HTTPS://tok@h b/x",
+        "https://u v@h/x",
+        "https://@h b/x",
+        "https://u:p@h b/x",
+        // The `?` before the first `/` doesn't hide the `@`, as in `redact_remote`.
+        "https://h?u@h/x",
+    ] {
+        assert_eq!(
+            check_remote(remote).unwrap_err().to_string(),
+            "daiku: remote has credentials in it, and REPOS.json is committed — remove them",
+            "{remote:?}"
+        );
+    }
+    for ok in [
+        "https://h b/x",
+        "https://h/x?u@h",
+        "https:///u@h/x",
+        "ssh://git@h/x",
+        "git://u@h/x",
+    ] {
+        assert!(check_remote(ok).is_ok(), "{ok}");
+    }
+    // A refused add leaves the registry as it was.
+    let mut r = Registry::default();
+    assert!(r.add("x", "https://tok@h b/x", "").is_err());
+    assert!(r.repos.is_empty());
 }
