@@ -211,13 +211,14 @@ fn check_remote_follows_gos_url_parse() {
     ] {
         assert!(check_remote(ok).is_ok(), "{ok}");
     }
-    // Go's parser rejects these, so its credentials test never runs on them.
+    // Go's parser rejects these, so its credentials test never runs on them; the
+    // raw userinfo scan still sees the password (N-0015).
     for unparsed in [
         "https://user:pw@exa mple.com/x",
         "https://user:pw@host:port/x",
     ] {
         assert!(url::parse(unparsed).is_none(), "{unparsed}");
-        assert!(check_remote(unparsed).is_ok(), "{unparsed}");
+        assert!(check_remote(unparsed).is_err(), "{unparsed}");
     }
     for bad in [
         "HTTPS://user@github.com/x",
@@ -228,7 +229,32 @@ fn check_remote_follows_gos_url_parse() {
     }
     // ssh with a user is how git remotes are written; not credentials.
     assert!(check_remote("ssh://git@github.com/org/x").is_ok());
-    assert!(check_remote("ssh://user:pw@github.com/org/x").is_ok());
+    assert!(check_remote("ssh://user:pw@github.com/org/x").is_err());
+}
+
+#[test]
+fn a_password_in_any_scheme_is_refused_and_a_user_alone_is_not() {
+    for remote in [
+        "ssh://u:p@h/x",
+        "git://u:p@h/x",
+        "ftp://u:p@h/x",
+        "ssh://u:@h/x",
+        " ssh://u:p@h/x",
+        "ssh://u:p@h",
+    ] {
+        assert_eq!(
+            check_remote(remote).unwrap_err().to_string(),
+            "daiku: remote has credentials in it, and REPOS.json is committed — remove them",
+            "{remote:?}"
+        );
+    }
+    for ok in ["ssh://git@h/x", "git://git@h/x", "git@github.com:org/x.git"] {
+        assert!(check_remote(ok).is_ok(), "{ok}");
+    }
+    // A refused add leaves the registry as it was.
+    let mut r = Registry::default();
+    assert!(r.add("x", "ssh://u:p@h/x", "").is_err());
+    assert!(r.repos.is_empty());
 }
 
 #[test]
@@ -849,6 +875,27 @@ fn clone_refuses_a_hostile_committed_remote() {
 }
 
 #[test]
+fn clone_refuses_a_committed_remote_with_a_password() {
+    let t = Temp::new();
+    let d = dirs("/h", Some(t.path().to_str().unwrap()));
+    let mut r = Registry::default();
+    r.repos.insert(
+        "x".into(),
+        Repo {
+            remote: "ssh://u:p@h/x".into(),
+            default_branch: "main".into(),
+            ..Repo::default()
+        },
+    );
+    let p = ScriptedProcess::default();
+    assert_eq!(
+        r.clone_repo("x", "x", &d, &p).unwrap_err().to_string(),
+        "daiku: remote has credentials in it, and REPOS.json is committed — remove them"
+    );
+    assert!(p.calls.borrow().is_empty());
+}
+
+#[test]
 fn env_flags_quote_and_refuse_partial_lists() {
     let t = Temp::new();
     std::fs::create_dir_all(t.p("plain")).unwrap();
@@ -910,10 +957,8 @@ fn check_remote_agrees_with_go_on_the_distinguishing_classes() {
         ("https://ü@h/x", false),
         ("HTTPS://U:P@H/x", true),
         ("HtTp://u@h/x", true),
-        ("ssh://u:p@h/x", false),
         ("git://u@h/x", false),
         ("file://u@h/x", false),
-        ("ftp://u:p@h/x", false),
         ("https://u@[::1]/x", true),
         ("https://u@[::1]:80/x", true),
         ("https://u@[::1/x", false),
@@ -936,7 +981,6 @@ fn check_remote_agrees_with_go_on_the_distinguishing_classes() {
         ("/local/x", false),
         ("x.git", false),
         ("https://h/x?u@h", false),
-        ("https://h#u:p@h", false),
         ("https://u@h?x", true),
         ("https://u@h#x", true),
         ("\u{1}https://u@h/x", false),
@@ -955,8 +999,9 @@ fn check_remote_agrees_with_go_on_the_distinguishing_classes() {
     }
 }
 
-/// The one place the port is stricter than Go, kept on purpose (S-0008 review,
-/// finding 1). Go's `url.Parse` rejects a percent-escaped ASCII character in a
+/// One place the port is stricter than Go, kept on purpose (S-0008 review,
+/// finding 1; `a_password_in_any_scheme_is_refused_unlike_go`, N-0015, is
+/// another). Go's `url.Parse` rejects a percent-escaped ASCII character in a
 /// host (`%41`), and `checkRemote` only looks for credentials when the parse
 /// succeeds, so Go accepts these and writes the credentials into the committed
 /// `REPOS.json`. The port refuses them.
@@ -976,4 +1021,20 @@ fn a_credentialed_remote_with_an_escaped_ascii_host_is_refused_unlike_go() {
     }
     // Without credentials the same host is fine, as in Go.
     assert!(check_remote("https://h%41/x").is_ok());
+}
+
+/// Where the port refuses more than Go, on purpose (N-0015). Go's `checkRemote`
+/// looks for credentials only in an http(s) URL its parser accepts. The port also
+/// refuses a password in the userinfo of any `scheme://` remote, by the scan
+/// `redact_remote` uses. `https://h#u:p@h` has its `@` after a `#`, so Go reads
+/// `u:p@h` as a fragment; the scan ends the authority only at `/`.
+#[test]
+fn a_password_in_any_scheme_is_refused_unlike_go() {
+    for remote in ["ssh://u:p@h/x", "ftp://u:p@h/x", "https://h#u:p@h"] {
+        assert_eq!(
+            check_remote(remote).unwrap_err().to_string(),
+            "daiku: remote has credentials in it, and REPOS.json is committed — remove them",
+            "{remote}"
+        );
+    }
 }
