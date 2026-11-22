@@ -4,6 +4,21 @@ Releases before 0.3.0 were the Go CLI, the last being `v0.2.0`; their notes are 
 this repo's GitHub releases. The `0.3.0-alpha` prereleases were built in
 `btdstudio/daiku-next` before it merged here.
 
+## Unreleased
+
+- **`daiku pr` builds its body from a PR template**: the repo's own
+  `pull_request_template.md` (in `.github/`, the repo root or `docs/`), else the
+  workspace's `build/05_ship/templates/pull-request.md`, else daiku's default. The
+  ticket's links go where `{{links}}` is, or at the end. The workspace file is new
+  in the build room, written by `daiku build new` and `daiku update`, and kept when
+  you edit it.
+- **`daiku pr --template`** prints the chosen template with the links in place (and
+  with `--json`, its origin, path and body), and **`daiku pr --body-file <path>`**
+  opens the pull request with the text you filled in, refreshing the links block.
+  `daiku pr` now refuses an unknown flag or a second argument; both were ignored
+  before. A repo template that is a symlink to a file outside the repo is ignored,
+  with a warning, so a repo can't make the pull request carry another file.
+
 ## 0.7.1
 
 Remotes that can't leak their credentials.
