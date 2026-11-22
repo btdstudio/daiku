@@ -484,6 +484,48 @@ fn heading_order(text: &str) -> Vec<&str> {
     text.lines().filter_map(|l| l.strip_prefix("## ")).collect()
 }
 
+/// `CLAUDE.md` as v0.5.0 wrote it: a pointer, not an import.
+const OLD_CLAUDE_MD: &str = "# CLAUDE.md
+
+The root map for this workspace lives in [AGENTS.md](./AGENTS.md). Read that
+first \u{2014} it is the single source of truth for routing, conventions, and rules.
+This file is only a pointer so every harness (Claude Code, OpenCode, etc.)
+resolves to the same map.
+";
+
+/// N-0016 AC1: `init` writes `CLAUDE.md` as the import alone.
+#[test]
+fn init_writes_claude_md_as_an_import() {
+    let (t, c) = (Temp::new(), Temp::new());
+    ws(&t.0, &c).init(&opts(true, false)).unwrap();
+    assert_eq!(t.read("CLAUDE.md"), "@AGENTS.md\n");
+}
+
+/// N-0016 AC5, AC6: `update` replaces an unedited v0.5.0 `CLAUDE.md` with the import,
+/// and skips one the user edited.
+#[test]
+fn update_replaces_the_old_claude_md_pointer() {
+    let (t, c) = (Temp::new(), Temp::new());
+    let w = ws(&t.0, &c);
+    w.init(&opts(true, false)).unwrap();
+    t.write("CLAUDE.md", OLD_CLAUDE_MD);
+    let mut m = manifest(&t);
+    m.files
+        .insert("CLAUDE.md".into(), engine::hash(OLD_CLAUDE_MD.as_bytes()));
+    t.write(".daiku/manifest.json", &serde_json::to_string(&m).unwrap());
+    let rep = w.update("dev").unwrap().value;
+    assert_eq!(rep.updated, ["CLAUDE.md"]);
+    assert_eq!(t.read("CLAUDE.md"), "@AGENTS.md\n");
+
+    let mine = format!("{OLD_CLAUDE_MD}\nMy notes.\n");
+    t.write("CLAUDE.md", &mine);
+    let m = manifest(&t);
+    t.write(".daiku/manifest.json", &serde_json::to_string(&m).unwrap());
+    let rep = w.update("dev").unwrap().value;
+    assert_eq!(rep.skipped, ["CLAUDE.md"]);
+    assert_eq!(t.read("CLAUDE.md"), mine);
+}
+
 /// N-0010 AC3–AC5 through update: a missing `## Model routing` is added after Tech
 /// stack and then left alone; an edited one is kept; a missing Tech stack comes back
 /// too.
