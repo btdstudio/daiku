@@ -15,30 +15,6 @@ use std::process::ExitCode;
 use daiku_core::scaffold::InitOptions;
 use daiku_core::{Error, Outcome, Workspace};
 
-/// Every command Go dispatches. Those without a handler here aren't ported yet.
-const KNOWN: &[&str] = &[
-    "init",
-    "update",
-    "check",
-    "status",
-    "settings",
-    "switch",
-    "source",
-    "adr",
-    "build",
-    "change",
-    "gate",
-    "reopen",
-    "tickets",
-    "overview",
-    "idea",
-    "references",
-    "repo",
-    "env",
-    "commit",
-    "pr",
-];
-
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     ExitCode::from(run(&args))
@@ -86,10 +62,6 @@ fn run(args: &[String]) -> u8 {
         "build" => build::build(&args[1..], &mut stdout, &mut stderr),
         "commit" => build::commit(&args[1..], &mut stderr),
         "pr" => build::pr(&args[1..], &mut stderr),
-        c if KNOWN.contains(&c) => {
-            let _ = writeln!(stderr, "daiku: {c} isn't implemented yet");
-            1
-        }
         c => {
             let _ = write!(
                 stderr,

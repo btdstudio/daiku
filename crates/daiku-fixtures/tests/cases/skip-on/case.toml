@@ -1,3 +1,3 @@
 args = ["exit", "9"]
 skip_on = ["macos", "linux", "windows"]
-deviations = "Skipped everywhere: proves a skipped case neither passes nor fails."
+# Skipped everywhere: proves a skipped case neither passes nor fails.

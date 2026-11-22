@@ -94,7 +94,6 @@ workspace = "plan-intake-draft"         # optional: a shared starting workspace
 # origin = "<url>"                      # git cases: the run's repo gets this origin
 # skip_on = ["windows"]                 # macos, linux, windows
 # tools = ["git"]                       # PATH holds only these (Unix only)
-# deviations = ""                       # recorded differences from Go
 
 [expect]
 exit = 0

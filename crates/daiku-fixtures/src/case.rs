@@ -59,9 +59,6 @@ pub struct CaseSpec {
     /// Operating systems the case doesn't run on.
     #[serde(default)]
     pub skip_on: Vec<Os>,
-    /// Recorded differences from the Go CLI, as free text.
-    #[serde(default)]
-    pub deviations: String,
     /// A shared starting workspace under `<cases>/../workspaces/`, copied in before
     /// the case's own `before/` and `config/`.
     #[serde(default)]
