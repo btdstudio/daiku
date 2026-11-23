@@ -9,8 +9,7 @@ The filesystem stays the source of truth. The app is a view over files that agen
 and the CLI are already changing, it keeps no workspace state of its own, and daiku
 works the same without it.
 
-Screen layout and visual design aren't covered here. This page defines what each
-view shows, not how it looks.
+Screens, below, gives the layout and the look of every view.
 
 ## Phases
 
@@ -32,6 +31,11 @@ The app is built with **Tauri 2** and a **React + TypeScript** frontend
 - **Later phases.** The webview reaches the components phases 2–4 need: xterm.js
   for terminals, CodeMirror for markdown, and tldraw or Excalidraw for whiteboards.
   tldraw and Excalidraw are React components, which is why the frontend is React.
+- **Components.** shadcn/ui on Tailwind v4: its source is copied into the app, with
+  the design system's tokens as its CSS variables (ADR-0009). The source is ours to
+  style, and there is no runtime CSS-in-JS. HeroUI is out because its resizable panes
+  and segmented control are paid. Ant Design is out because of its strong dashboard
+  look and styles generated at runtime.
 - **Packaging.** Tauri bundles for macOS, Windows and Linux.
 
 Rejected:
@@ -140,6 +144,178 @@ The rules are checked in that order, so every ticket lands in exactly one column
 Drifted, published and frozen are badges on the card, not columns. The rule is a
 view rule, computed in the app from `TicketView` and `Status`, not in core.
 
+## Screens
+
+The window is quiet, dark and dense, a calm frame around the work. This section
+gives the frame, the two tabs, the nudge, how the window folds, how a workspace
+opens, and the look. The values are the starting design system. They become CSS
+variables when the app is built.
+The layout comes from the owner's wireframes and mockups, and the component kit from
+a comparison of shadcn/ui, HeroUI and Ant Design. Those working files live outside
+this repo.
+
+### The frame
+
+One frame serves both tabs. Left to right: the workspaces rail, the terminal, the
+viewer and the list. The terminal and the viewer share the width and run full height.
+
+| Part | Size | What it holds |
+|---|---|---|
+| Title bar | 44px | The app name, the Plan/Build switch (centred), and the focus switch: Split, Terminal, Viewer, Board |
+| Workspaces rail | 52px | One chip per open workspace, and a "+" to open another |
+| Terminal | shares the width | The terminal pane |
+| Viewer | shares the width | The open file, ticket or plan artifact |
+| List | 340px, on the right | Tickets on Build; plans, ideas, ADRs and references on Plan |
+| Pane header | 36px | The pane's name or the open file's path, and its fill-the-window button |
+| Status bar | 30px | Where you are, and the nudge |
+
+- **Focus.** The focus switch picks Split (all panes), Terminal, Viewer or Board. Each
+  pane's arrow fills this window. It doesn't open a new one.
+- **The terminal arrives with terminals** (phase 3 in Phases above). In phase one the
+  column is hidden and the viewer takes its width. This section doesn't change the
+  phase order.
+- **No create actions.** Phase one has no "+" to create tickets, plans or ideas,
+  because creating is a write (phase 2). The rail's "+" opens a workspace and is the
+  exception.
+
+### Build
+
+The list holds tickets in four groups, in this order. Each header has a status mark.
+
+| Group | Mark |
+|---|---|
+| In build | half-filled circle |
+| Ready | circle |
+| Draft | dashed circle |
+| Done | circle with a check |
+
+The next ticket is marked: its row sits on a distinct surface with a 3px amber edge on
+the left. Long groups fold to "N more". The list leaves out Closed, which isn't work.
+Board focus opens the full board, with all five columns of Board columns.
+
+### Plan
+
+The list holds four groups, in this order. Each header has an icon.
+
+| Group | Icon |
+|---|---|
+| Plans | bulleted list |
+| Ideas | bulb |
+| ADRs | scale |
+| References | book |
+
+The viewer shows a phase strip over the selected plan's artifact. A skipped phase is
+marked with its reason. Board focus lays plans out by phase: one card per plan, in its
+current phase.
+
+References show in the Plan list, but they aren't a phase-one view, because listing
+them needs a core call that doesn't exist yet. That is a follow-up.
+
+### Where each view lives
+
+Every view in "What phase one shows" has a place in the frame.
+
+| View | Where it appears |
+|---|---|
+| Workspaces | The rail, and the launch screen when none is open |
+| Overview | The status bar, and the Plan list; builds and their repo locks in the Build list's In build group |
+| Board | Board focus |
+| Card | A row in the list, and a card on the board |
+| Ticket | The viewer |
+| Change | The viewer; for a plan, the phase strip |
+| Ideas, ADRs | Groups in the Plan list |
+
+### The nudge
+
+The status bar carries the nudge. It starts "Next: …". For example:
+
+> Next: N-0020 is a draft. Start its build when you're ready.
+
+In a narrow window it shortens:
+
+> Next: N-0020 · draft
+
+Amber marks only what needs the person: the nudge, the Next pill and edge, the count
+that holds the next item, and draft status labels. Nothing decorative is amber.
+
+Which item counts as next, and where that rule lives (core or the app), is a
+follow-up.
+
+### Narrow windows
+
+- From 1440px: four columns.
+- Below 1440px: the list folds into a rail (52px) with counts.
+- Below 1000px: one pane, with Terminal, Viewer and Tickets tabs. The Terminal tab
+  arrives with terminals.
+
+The workspaces rail, the Plan/Build switch (centred at every width) and a shortened
+status bar always stay.
+
+### Opening a workspace
+
+- Several workspaces open in one window, one chip each in the rail.
+- The rail's "+" opens the system folder picker.
+- On launch the app reopens the last workspace.
+- With none open (first launch, or the last one gone), a launch screen shows recent
+  workspaces, "Open workspace…" and a drop zone.
+- A folder with no `.daiku/` shows "This folder isn't a daiku workspace", with the
+  `daiku init` command to copy. Phase one doesn't write.
+- Dropping a folder on the window or the Dock icon is a nice-to-have.
+- Opening from the terminal (`daiku app`) is out for now.
+
+### The look
+
+Principles:
+
+- Dark only for now.
+- Quiet and native, not a web dashboard.
+- One accent, amber, meaning "needs you".
+- Blue is only for the terminal prompt and links.
+- Dense, and laptop first: every screen works at 1440x900.
+- Nothing the folders don't say. Every label comes from the CLI's `--json`.
+- The terminal gets out of the way. With focus, every keystroke goes to it.
+
+Colours:
+
+| Role | Token | Hex | Use |
+|---|---|---|---|
+| Window | `surface-window` | #1a1a1c | The viewer, the board, empty space |
+| Chrome | `surface-chrome` | #1d1d20 | Title bar, rails, list and status bar |
+| Terminal | `surface-terminal` | #141416 | The terminal pane only |
+| Raised | `surface-raised` | #26262a | Cards, the switch track, row hover |
+| Selected | `surface-selected` | #3a3a40 | The active segment of a switch |
+| Next | `surface-next` | #2b2a26 | Behind the Next row or card |
+| Line | `line` | #2e2e33 | Pane borders and header hairlines |
+| Ink | `ink` | #ececef | Primary text |
+| Ink secondary | `ink-secondary` | #c9c9cf | Body text, list titles |
+| Ink muted | `ink-muted` | #a4a4ab | Meta text, status bar text |
+| Ink faint | `ink-faint` | #9a9aa2 | Group labels, counts, empty states |
+| Attention | `attention` | #f0b45a | The one accent: something needs the person |
+| Attention ink | `attention-ink` | #f0c27a | Attention as text, such as the nudge |
+| On attention | `on-attention` | #1a1a1c | Text on an amber fill |
+| Prompt | `prompt` | #7aa7ff | The terminal prompt and links |
+
+The design system also has tokens for group bands (`surface-band`), the active
+workspace chip (`surface-workspace`), more line weights (`line-band`, `line-control`,
+`line-hover`), terminal text (`ink-terminal`), the outline and fill for a card or chip
+marked Next or draft (`attention-line`, `attention-surface`) and link hover
+(`prompt-hover`).
+
+Type uses two families: Inter (sans) and JetBrains Mono (mono). Ids, paths and
+commands are always mono.
+
+| Style | Family | Size | Weight |
+|---|---|---|---|
+| Title | sans | 20px | 600 |
+| Body | sans | 13px | 400 |
+| Lists and secondary | sans | 12px | 400 |
+| Label | sans | 11px | 600, uppercase, 0.06em |
+| Id | mono | 12px | 500 |
+| Terminal | mono | 12px | 400 |
+
+The spacing scale is 4, 8, 12, 16 and 24px. Radii are 4, 6 and 8px, 12px for the
+window, and a pill. There are no shadows. Icons are thin outlines with a 1.8px stroke.
+
 ## What the app needs from core
 
 | Need | In `daiku-core` |
@@ -165,7 +341,7 @@ The watcher lives in the app, never in core or the CLI. Core stays free of watch
 and async crates, and gives the app two functions instead: `watch_paths` says what
 to watch, and `classify` says what an event means.
 
-1. When a workspace opens, the app shows the Overview and Board, and starts a
+1. When a workspace opens, the app shows the frame (see Screens), and starts a
    watcher (the `notify` crate) on `watch_paths()`.
 2. An agent or the CLI changes files. For example, gating a build rewrites
    `STATE.json` and `LOG.md`. The watcher collects events until 150 ms pass with
