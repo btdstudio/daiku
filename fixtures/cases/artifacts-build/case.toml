@@ -1,0 +1,12 @@
+args = ["artifacts", "S-0002"]
+workspace = "build-implement"
+
+[expect]
+exit = 0
+stdout = '''
+ticket  plan/specs/1-auth-flow/tickets/S-0002.md
+requirements  build/api/changes/S-0002/requirements.md
+design  build/api/changes/S-0002/design.md
+tasks  build/api/changes/S-0002/tasks.json
+test  build/api/changes/S-0002/test-results.md
+'''

@@ -25,6 +25,7 @@ const FORMS: &[(&str, Option<&str>, Option<&str>)] = &[
     ("status <plan>", None, None),
     ("switch", None, None),
     ("settings", None, None),
+    ("artifacts", None, None),
     ("source list", None, None),
     ("source show", None, None),
     ("adr list", None, None),
@@ -51,6 +52,7 @@ const FORMS: &[(&str, Option<&str>, Option<&str>)] = &[
 /// JSON cases with no Go case of the same name, and the Go case whose starting
 /// files each one takes.
 const NO_TWIN: &[(&str, &str)] = &[
+    ("json-artifacts-usage", "artifacts-no-args"),
     ("json-tickets-check-corrupt-state", "status-corrupt-state"),
     ("json-tickets-status-corrupt-state", "status-corrupt-state"),
 ];

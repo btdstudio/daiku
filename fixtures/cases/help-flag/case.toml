@@ -9,6 +9,7 @@ Usage:
   daiku init [dir] [--no-git] [--force]    scaffold the planning ICM structure
   daiku update                             refresh managed files
   daiku status [<plan-change>]             show the active change and the board, or a plan's tickets
+  daiku artifacts <change>                 list a change's files by phase (plan or build)
   daiku settings                           show effective settings
   daiku switch [--all] [<change>]          list changes, or switch the active one
   daiku source new --title <t> [--repo <path>] [--rev <r>] [--body <b>]

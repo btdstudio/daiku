@@ -52,6 +52,13 @@ pub const COMMANDS: &[Command] = &[
         raw: "",
     },
     Command {
+        path: &["artifacts"],
+        synopsis: "daiku artifacts <change>",
+        summary: "list a change's files by phase (plan or build)",
+        notes: "",
+        raw: "",
+    },
+    Command {
         path: &["settings"],
         synopsis: "daiku settings",
         summary: "show effective settings",

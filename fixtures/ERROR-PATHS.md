@@ -59,6 +59,17 @@ The classes:
 | corrupt | `status-corrupt-state` |
 | other | `status-build-archived-repo`, `status-build-change`, `status-git-workspace`, `status-help-flag`, `status-path-newline`, `status-plan-argument`, `status-plan-change`, `status-repo-explore-skipped`, `status-unknown-plan` |
 
+## daiku artifacts
+
+| Class | Cases |
+| --- | --- |
+| args | `artifacts-extra-arg`, `artifacts-flag`, `artifacts-no-args` |
+| context | `artifacts-outside-workspace`, `artifacts-unknown-change` |
+| order | n/a: no phase order: works in any phase |
+| unsafe | n/a: writes nothing |
+| corrupt | `artifacts-corrupt-state` |
+| other | `artifacts-build`, `artifacts-control-chars`, `artifacts-plan` |
+
 ## daiku settings
 
 | Class | Cases |

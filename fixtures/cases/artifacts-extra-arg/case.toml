@@ -1,0 +1,6 @@
+args = ["artifacts", "1-auth-flow", "S-0002"]
+workspace = "plan-published"
+
+[expect]
+exit = 1
+stderr = "usage: daiku artifacts <change>\n"

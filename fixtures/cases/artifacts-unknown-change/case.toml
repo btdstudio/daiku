@@ -1,0 +1,6 @@
+args = ["artifacts", "9-nope"]
+workspace = "plan-published"
+
+[expect]
+exit = 1
+stderr = "daiku: unknown change \"9-nope\"\n"
