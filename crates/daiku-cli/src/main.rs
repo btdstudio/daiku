@@ -50,6 +50,7 @@ fn run(args: &[String]) -> u8 {
         "adr" => room::adr(&args[1..], &mut stdout, &mut stderr),
         "idea" => room::idea(&args[1..], &mut stdout, &mut stderr),
         "artifacts" => room::artifacts(&args[1..], &mut stdout, &mut stderr),
+        "next" => room::next(&args[1..], &mut stdout, &mut stderr),
         "overview" => room::overview(&args[1..], &mut stdout, &mut stderr),
         "references" => room::references(&args[1..], &mut stdout, &mut stderr),
         "change" => change(&args[1..], &mut stdout, &mut stderr),

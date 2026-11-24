@@ -70,6 +70,17 @@ The classes:
 | corrupt | `artifacts-corrupt-state` |
 | other | `artifacts-build`, `artifacts-control-chars`, `artifacts-plan` |
 
+## daiku next
+
+| Class | Cases |
+| --- | --- |
+| args | `next-extra-argument`, `next-unknown-flag` |
+| context | `next-outside-workspace` |
+| order | n/a: no phase order: works in any phase |
+| unsafe | n/a: writes nothing |
+| corrupt | `next-warning` (a bad ticket file is a warning; a bad state file is the error every state read gives) |
+| other | `next`, `next-empty`, `next-help-flag` |
+
 ## daiku settings
 
 | Class | Cases |

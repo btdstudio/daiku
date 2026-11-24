@@ -59,6 +59,13 @@ pub const COMMANDS: &[Command] = &[
         raw: "",
     },
     Command {
+        path: &["next"],
+        synopsis: "daiku next",
+        summary: "list what is waiting on you: gates to approve, phases to start, tickets ready to build",
+        notes: "",
+        raw: "",
+    },
+    Command {
         path: &["settings"],
         synopsis: "daiku settings",
         summary: "show effective settings",

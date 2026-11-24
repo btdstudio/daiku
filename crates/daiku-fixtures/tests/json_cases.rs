@@ -26,6 +26,7 @@ const FORMS: &[(&str, Option<&str>, Option<&str>)] = &[
     ("switch", None, None),
     ("settings", None, None),
     ("artifacts", None, None),
+    ("next", None, None),
     ("source list", None, None),
     ("source show", None, None),
     ("adr list", None, None),
@@ -54,6 +55,8 @@ const FORMS: &[(&str, Option<&str>, Option<&str>)] = &[
 /// files each one takes.
 const NO_TWIN: &[(&str, &str)] = &[
     ("json-artifacts-usage", "artifacts-no-args"),
+    ("json-next-usage", "next-extra-argument"),
+    ("json-next-control-chars", "next"),
     ("json-tickets-list-usage", "tickets-list-extra-argument"),
     ("json-tickets-check-corrupt-state", "status-corrupt-state"),
     ("json-tickets-status-corrupt-state", "status-corrupt-state"),

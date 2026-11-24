@@ -1,0 +1,47 @@
+args = ["next", "--json"]
+workspace = "next-mixed"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "items": [
+      {
+        "kind": "start",
+        "change": "3-billing",
+        "loop": "plan",
+        "phase": "research",
+        "active": true,
+        "since": "{TIMESTAMP}"
+      },
+      {
+        "kind": "approve",
+        "change": "2-payments",
+        "loop": "plan",
+        "phase": "intake",
+        "active": false,
+        "since": "{TIMESTAMP}"
+      },
+      {
+        "kind": "build",
+        "ticket": "N-0001",
+        "title": "Tidy the logs",
+        "repo": "api",
+        "change": "",
+        "since": null
+      },
+      {
+        "kind": "build",
+        "ticket": "S-0003",
+        "title": "Sign out",
+        "repo": "api",
+        "change": "1-auth-flow",
+        "since": "{TIMESTAMP}"
+      }
+    ]
+  },
+  "warnings": []
+}
+'''

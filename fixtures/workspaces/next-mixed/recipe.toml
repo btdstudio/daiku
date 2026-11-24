@@ -1,0 +1,46 @@
+from = "build-ship"
+steps = [
+  ["gate", "ship", "complete"],
+  ["change", "new", "Payments", "--repo", "api"],
+  ["gate", "intake", "await-approval"],
+  ["change", "new", "Billing", "--repo", "api"],
+  ["gate", "intake", "approved"],
+]
+
+[[files]]
+path = "plan/specs/1-auth-flow/tickets/S-0003.md"
+text = """
+---
+schema: 1
+id: S-0003
+type: story
+title: Sign out
+repo: api
+depends_on: [S-0002]
+change: 1-auth-flow
+requirements: [R1]
+labels: []
+status: published
+external:
+  github: "org/api#13"
+---
+
+## Acceptance criteria
+- [ ] AC1: Given a signed-in user, When they sign out, Then they see the sign-in page
+"""
+
+[[files]]
+path = "build/tickets/N-0001.md"
+text = """
+---
+schema: 1
+id: N-0001
+type: task
+title: Tidy the logs
+repo: api
+labels: []
+status: draft
+---
+
+Remove the noisy debug lines.
+"""

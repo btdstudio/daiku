@@ -1,0 +1,9 @@
+args = ["next", "--help"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku next
+
+list what is waiting on you: gates to approve, phases to start, tickets ready to build
+'''

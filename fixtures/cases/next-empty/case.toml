@@ -1,0 +1,6 @@
+args = ["next"]
+workspace = "init"
+
+[expect]
+exit = 0
+stdout = "nothing is waiting on you\n"

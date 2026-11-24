@@ -1,0 +1,6 @@
+args = ["next", "x"]
+workspace = "init"
+
+[expect]
+exit = 1
+stderr = "usage: daiku next\n"

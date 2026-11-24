@@ -1,0 +1,5 @@
+args = ["next"]
+
+[expect]
+exit = 0
+stdout = "nothing is waiting on you\n"
