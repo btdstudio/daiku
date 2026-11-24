@@ -33,6 +33,7 @@ pub(crate) mod testutil;
 pub mod text;
 pub mod ticket;
 pub mod tickets;
+pub mod watch;
 pub mod workspace;
 pub mod write;
 
@@ -42,6 +43,7 @@ pub use error::Error;
 pub use next::{NextItem, NextList};
 pub use outcome::{Outcome, Warning};
 pub use tickets::{TicketList, TicketView};
+pub use watch::{Changed, WatchPath, classify};
 pub use workspace::Workspace;
 
 /// The crate's version, as Cargo built it.
