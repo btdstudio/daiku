@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Artifact",
+  "description": "One existing file a change produced, and the phase it belongs to.",
+  "type": "object",
+  "required": [
+    "path",
+    "phase"
+  ],
+  "properties": {
+    "path": {
+      "description": "Workspace-relative, `/`-separated.",
+      "type": "string"
+    },
+    "phase": {
+      "type": "string"
+    }
+  }
+}
