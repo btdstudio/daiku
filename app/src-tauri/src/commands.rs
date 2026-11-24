@@ -52,6 +52,15 @@ pub async fn status(app: AppHandle, root: String) -> Value {
     with_workspace(root, |ws| ws.status()).await
 }
 
+/// Core's `tickets_list` for the workspace at `root`: every ticket with its fields.
+#[tauri::command]
+pub async fn tickets_list(app: AppHandle, root: String) -> Value {
+    if let Some(no) = refuse(&app, &root) {
+        return no;
+    }
+    with_workspace(root, |ws| ws.tickets_list()).await
+}
+
 /// A change's existing files by phase (core's `artifacts`).
 #[tauri::command]
 pub async fn artifacts(app: AppHandle, root: String, change: String) -> Value {
@@ -231,5 +240,37 @@ mod tests {
         );
         let v = envelope::reply(ws.artifacts("nope"));
         assert_eq!(v["error"]["kind"], "UnknownChange");
+    }
+
+    #[test]
+    fn tickets_list_returns_the_envelope_of_the_list() {
+        let (_dir, ws) = workspace();
+        let v = envelope::reply(ws.tickets_list());
+        assert_eq!(v["data"]["tickets"].as_array().unwrap().len(), 0);
+        ws.repo_add("api", "https://example.com/api.git", None, "main")
+            .unwrap();
+        ws.tickets_new(&daiku_core::tickets::TicketNewOptions {
+            typ: "task".into(),
+            title: "Fix typo".into(),
+            parent: String::new(),
+            repo: "api".into(),
+            depends_on: vec![],
+            requirements: vec![],
+            inbox: true,
+        })
+        .unwrap();
+        let v = envelope::reply(ws.tickets_list());
+        let tickets = v["data"]["tickets"].as_array().unwrap();
+        assert_eq!(tickets.len(), 1);
+        assert_eq!(tickets[0]["title"], "Fix typo");
+        assert_eq!(tickets[0]["inbox"], true);
+    }
+
+    /// `refuse` answers an unopened root with this Failure before core runs.
+    #[test]
+    fn an_unopened_root_is_the_not_open_failure() {
+        let v = envelope::not_open("/somewhere/else");
+        assert_eq!(v["error"]["kind"], "NotOpen");
+        assert!(v.get("data").is_none());
     }
 }
