@@ -84,6 +84,8 @@ pub struct Status {
     pub no_changes: bool,
     pub plans: Vec<Change>,
     pub builds: Vec<RepoBuilds>,
+    /// The names of recorded build changes that are closed, sorted.
+    pub closed_builds: Vec<String>,
 }
 
 /// `status <plan>`: a plan's progress and its builds.
@@ -367,9 +369,13 @@ impl crate::Workspace {
             Some(self.active_status(&reader, &changes, st.clone()))
         };
         let mut plans = Vec::new();
+        let mut closed_builds = Vec::new();
         let mut by_repo: BTreeMap<String, Vec<Change>> = BTreeMap::new();
         for c in changes.values() {
             if c.is_closed() {
+                if c.loop_ == BUILD_LOOP {
+                    closed_builds.push(c.name.clone());
+                }
                 continue;
             }
             if c.loop_ == BUILD_LOOP {
@@ -401,6 +407,7 @@ impl crate::Workspace {
                 no_changes: changes.is_empty(),
                 plans,
                 builds,
+                closed_builds,
             },
             warnings,
         })

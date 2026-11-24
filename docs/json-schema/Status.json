@@ -5,6 +5,7 @@
   "type": "object",
   "required": [
     "builds",
+    "closedBuilds",
     "noChanges",
     "plans",
     "vcs"
@@ -24,6 +25,13 @@
       "type": "array",
       "items": {
         "$ref": "#/definitions/RepoBuilds"
+      }
+    },
+    "closedBuilds": {
+      "description": "The names of recorded build changes that are closed, sorted.",
+      "type": "array",
+      "items": {
+        "type": "string"
       }
     },
     "noChanges": {

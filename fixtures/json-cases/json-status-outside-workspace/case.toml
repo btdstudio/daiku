@@ -10,7 +10,8 @@ stdout = '''
     "active": null,
     "noChanges": true,
     "plans": [],
-    "builds": []
+    "builds": [],
+    "closedBuilds": []
   },
   "warnings": []
 }
