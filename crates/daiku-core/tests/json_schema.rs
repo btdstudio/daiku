@@ -18,7 +18,7 @@ use daiku_core::state::Change;
 use daiku_core::state::store::Known;
 use daiku_core::ticket::Problem;
 use daiku_core::tickets::{Bucket, CheckReport, Ordered, StatusReport};
-use daiku_core::{Artifact, ArtifactList, NextItem, NextList, TicketList, TicketView};
+use daiku_core::{Artifact, ArtifactList, Changed, NextItem, NextList, TicketList, TicketView};
 use schemars::schema_for;
 
 fn dir() -> PathBuf {
@@ -98,6 +98,7 @@ fn schemas() -> BTreeMap<String, String> {
     add!("TicketView", TicketView);
     add!("NextList", NextList);
     add!("NextItem", NextItem);
+    add!("Changed", Changed);
     m
 }
 

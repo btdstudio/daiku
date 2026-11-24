@@ -1,0 +1,184 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Changed",
+  "description": "What a changed path means for the views.",
+  "oneOf": [
+    {
+      "description": "`STATE.json`, `LOG.md` or `.daiku/active`.",
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "state"
+          ]
+        }
+      }
+    },
+    {
+      "description": "A ticket file: `plan/specs/<c>/tickets/<id>.md` (with its change) or `build/tickets/<id>.md` (without).",
+      "type": "object",
+      "required": [
+        "id",
+        "kind"
+      ],
+      "properties": {
+        "change": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "ticket"
+          ]
+        }
+      }
+    },
+    {
+      "description": "A file under `plan/specs/<c>/` or `plan/<room>/<c>/`, or `plan/00_intake/<n>.md` (the raw number as the change).",
+      "type": "object",
+      "required": [
+        "change",
+        "kind"
+      ],
+      "properties": {
+        "change": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "planArtifact"
+          ]
+        }
+      }
+    },
+    {
+      "description": "A file under `build/<repo>/changes/<c>/`.",
+      "type": "object",
+      "required": [
+        "change",
+        "kind",
+        "repo"
+      ],
+      "properties": {
+        "change": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "buildArtifact"
+          ]
+        },
+        "repo": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "description": "A file under `ideas/<n>-<slug>/`.",
+      "type": "object",
+      "required": [
+        "id",
+        "kind"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "idea"
+          ]
+        }
+      }
+    },
+    {
+      "description": "The ADR folder `plan/04_architecture/adr/` or a file under it.",
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "adr"
+          ]
+        }
+      }
+    },
+    {
+      "description": "`REPOS.json` or `.daiku/paths.json`.",
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "repos"
+          ]
+        }
+      }
+    },
+    {
+      "description": "`.daiku/settings.json`.",
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "settings"
+          ]
+        }
+      }
+    },
+    {
+      "description": "Anything under `references/`.",
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "reference"
+          ]
+        }
+      }
+    },
+    {
+      "description": "Root `AGENTS.md`, and each room's `context.md`, `personas/**` and `templates/**`.",
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "scaffold"
+          ]
+        }
+      }
+    }
+  ]
+}
