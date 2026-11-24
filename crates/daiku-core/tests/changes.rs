@@ -241,3 +241,31 @@ fn ac7_the_overview_keeps_the_narrative() {
         assert_eq!(outside.read("README.md"), "x");
     }
 }
+
+/// `Status.closed_builds` names the closed builds of planned tickets and of the
+/// inbox, sorted, and leaves out closed plans; `builds` and `plans` stay as they were.
+#[test]
+fn status_names_closed_builds() {
+    let (_t, ws) = workspace("build-two-in-repo");
+    let st = ws.status().unwrap().value;
+    assert!(st.closed_builds.is_empty());
+    let open_builds = |st: &daiku_core::changes::Status| -> Vec<String> {
+        st.builds
+            .iter()
+            .flat_map(|r| r.builds.iter().map(|c| c.name.clone()))
+            .collect()
+    };
+    assert_eq!(open_builds(&st), ["N-0001", "S-0002"]);
+
+    ws.change_close("S-0002", "r").unwrap();
+    let st = ws.status().unwrap().value;
+    assert_eq!(st.closed_builds, ["S-0002"]);
+    assert_eq!(open_builds(&st), ["N-0001"]);
+
+    ws.change_close("N-0001", "r").unwrap();
+    ws.change_close("1-auth-flow", "r").unwrap();
+    let st = ws.status().unwrap().value;
+    assert_eq!(st.closed_builds, ["N-0001", "S-0002"]);
+    assert!(open_builds(&st).is_empty());
+    assert!(st.plans.is_empty());
+}

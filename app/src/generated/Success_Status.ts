@@ -19,6 +19,10 @@ export interface Status {
   active?: ActiveStatus | null;
   builds: RepoBuilds[];
   /**
+   * The names of recorded build changes that are closed, sorted.
+   */
+  closedBuilds: string[];
+  /**
    * No change is recorded at all.
    */
   noChanges: boolean;
