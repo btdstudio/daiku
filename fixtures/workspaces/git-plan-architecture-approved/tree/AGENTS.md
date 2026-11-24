@@ -208,6 +208,7 @@ change.
 | `daiku tickets new <type> <title> [--parent <id>] [--repo <name>] [--depends <id,id>] [--requirements <id,id>] [--inbox]` | create a ticket in the active change, citing the spec's requirements; with `--inbox`, or no open plan change, an `N-` task in `build/tickets/` |
 | `daiku tickets check` | validate every ticket: schema, parents, cycles, repos, readiness, drift. Errors (`✗`) exit 1; warnings (`!`) don't |
 | `daiku tickets status` | list tickets by draft, ready, published and drifted |
+| `daiku tickets list` | list every ticket with its fields, from every plan and the inbox (`--json` for the app) |
 | `daiku tickets order` | list tickets in publish order |
 | `daiku tickets ready <id>... \| --all [--force]` | ready draft tickets once breakdown is approved, all or none |
 | `daiku tickets mark-published <id> --external <tool>=<item-id> [--force]` | record a PM tool's id and freeze the ticket; needs publish in-progress (`--force` overrides only that), a valid ready mark, and published predecessors |
