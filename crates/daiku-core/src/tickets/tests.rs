@@ -395,3 +395,295 @@ fn mark_published_collects_every_problem() {
         ]
     );
 }
+
+// tickets_list (S-0013)
+
+fn plain_ticket(id: &str, status: &str, change: &str) -> String {
+    format!(
+        "---\nschema: 1\nid: {id}\ntype: story\ntitle: Ticket {id}\nrepo: app\nchange: {change}\nstatus: {status}\n---\nBody of {id}\n"
+    )
+}
+
+/// Plan `1-x` open, plan `2-y` closed, `3-z` with no STATE entry, and the inbox.
+fn list_workspace(t: &Temp) -> Workspace {
+    t.write(
+        ".daiku/settings.json",
+        "{\"overview\": \"manual\", \"vcs\": \"none\"}\n",
+    );
+    t.write(
+        "STATE.json",
+        r#"{"schema":1,"changes":{"1-x":{"loop":"plan","phase":"breakdown","status":"approved","gates":{},"sources":[],"repos":["app"],"updatedAt":"x"},"2-y":{"loop":"plan","phase":"breakdown","status":"closed","gates":{},"sources":[],"repos":["app"],"updatedAt":"x"}}}"#,
+    );
+    t.write(
+        "REPOS.json",
+        "{\"schema\": 1, \"repos\": {\"app\": {\"remote\": \"https://example.com/app.git\"}}}\n",
+    );
+    for c in ["1-x", "2-y", "3-z"] {
+        std::fs::create_dir_all(t.p(&format!("plan/specs/{c}/tickets"))).unwrap();
+    }
+    let p = Rc::new(ScriptedProcess::default());
+    let env = testutil::env(t, Box::new(Shared(p)));
+    Workspace::open(t.path(), env)
+}
+
+fn listed(ws: &Workspace) -> TicketList {
+    ws.tickets_list().unwrap().value
+}
+
+#[test]
+fn list_shape_closed_plan_inbox_and_broken_file() {
+    let t = Temp::new();
+    let ws = list_workspace(&t);
+    t.write(
+        "plan/specs/1-x/tickets/S-0002.md",
+        &plain_ticket("S-0002", "draft", "1-x"),
+    );
+    t.write(
+        "plan/specs/2-y/tickets/S-0001.md",
+        &plain_ticket("S-0001", "ready", "2-y"),
+    );
+    t.write(
+        "build/tickets/N-0001.md",
+        &plain_ticket("N-0001", "draft", ""),
+    );
+    t.write("plan/specs/1-x/tickets/bad.md", "no frontmatter\n");
+    let l = listed(&ws);
+    let got: Vec<_> = l
+        .tickets
+        .iter()
+        .map(|v| {
+            (
+                v.id.as_str(),
+                v.change.as_str(),
+                v.change_closed,
+                v.inbox,
+                v.path.as_str(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        got,
+        vec![
+            ("N-0001", "", false, true, "build/tickets/N-0001.md"),
+            (
+                "S-0001",
+                "2-y",
+                true,
+                false,
+                "plan/specs/2-y/tickets/S-0001.md"
+            ),
+            (
+                "S-0002",
+                "1-x",
+                false,
+                false,
+                "plan/specs/1-x/tickets/S-0002.md"
+            ),
+        ]
+    );
+    let v = &l.tickets[2];
+    assert_eq!(
+        (
+            v.typ.as_str(),
+            v.title.as_str(),
+            v.repo.as_str(),
+            v.status.as_str()
+        ),
+        ("story", "Ticket S-0002", "app", "draft")
+    );
+    assert_eq!(v.body, "Body of S-0002\n");
+    assert_eq!(l.unreadable.len(), 1);
+    assert_eq!(l.unreadable[0].id, "plan/specs/1-x/tickets/bad.md");
+}
+
+#[test]
+fn list_change_is_the_folder_not_the_frontmatter() {
+    let t = Temp::new();
+    let ws = list_workspace(&t);
+    t.write(
+        "plan/specs/1-x/tickets/S-0001.md",
+        &plain_ticket("S-0001", "draft", "other"),
+    );
+    assert_eq!(listed(&ws).tickets[0].change, "1-x");
+}
+
+#[test]
+fn list_plan_without_a_state_entry_is_not_closed() {
+    let t = Temp::new();
+    let ws = list_workspace(&t);
+    t.write(
+        "plan/specs/3-z/tickets/S-0001.md",
+        &plain_ticket("S-0001", "draft", "3-z"),
+    );
+    let l = listed(&ws);
+    assert_eq!(l.tickets.len(), 1);
+    assert_eq!(l.tickets[0].change, "3-z");
+    assert!(!l.tickets[0].change_closed);
+}
+
+#[test]
+fn list_drifted_and_frozen_match_the_ticket_methods() {
+    let t = Temp::new();
+    let ws = list_workspace(&t);
+    // A legacy freeze (a body hash): the first doesn't match its body, so it
+    // drifted; the second is the hash of the body, so it's frozen and clean.
+    let body = "Body\n";
+    let hash = crate::ticket::hash_bytes(body.as_bytes());
+    for (id, h) in [("S-0001", "0000"), ("S-0002", hash.as_str())] {
+        t.write(
+            &format!("plan/specs/1-x/tickets/{id}.md"),
+            &format!(
+                "---\nschema: 1\nid: {id}\ntype: story\ntitle: T\nrepo: app\nchange: 1-x\nstatus: published\nexternal:\n  jira: J-1\npublished_hash: {h}\n---\n{body}"
+            ),
+        );
+    }
+    let l = listed(&ws);
+    for v in &l.tickets {
+        let raw = std::fs::read(t.p(&v.path)).unwrap();
+        let tk = Ticket::parse(&raw).unwrap();
+        assert_eq!(
+            (v.drifted, v.frozen),
+            (tk.drifted(), tk.frozen()),
+            "{}",
+            v.id
+        );
+    }
+    assert_eq!((l.tickets[0].drifted, l.tickets[0].frozen), (true, true));
+    assert_eq!((l.tickets[1].drifted, l.tickets[1].frozen), (false, true));
+    assert_eq!(
+        l.tickets[1].external.get("jira").map(String::as_str),
+        Some("J-1")
+    );
+}
+
+#[test]
+fn list_keeps_body_bytes_that_are_not_utf8() {
+    let t = Temp::new();
+    let ws = list_workspace(&t);
+    let mut raw = plain_ticket("S-0001", "draft", "1-x").into_bytes();
+    raw.truncate(raw.len() - "Body of S-0001\n".len());
+    raw.extend_from_slice(b"a\xffb\n");
+    std::fs::write(t.p("plan/specs/1-x/tickets/S-0001.md"), &raw).unwrap();
+    let l = listed(&ws);
+    assert_eq!(l.tickets[0].body.as_bytes(), b"a\xffb\n");
+    assert_eq!(l.tickets[0].body.to_string_lossy(), "a\u{fffd}b\n");
+}
+
+#[test]
+fn list_reports_a_planned_id_in_the_inbox_and_lists_it() {
+    let t = Temp::new();
+    let ws = list_workspace(&t);
+    t.write(
+        "build/tickets/S-0001.md",
+        &plain_ticket("S-0001", "draft", ""),
+    );
+    let l = listed(&ws);
+    assert_eq!(l.tickets.len(), 1);
+    assert!(l.tickets[0].inbox);
+    assert_eq!(
+        l.unreadable,
+        vec![Problem::new(
+            "S-0001",
+            "planned tickets live under plan/specs/, not in build/tickets/".into()
+        )]
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn list_fails_on_a_file_it_cannot_read() {
+    use std::os::unix::fs::PermissionsExt;
+    let t = Temp::new();
+    let ws = list_workspace(&t);
+    let f = t.p("plan/specs/1-x/tickets/S-0001.md");
+    t.write(
+        "plan/specs/1-x/tickets/S-0001.md",
+        &plain_ticket("S-0001", "draft", "1-x"),
+    );
+    std::fs::set_permissions(&f, std::fs::Permissions::from_mode(0o000)).unwrap();
+    if std::fs::read(&f).is_ok() {
+        return; // running as root: the mode doesn't stop the read
+    }
+    let r = ws.tickets_list();
+    std::fs::set_permissions(&f, std::fs::Permissions::from_mode(0o644)).unwrap();
+    assert!(r.is_err());
+}
+
+#[test]
+fn list_id_is_the_frontmatter_value() {
+    let t = Temp::new();
+    let ws = list_workspace(&t);
+    t.write(
+        "plan/specs/1-x/tickets/S-0009.md",
+        &plain_ticket("S-0003", "draft", "1-x"),
+    );
+    t.write(
+        "plan/specs/1-x/tickets/S-0010.md",
+        &plain_ticket("", "draft", "1-x"),
+    );
+    let ids: Vec<_> = listed(&ws).tickets.into_iter().map(|v| v.id).collect();
+    assert_eq!(ids, vec!["", "S-0003"]);
+}
+
+#[test]
+fn list_orders_equal_ids_by_path() {
+    let t = Temp::new();
+    let ws = list_workspace(&t);
+    t.write(
+        "plan/specs/2-y/tickets/S-0001.md",
+        &plain_ticket("S-0001", "draft", "2-y"),
+    );
+    t.write(
+        "plan/specs/1-x/tickets/b.md",
+        &plain_ticket("S-0001", "draft", "1-x"),
+    );
+    t.write(
+        "plan/specs/1-x/tickets/a.md",
+        &plain_ticket("S-0001", "draft", "1-x"),
+    );
+    let paths: Vec<_> = listed(&ws).tickets.into_iter().map(|v| v.path).collect();
+    assert_eq!(
+        paths,
+        vec![
+            "plan/specs/1-x/tickets/a.md",
+            "plan/specs/1-x/tickets/b.md",
+            "plan/specs/2-y/tickets/S-0001.md"
+        ]
+    );
+}
+
+#[test]
+fn list_paths_are_relative_under_an_absolute_root() {
+    let t = Temp::new();
+    let ws = list_workspace(&t);
+    assert!(t.path().is_absolute());
+    t.write(
+        "plan/specs/1-x/tickets/S-0001.md",
+        &plain_ticket("S-0001", "draft", "1-x"),
+    );
+    t.write(
+        "build/tickets/N-0001.md",
+        &plain_ticket("N-0001", "draft", ""),
+    );
+    t.write(
+        "build/tickets/S-0002.md",
+        &plain_ticket("S-0002", "draft", ""),
+    );
+    t.write("build/tickets/bad.md", "nope\n");
+    t.write("plan/specs/1-x/tickets/bad.md", "nope\n");
+    let l = listed(&ws);
+    for v in &l.tickets {
+        assert!(!v.path.starts_with('/'), "{}", v.path);
+        assert!(v.path.starts_with("plan/specs/") || v.path.starts_with("build/tickets/"));
+    }
+    let mut ids: Vec<_> = l.unreadable.iter().map(|p| p.id.as_str()).collect();
+    ids.sort();
+    assert_eq!(
+        ids,
+        vec![
+            "S-0002",
+            "build/tickets/bad.md",
+            "plan/specs/1-x/tickets/bad.md"
+        ]
+    );
+}

@@ -15,6 +15,7 @@ use crate::outcome::{Outcome, Warning};
 use crate::plan::{SPECS_DIR, model, problems::problems as plan_problems, spec::Severity};
 use crate::state::store::{Store, at, shown};
 use crate::state::{BUILD_LOOP, overview};
+use crate::text::Text;
 use crate::ticket::{
     self, NewTicket, Problem, STATUS_DRAFT, STATUS_PUBLISHED, STATUS_READY, STORY, TASK, Ticket,
 };
@@ -118,6 +119,44 @@ pub struct Pulled {
     pub tool: String,
 }
 
+/// One ticket as a client shows it: its fields, where it came from, and its body.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TicketView {
+    pub id: String,
+    #[serde(rename = "type")]
+    pub typ: String,
+    pub title: String,
+    pub repo: String,
+    /// The plan folder the ticket was loaded from; empty for an inbox ticket.
+    pub change: String,
+    /// The plan's status is `closed`.
+    pub change_closed: bool,
+    /// Loaded from `build/tickets/`.
+    pub inbox: bool,
+    /// Relative to the workspace, slash-separated.
+    pub path: String,
+    pub status: String,
+    pub depends_on: Vec<String>,
+    pub parent: String,
+    pub requirements: Vec<String>,
+    pub labels: Vec<String>,
+    pub external: BTreeMap<String, String>,
+    pub drifted: bool,
+    pub frozen: bool,
+    /// The file's body, as its bytes (ADR-0004, ADR-0008).
+    pub body: Text,
+}
+
+/// `tickets list`: every ticket, sorted by id then path, and the files that
+/// couldn't be read.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TicketList {
+    pub tickets: Vec<TicketView>,
+    pub unreadable: Vec<Problem>,
+}
+
 /// Go's `checkGate`: a gate not at the wanted status, through the gates policy.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 struct GateCheck {
@@ -212,6 +251,28 @@ fn rel_of(root: &Path, t: &Ticket) -> String {
         return p.to_string();
     }
     p.strip_prefix(&format!("{base}/")).unwrap_or(p).to_string()
+}
+
+fn view(t: &Ticket, root: &Path, change: &str, change_closed: bool, inbox: bool) -> TicketView {
+    TicketView {
+        id: t.id.clone(),
+        typ: t.typ.clone(),
+        title: t.title.clone(),
+        repo: t.repo.clone(),
+        change: change.to_string(),
+        change_closed,
+        inbox,
+        path: rel_of(root, t),
+        status: t.status.clone(),
+        depends_on: t.depends_on.clone(),
+        parent: t.parent.clone(),
+        requirements: t.requirements.clone(),
+        labels: t.labels.clone(),
+        external: t.external.clone(),
+        drifted: t.drifted(),
+        frozen: t.frozen(),
+        body: Text::from(t.body_bytes().to_vec()),
+    }
 }
 
 impl crate::Workspace {
@@ -487,6 +548,44 @@ impl crate::Workspace {
             buckets,
             unreadable,
         }))
+    }
+
+    /// `daiku tickets list`: every ticket of every plan change and the inbox with
+    /// its fields, sorted by id then path. It writes nothing and doesn't require a
+    /// ticket to pass `tickets check`; files that can't be parsed come back as
+    /// `unreadable`, and an IO error fails the call.
+    pub fn tickets_list(&self) -> Result<Outcome<TicketList>, Error> {
+        let store = self.store();
+        let root = self.root();
+        let (mut tickets, mut unreadable) = (Vec::new(), Vec::new());
+        for c in store.plan_changes()? {
+            let rel = ticket_dir_rel(&c.name);
+            let (ts, bad) = ticket::load_dir(&at(root, &rel), &rel)?;
+            let closed = c.status == "closed";
+            tickets.extend(ts.iter().map(|t| view(t, root, &c.name, closed, false)));
+            unreadable.extend(bad);
+        }
+        let (ts, bad) = inbox::list(root)?;
+        tickets.extend(ts.iter().map(|t| view(t, root, "", false, true)));
+        let prefix = gofmt::to_slash(&root.to_string_lossy());
+        unreadable.extend(bad.into_iter().map(|mut p| {
+            if prefix != "."
+                && let Some(rest) = p.id.strip_prefix(&format!("{prefix}/"))
+            {
+                p.id = rest.to_string();
+            }
+            p
+        }));
+        tickets.sort_by(|a, b| {
+            (a.id.as_bytes(), a.path.as_bytes()).cmp(&(b.id.as_bytes(), b.path.as_bytes()))
+        });
+        Ok(Outcome {
+            value: TicketList {
+                tickets,
+                unreadable,
+            },
+            warnings: store.take_warnings(),
+        })
     }
 
     /// `daiku tickets order`: Go's `ticketsOrder`.

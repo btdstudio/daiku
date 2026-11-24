@@ -18,7 +18,7 @@ use daiku_core::state::Change;
 use daiku_core::state::store::Known;
 use daiku_core::ticket::Problem;
 use daiku_core::tickets::{Bucket, CheckReport, Ordered, StatusReport};
-use daiku_core::{Artifact, ArtifactList};
+use daiku_core::{Artifact, ArtifactList, TicketList, TicketView};
 use schemars::schema_for;
 
 fn dir() -> PathBuf {
@@ -61,6 +61,7 @@ fn schemas() -> BTreeMap<String, String> {
     add!("Success_AdrList", Success<Vec<adr::Record>>);
     add!("Success_Adr", Success<adr::Record>);
     add!("Success_ArtifactList", Success<ArtifactList>);
+    add!("Success_TicketList", Success<TicketList>);
     add!("Success_IdeaList", Success<Vec<idea::Idea>>);
     add!("Success_IdeaSummary", Success<IdeaSummary>);
     add!("Success_TicketsCheck", Success<CheckReport>);
@@ -92,6 +93,8 @@ fn schemas() -> BTreeMap<String, String> {
     add!("OverviewDoc", OverviewDoc);
     add!("ArtifactList", ArtifactList);
     add!("Artifact", Artifact);
+    add!("TicketList", TicketList);
+    add!("TicketView", TicketView);
     m
 }
 
