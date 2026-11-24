@@ -35,15 +35,20 @@ function serve(l: ArtifactList) {
   });
 }
 
-function show(name = "4-plan", root = "/w") {
+function show(name = "4-plan", root = "/w", initialPhase?: string) {
   const client = makeQueryClient();
-  const ui = (n: string, r: string) => (
+  const ui = (n: string, r: string, p?: string) => (
     <QueryClientProvider client={client}>
-      <PlanPanel root={r} name={n} focused={false} onFill={() => {}} />
+      <PlanPanel root={r} name={n} initialPhase={p} focused={false} onFill={() => {}} />
     </QueryClientProvider>
   );
-  const view = render(ui(name, root));
-  return { ...view, client, to: (n: string, r = root) => view.rerender(ui(n, r)) };
+  const view = render(ui(name, root, initialPhase));
+  return {
+    ...view,
+    client,
+    to: (n: string, r = root) => view.rerender(ui(n, r)),
+    phase: (p?: string) => view.rerender(ui(name, root, p)),
+  };
 }
 
 const chip = (name: string) => screen.getByRole("button", { name: new RegExp(`^${name}`) });
@@ -111,6 +116,34 @@ describe("PlanPanel", () => {
     to("5-other");
     await waitFor(() => expect(screen.getByText("First spec")).toBeTruthy());
     expect(chip("spec").getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("starts on initialPhase and shows its first file", async () => {
+    serve(list({ phase: "spec" }));
+    show("4-plan", "/w", "intake");
+    await screen.findByText("Intake body");
+    expect(chip("intake").getAttribute("aria-pressed")).toBe("true");
+    expect(chip("spec").getAttribute("aria-current")).toBe("step");
+  });
+
+  it("falls back to the current phase for an unknown initialPhase", async () => {
+    serve(list({ phase: "spec" }));
+    show("4-plan", "/w", "nonesuch");
+    await screen.findByText("First spec");
+    expect(chip("spec").getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("resets the pick when initialPhase changes", async () => {
+    serve(list({ phase: "spec" }));
+    const { phase } = show("4-plan", "/w", "intake");
+    await screen.findByText("Intake body");
+    fireEvent.click(chip("spec"));
+    await screen.findByText("First spec");
+    phase("spec");
+    await screen.findByText("First spec");
+    phase("intake");
+    await screen.findByText("Intake body");
+    expect(chip("intake").getAttribute("aria-pressed")).toBe("true");
   });
 
   it("shows a read failure inline", async () => {

@@ -22,7 +22,14 @@ export function Viewer({ root, selected, focused, onFill, onClose }: Props) {
     case "ticket":
       return <TicketPanel {...common} ticketKey={selected.key} />;
     case "plan":
-      return <PlanPanel {...common} name={selected.name} />;
+      return (
+        <PlanPanel
+          {...common}
+          name={selected.name}
+          initialPhase={selected.phase}
+          nonce={selected.nonce}
+        />
+      );
     case "idea":
       return <IdeaPanel {...common} id={selected.id} />;
     case "adr":
