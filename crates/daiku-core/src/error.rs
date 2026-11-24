@@ -17,6 +17,14 @@ pub enum Error {
     )]
     WriteThroughSymlink { rel: String, link: String },
 
+    /// A read outside the workspace (`read_text`).
+    #[error("daiku: won't read {path}: it's outside the workspace")]
+    ReadOutside { path: String },
+
+    /// A read whose path passes through a symlink.
+    #[error("daiku: won't read {rel}: {link} is a symlink, which could lead outside the workspace")]
+    ReadThroughSymlink { rel: String, link: String },
+
     /// A settings file that isn't valid JSON; `detail` is Go's JSON message.
     #[error("daiku: cannot parse settings {path}: {detail}")]
     SettingsParse { path: String, detail: String },

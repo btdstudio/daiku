@@ -496,6 +496,16 @@ impl<'a> Store<'a> {
         Ok(())
     }
 
+    /// The change `name` names, recorded or found by its plan folder, with a real
+    /// folder where its loop puts it; anything else is `UnknownChange`. Unlike
+    /// [`Store::switch`], it records and activates nothing.
+    pub fn find(&self, name: &str) -> Result<Change, Error> {
+        let changes = self.read_changes()?;
+        let c = self.resolve(name, &changes);
+        self.check_folder(&c)?;
+        Ok(c)
+    }
+
     /// Go's `Switch`: makes `name` active, recording a found plan folder.
     pub fn switch(&self, name: &str) -> Result<Change, Error> {
         let changes = self.read_changes()?;
