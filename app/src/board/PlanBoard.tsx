@@ -1,4 +1,5 @@
 import { FailureError } from "@/data/envelope";
+import { NEXT_MARK } from "@/frame/marks";
 import { useStatus } from "@/data/hooks";
 import type { Change } from "@/generated/Change";
 import { NOT_STARTED } from "@/plan/phaseStrip";
@@ -8,13 +9,15 @@ interface Props {
   root: string | null;
   /** A card was chosen: the plan's name. */
   onSelect: (name: string) => void;
+  /** The plan's name to carry the next mark (S-0023). */
+  nextPlan?: string | null;
 }
 
 const NONE: never[] = [];
 
 /** The Plan board (design D9): one column per plan phase, each open plan one card in
  *  the column of its current phase (the first when it has none). */
-export function PlanBoard({ root, onSelect }: Props) {
+export function PlanBoard({ root, onSelect, nextPlan }: Props) {
   const status = useStatus(root);
   const phases = status.data?.planPhases ?? NONE;
   const plans = status.data?.plans ?? NONE;
@@ -57,7 +60,9 @@ export function PlanBoard({ root, onSelect }: Props) {
                   key={p.name}
                   type="button"
                   onClick={() => onSelect(p.name)}
-                  className="flex flex-col gap-1 rounded-md border border-line bg-surface-raised p-2 text-left outline-none hover:bg-surface-selected focus-visible:ring-2 focus-visible:ring-ring"
+                  className={`flex flex-col gap-1 rounded-md border border-line p-2 text-left outline-none hover:bg-surface-selected focus-visible:ring-2 focus-visible:ring-ring ${
+                    p.name === nextPlan ? NEXT_MARK : "bg-surface-raised"
+                  }`}
                 >
                   <span className="min-w-0 break-words text-list text-ink">{p.name}</span>
                   {p.repos.length > 0 && (

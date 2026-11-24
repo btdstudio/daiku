@@ -8,8 +8,8 @@ function Pill({ children }: { children: string }) {
   );
 }
 
-/** The drifted, published and frozen badges of a ticket: neutral pills (no amber;
- *  S-0023 owns that). */
+/** The drifted, published and frozen badges of a ticket: neutral pills (the
+ *  highlight colour is reserved, see frame/marks.ts). */
 export function Badges({ ticket }: { ticket: TicketView }) {
   if (!ticket.drifted && ticket.status !== "published" && !ticket.frozen) return null;
   return (

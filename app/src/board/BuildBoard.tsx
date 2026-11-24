@@ -12,6 +12,7 @@ import {
   repoOptions,
 } from "@/build/groups";
 import { useBuildBoard } from "@/build/useBuildBoard";
+import { DRAFT_INK, NEXT_MARK } from "@/frame/marks";
 import type { BuildInfo } from "./columns";
 import type { TicketView } from "@/generated/TicketView";
 
@@ -19,6 +20,8 @@ interface Props {
   root: string | null;
   /** A card was chosen: its `TicketView.path`, used only as a key. */
   onSelect: (path: string) => void;
+  /** The ticket id to carry the next mark (S-0023). */
+  nextId?: string | null;
 }
 
 const selectClass =
@@ -38,7 +41,7 @@ function parseRepo(v: string): RepoFilter {
 
 /** The Build board (design D8): five columns of cards, with plan and repo filters
  *  held in local state, back to All when the workspace changes. */
-export function BuildBoard({ root, onSelect }: Props) {
+export function BuildBoard({ root, onSelect, nextId }: Props) {
   const board = useBuildBoard(root);
   const [filters, setFilters] = useState<{ root: string | null; plan: string; repo: string }>({
     root,
@@ -116,7 +119,11 @@ export function BuildBoard({ root, onSelect }: Props) {
             aria-label={COLUMN_LABEL[c]}
             className="flex min-w-0 flex-col gap-2"
           >
-            <h3 className="text-label font-medium uppercase tracking-[var(--tracking-label)] text-ink-muted">
+            <h3
+              className={`text-label font-medium uppercase tracking-[var(--tracking-label)] ${
+                c === "draft" ? DRAFT_INK : "text-ink-muted"
+              }`}
+            >
               {COLUMN_LABEL[c]} <span className="font-mono text-ink-faint">{columns[c].length}</span>
             </h3>
             {columns[c].map((t) => (
@@ -124,6 +131,7 @@ export function BuildBoard({ root, onSelect }: Props) {
                 key={t.path}
                 ticket={t}
                 info={board.builds.get(t.id)}
+                next={t.id === nextId}
                 onSelect={() => onSelect(t.path)}
               />
             ))}
@@ -137,17 +145,21 @@ export function BuildBoard({ root, onSelect }: Props) {
 function Card({
   ticket: t,
   info,
+  next,
   onSelect,
 }: {
   ticket: TicketView;
   info: BuildInfo | undefined;
+  next: boolean;
   onSelect: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onSelect}
-      className="flex flex-col gap-1 rounded-md border border-line bg-surface-raised p-2 text-left outline-none hover:bg-surface-selected focus-visible:ring-2 focus-visible:ring-ring"
+      className={`flex flex-col gap-1 rounded-md border border-line p-2 text-left outline-none hover:bg-surface-selected focus-visible:ring-2 focus-visible:ring-ring ${
+        next ? NEXT_MARK : "bg-surface-raised"
+      }`}
     >
       <span className="flex items-baseline gap-2 text-list text-ink">
         <span className="font-mono text-id text-ink-secondary">{t.id}</span>

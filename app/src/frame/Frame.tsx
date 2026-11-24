@@ -1,8 +1,9 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { Board } from "@/board/Board";
 import { BuildList } from "@/build/BuildList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useStatus } from "@/data/hooks";
 import { useBuildBoard } from "@/build/useBuildBoard";
 import { PlanList } from "@/plan/PlanList";
 import { usePlanTab } from "@/plan/usePlanTab";
@@ -12,6 +13,7 @@ import { gridColumns, useFold } from "./fold";
 import { LaunchScreen } from "./LaunchScreen";
 import { ListRail } from "./ListRail";
 import { NotWorkspace } from "./NotWorkspace";
+import { useNudge } from "./useNudge";
 import { StatusBar } from "./StatusBar";
 import { TitleBar } from "./TitleBar";
 import type { Action, FrameState, Pane, WorkspaceRef } from "./viewState";
@@ -53,15 +55,32 @@ export function Frame({ state, dispatch }: Props) {
   const planCounts = usePlanTab(view.tab === "plan" ? root : null).counts;
   const counts = view.tab === "build" ? buildCounts : planCounts;
 
+  // The nudge (S-0023): the status bar's text, the marks and the click.
+  const nudge = useNudge(root, fold);
+  const active = useStatus(root).data?.active?.change;
+  const nextGroup = view.tab === "build" ? nudge.buildGroup : nudge.planGroup;
+  const nudgeClicks = useRef(0);
+  const onNudge = () => {
+    const t = nudge.target(nudge.item);
+    if (!t) return;
+    dispatch({ type: "tab", tab: t.tab });
+    // A plan carries the click count, so a repeat click starts on the nudge's phase again.
+    nudgeClicks.current += 1;
+    select(t.sel.kind === "plan" ? { ...t.sel, nonce: nudgeClicks.current } : t.sel);
+    if (fold === "narrow") dispatch({ type: "pane", pane: "viewer" });
+    if (view.focus === "board") setFocus("split");
+  };
+
   const list =
     view.tab === "build" ? (
       <BuildList
         root={root}
         onFill={toBoard}
         onSelect={(key) => select({ kind: "ticket", key })}
+        nextId={nudge.nextTicket}
       />
     ) : (
-      <PlanList root={root} onFill={toBoard} onSelect={select} />
+      <PlanList root={root} onFill={toBoard} onSelect={select} nextPlan={nudge.nextPlan} />
     );
   const viewer = (
     <Viewer
@@ -86,7 +105,16 @@ export function Frame({ state, dispatch }: Props) {
   } else {
     columns = gridColumns(fold, view.focus);
     if (view.focus === "board") {
-      body = message ?? <Board tab={view.tab} root={root} onSelect={select} onRestore={toSplit} />;
+      body = message ?? (
+        <Board
+          tab={view.tab}
+          root={root}
+          onSelect={select}
+          onRestore={toSplit}
+          nextTicket={nudge.nextTicket}
+          nextPlan={nudge.nextPlan}
+        />
+      );
     } else if (view.focus === "viewer") {
       body = message ?? viewer;
     } else if (fold === "wide") {
@@ -100,7 +128,9 @@ export function Frame({ state, dispatch }: Props) {
       body = (
         <>
           {message ?? viewer}
-          <ListRail tab={view.tab} counts={counts}>{list}</ListRail>
+          <ListRail tab={view.tab} counts={counts} nextGroup={nextGroup}>
+            {list}
+          </ListRail>
         </>
       );
     } else {
@@ -141,7 +171,14 @@ export function Frame({ state, dispatch }: Props) {
           <WorkspacesRail open={open} selected={view.selected} dispatch={dispatch} />
           {body}
         </div>
-        <StatusBar fold={fold} name={selected?.name ?? null} tab={view.tab} />
+        <StatusBar
+          fold={fold}
+          name={selected?.name ?? null}
+          tab={view.tab}
+          active={active ? { name: active.name, phase: active.phase } : null}
+          nudge={nudge.text}
+          onNudge={nudge.target(nudge.item) ? onNudge : undefined}
+        />
       </div>
     </TooltipProvider>
   );
