@@ -6,9 +6,11 @@ use std::path::PathBuf;
 use daiku_core::{Error, Outcome, Workspace};
 use serde::Serialize;
 use serde_json::Value;
+use tauri::State;
 
 use crate::env::app_env;
 use crate::envelope;
+use crate::view_state::{self, ViewState, ViewStateStore, WorkspaceRef};
 
 /// Opens the workspace at `root`, runs `f` on the blocking pool and returns its
 /// envelope. A panic or cancelled task becomes a `Failure` of kind `Internal`.
@@ -32,6 +34,28 @@ where
 #[tauri::command]
 pub async fn status(root: String) -> Value {
     with_workspace(root, |ws| ws.status()).await
+}
+
+/// The saved view state with a [`WorkspaceRef`] for every root in it. Plain values,
+/// not the envelope: these aren't core calls.
+#[tauri::command]
+pub fn view_state_load(store: State<ViewStateStore>) -> Value {
+    serde_json::json!({ "state": store.current(), "refs": store.refs() })
+}
+
+/// Replaces the saved view state (the window size stays Rust's) and writes it.
+#[tauri::command]
+pub fn view_state_save(store: State<ViewStateStore>, state: ViewState) {
+    store.save(state);
+}
+
+/// Is the folder at `root` a daiku workspace? Only checks for
+/// `.daiku/settings.json`; runs no process and writes nothing.
+#[tauri::command]
+pub async fn probe_workspace(root: String) -> Result<WorkspaceRef, String> {
+    tauri::async_runtime::spawn_blocking(move || view_state::probe(&root))
+        .await
+        .map_err(|e| e.to_string())
 }
 
 /// The workspace to open at start. Only a `measure` build reads one; otherwise
