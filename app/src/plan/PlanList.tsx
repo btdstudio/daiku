@@ -1,6 +1,7 @@
 import { BookOpen, Lightbulb, List, Scale, type LucideIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { visibleRows } from "@/build/groups";
+import { NEXT_MARK } from "@/frame/marks";
 import { PaneHeader } from "@/frame/PaneHeader";
 import type { Selected } from "@/viewer/selected";
 import { usePlanTab } from "./usePlanTab";
@@ -9,6 +10,8 @@ interface Props {
   root: string | null;
   onFill: () => void;
   onSelect: (sel: Selected) => void;
+  /** The plan's name to carry the next mark (S-0023). */
+  nextPlan?: string | null;
 }
 
 type GroupName = "Plans" | "Ideas" | "ADRs";
@@ -21,7 +24,7 @@ const headingClass =
 
 /** The Plan tab's list (design D8): Plans, Ideas, ADRs and a References heading,
  *  each with its icon and count; the first three fold at 8 rows. */
-export function PlanList({ root, onFill, onSelect }: Props) {
+export function PlanList({ root, onFill, onSelect, nextPlan }: Props) {
   const tab = usePlanTab(root);
   // Expanded groups, local; a new workspace folds them again (reset during render).
   const [expanded, setExpanded] = useState<{ root: string | null; groups: GroupName[] }>({
@@ -83,7 +86,11 @@ export function PlanList({ root, onFill, onSelect }: Props) {
           tab.plans,
           (p) => p.name,
           (p) => (
-            <button type="button" onClick={() => onSelect({ kind: "plan", name: p.name })} className={rowClass}>
+            <button
+              type="button"
+              onClick={() => onSelect({ kind: "plan", name: p.name })}
+              className={`${rowClass} ${p.name === nextPlan ? NEXT_MARK : ""}`}
+            >
               <span className="min-w-0 truncate text-list text-ink">{p.name}</span>
               <span className="text-label text-ink-faint">{p.phase || "intake"}</span>
             </button>

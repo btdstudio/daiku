@@ -1,6 +1,8 @@
 import { PaneHeader } from "@/frame/PaneHeader";
 import { Badges } from "@/build/Badges";
+import { StatusText } from "@/build/StatusText";
 import { useBuildBoard } from "@/build/useBuildBoard";
+import type { ReactNode } from "react";
 import type { TicketView } from "@/generated/TicketView";
 import { Markdown } from "./Markdown";
 
@@ -13,11 +15,11 @@ interface Props {
   onClose?: () => void;
 }
 
-function fields(t: TicketView): [string, string][] {
-  const rows: [string, string][] = [
+function fields(t: TicketView): [string, ReactNode][] {
+  const rows: [string, ReactNode][] = [
     ["id", t.id],
     ["type", t.type],
-    ["status", t.status],
+    ["status", t.status === "" ? "" : <StatusText status={t.status} />],
     ["repo", t.repo],
     ["change", t.inbox || t.change === "" ? "Inbox" : t.changeClosed ? `${t.change} (closed)` : t.change],
     ["parent", t.parent],

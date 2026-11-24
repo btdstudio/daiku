@@ -18,6 +18,8 @@ interface Props {
   tab: Tab;
   /** Each group's whole size, keyed by group name; a missing count shows 0. */
   counts?: Record<string, number>;
+  /** The group whose count is amber: the one holding the next mark (S-0023 D9). */
+  nextGroup?: string;
   /** The tab's list, shown in the overlay. */
   children: ReactNode;
 }
@@ -25,7 +27,7 @@ interface Props {
 /** The folded list (D9, D15): 52px, each group's icon with a count (Build's and
  *  Plan's from their lists). Clicking opens the list as a 340px overlay over the viewer's
  *  right edge; Escape or a click outside closes it. Local state, not view state. */
-export function ListRail({ tab, counts, children }: Props) {
+export function ListRail({ tab, counts, nextGroup, children }: Props) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
 
@@ -55,9 +57,15 @@ export function ListRail({ tab, counts, children }: Props) {
         className="flex h-full w-[52px] flex-col items-center gap-3 border-l border-line bg-surface-chrome py-3 outline-none hover:bg-surface-raised focus-visible:ring-2 focus-visible:ring-ring"
       >
         {GROUPS[tab].map(({ key, label, icon: Icon }) => (
-          <span key={key} title={label} className="flex flex-col items-center gap-0.5 text-ink-faint">
+          <span
+            key={key}
+            title={label}
+            className="flex flex-col items-center gap-0.5 text-ink-faint"
+          >
             <Icon className="size-4" />
-            <span className="font-mono text-label">
+            <span
+              className={`font-mono text-label ${key === nextGroup ? "text-attention-ink" : ""}`}
+            >
               {counts?.[key] ?? 0}
             </span>
           </span>

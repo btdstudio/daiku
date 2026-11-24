@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ArtifactList } from "@/generated/ArtifactList";
 import type { Idea } from "@/generated/Idea";
+import type { NextList } from "@/generated/NextList";
 import type { Record as Adr } from "@/generated/AdrRecord";
 import type { Status } from "@/generated/Status";
 import type { TicketList } from "@/generated/TicketList";
@@ -11,6 +12,8 @@ import { unwrap } from "./envelope";
  *  these keys. */
 export const statusKey = (root: string | null) => [root, "status"] as const;
 export const ticketsKey = (root: string | null) => [root, "tickets_list"] as const;
+
+export const nextKey = (root: string | null) => [root, "next"] as const;
 
 export const ideasKey = (root: string | null) => [root, "idea_list"] as const;
 export const adrsKey = (root: string | null) => [root, "adr_list"] as const;
@@ -31,6 +34,16 @@ export function useTickets(root: string | null) {
   return useQuery({
     queryKey: ticketsKey(root),
     queryFn: () => call<TicketList>("tickets_list", { root }).then(unwrap),
+    enabled: root !== null,
+  });
+}
+
+/** What is waiting on the person (`items[0]` is the nudge). Refetches on window focus
+ *  (the default); a failed refetch keeps the last data. S-0019 invalidates `nextKey`. */
+export function useNext(root: string | null) {
+  return useQuery({
+    queryKey: nextKey(root),
+    queryFn: () => call<NextList>("next", { root }).then(unwrap),
     enabled: root !== null,
   });
 }

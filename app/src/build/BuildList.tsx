@@ -1,5 +1,6 @@
 import { Lock } from "lucide-react";
 import { useState } from "react";
+import { DRAFT_INK, NEXT_MARK } from "@/frame/marks";
 import { PaneHeader } from "@/frame/PaneHeader";
 import { Badges } from "./Badges";
 import { COLUMN_LABEL, type ListColumn, visibleRows } from "./groups";
@@ -11,11 +12,13 @@ interface Props {
   onFill: () => void;
   /** A ticket was chosen: its `TicketView.path`, used only as a key. */
   onSelect: (path: string) => void;
+  /** The ticket id to carry the next mark (S-0023). */
+  nextId?: string | null;
 }
 
 /** The Build tab's list (design D7): four groups with status marks, folded at 8
  *  rows, from `useBuildBoard`. */
-export function BuildList({ root, onFill, onSelect }: Props) {
+export function BuildList({ root, onFill, onSelect, nextId }: Props) {
   const board = useBuildBoard(root);
   // Expanded groups, local; a new workspace folds them again (reset during render).
   const [expanded, setExpanded] = useState<{ root: string | null; groups: ListColumn[] }>({
@@ -57,7 +60,11 @@ export function BuildList({ root, onFill, onSelect }: Props) {
             const rows = visibleRows(g.tickets, open(g.column));
             return (
               <div key={g.column} role="group" aria-label={COLUMN_LABEL[g.column]}>
-                <h3 className="flex items-center gap-2 px-3 pb-1 pt-3 text-label font-medium uppercase tracking-[var(--tracking-label)] text-ink-muted">
+                <h3
+                  className={`flex items-center gap-2 px-3 pb-1 pt-3 text-label font-medium uppercase tracking-[var(--tracking-label)] ${
+                    g.column === "draft" ? DRAFT_INK : "text-ink-muted"
+                  }`}
+                >
                   <Mark className="size-3.5" />
                   {COLUMN_LABEL[g.column]}
                   <span className="font-mono text-ink-faint">{g.tickets.length}</span>
@@ -84,7 +91,9 @@ export function BuildList({ root, onFill, onSelect }: Props) {
                       key={t.path}
                       type="button"
                       onClick={() => onSelect(t.path)}
-                      className="flex w-full flex-col gap-0.5 px-3 py-1.5 text-left outline-none hover:bg-surface-raised focus-visible:ring-2 focus-visible:ring-ring"
+                      className={`flex w-full flex-col gap-0.5 px-3 py-1.5 text-left outline-none hover:bg-surface-raised focus-visible:ring-2 focus-visible:ring-ring ${
+                        t.id === nextId ? NEXT_MARK : ""
+                      }`}
                     >
                       <span className="flex items-baseline gap-2 text-list text-ink">
                         <span className="font-mono text-id text-ink-secondary">{t.id}</span>
