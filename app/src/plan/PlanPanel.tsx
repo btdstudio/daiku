@@ -11,6 +11,10 @@ interface Props {
   root: string | null;
   /** The plan's name. */
   name: string;
+  /** A phase to start on (from the nudge); one not in the strip falls back to the current. */
+  initialPhase?: string;
+  /** The nudge's click count: a repeat click starts on `initialPhase` again. */
+  nonce?: number;
   focused: boolean;
   onFill: () => void;
   onClose?: () => void;
@@ -65,15 +69,14 @@ function Chip({ p, chosen, onChoose }: { p: StripPhase; chosen: boolean; onChoos
 /** A plan in the viewer (design D6): the phase strip, the chosen phase's files, and
  *  the chosen file read through `read_artifact`. The phase and file choice is local,
  *  and starts again when the plan or the workspace changes. */
-export function PlanPanel({ root, name, focused, onFill, onClose }: Props) {
-  const key = `${root}\0${name}`;
-  const [pick, setPick] = useState<{ key: string; phase: string | null; file: string | null }>({
-    key,
-    phase: null,
-    file: null,
-  });
-  if (pick.key !== key) setPick({ key, phase: null, file: null });
-  const chosen = pick.key === key ? pick : { key, phase: null, file: null };
+export function PlanPanel({ root, name, initialPhase, nonce, focused, onFill, onClose }: Props) {
+  const key = `${root}\0${name}\0${initialPhase ?? ""}\0${nonce ?? 0}`;
+  const start = { key, phase: initialPhase ?? null, file: null };
+  const [pick, setPick] = useState<{ key: string; phase: string | null; file: string | null }>(
+    start,
+  );
+  if (pick.key !== key) setPick(start);
+  const chosen = pick.key === key ? pick : start;
 
   const artifacts = useArtifacts(root, name);
   const strip = artifacts.data ? phaseStrip(artifacts.data) : null;
