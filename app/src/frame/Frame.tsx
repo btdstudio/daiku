@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useBuildBoard } from "@/build/useBuildBoard";
 import { PlanList } from "@/plan/PlanList";
+import { usePlanTab } from "@/plan/usePlanTab";
 import type { Selected } from "@/viewer/selected";
 import { Viewer } from "@/viewer/Viewer";
 import { gridColumns, useFold } from "./fold";
@@ -37,7 +38,7 @@ export function Frame({ state, dispatch }: Props) {
   const message = notWorkspace ? <NotWorkspace folder={notWorkspace} /> : null;
 
   const root = selected?.root ?? null;
-  // The open file or ticket: not view state. Selecting another workspace closes it,
+  // The open ticket, plan, idea or ADR: not view state. Selecting another workspace closes it,
   // so coming back shows the list again (reset during render, React's pattern for
   // state that follows a prop).
   const [opened, setOpened] = useState<{ root: string | null; sel: Selected | null }>({
@@ -46,20 +47,26 @@ export function Frame({ state, dispatch }: Props) {
   });
   if (opened.root !== root) setOpened({ root, sel: null });
   const sel = opened.root === root ? opened.sel : null;
-  const selectTicket = (key: string) => setOpened({ root, sel: { kind: "ticket", key } });
-  const counts = useBuildBoard(root).counts;
+  const select = (next: Selected) => setOpened({ root, sel: next });
+  // Only the current tab's queries run for the rail's counts.
+  const buildCounts = useBuildBoard(view.tab === "build" ? root : null).counts;
+  const planCounts = usePlanTab(view.tab === "plan" ? root : null).counts;
+  const counts = view.tab === "build" ? buildCounts : planCounts;
 
   const list =
     view.tab === "build" ? (
-      <BuildList root={root} onFill={toBoard} onSelect={selectTicket} />
+      <BuildList
+        root={root}
+        onFill={toBoard}
+        onSelect={(key) => select({ kind: "ticket", key })}
+      />
     ) : (
-      <PlanList onFill={toBoard} />
+      <PlanList root={root} onFill={toBoard} onSelect={select} />
     );
   const viewer = (
     <Viewer
       root={root}
       selected={sel}
-      onPick={(path) => setOpened({ root, sel: { kind: "file", path } })}
       onClose={() => setOpened({ root, sel: null })}
       focused={view.focus === "viewer"}
       onFill={() => setFocus(view.focus === "viewer" ? "split" : "viewer")}
@@ -79,7 +86,7 @@ export function Frame({ state, dispatch }: Props) {
   } else {
     columns = gridColumns(fold, view.focus);
     if (view.focus === "board") {
-      body = message ?? <Board tab={view.tab} root={root} onSelect={selectTicket} onRestore={toSplit} />;
+      body = message ?? <Board tab={view.tab} root={root} onSelect={select} onRestore={toSplit} />;
     } else if (view.focus === "viewer") {
       body = message ?? viewer;
     } else if (fold === "wide") {
