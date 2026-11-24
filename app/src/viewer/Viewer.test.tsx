@@ -12,7 +12,7 @@ const fail = (kind: string, message: string) => ({ schema: 1, error: { kind, mes
 
 function show(reply: unknown, path = "plan/a.md") {
   vi.mocked(invoke).mockResolvedValue(reply);
-  return render(<Viewer root="/w" path={path} focused={false} onFill={() => {}} />);
+  return render(<Viewer root="/w" selected={{ kind: "file", path }} focused={false} onFill={() => {}} />);
 }
 
 describe("Viewer", () => {
@@ -60,7 +60,7 @@ describe("Viewer", () => {
     await screen.findByText("first");
     let resolve: (v: unknown) => void = () => {};
     vi.mocked(invoke).mockReturnValue(new Promise((r) => (resolve = r)));
-    rerender(<Viewer root="/w" path="b.md" focused={false} onFill={() => {}} />);
+    rerender(<Viewer root="/w" selected={{ kind: "file", path: "b.md" }} focused={false} onFill={() => {}} />);
     expect(screen.queryByText("first")).toBeNull();
     expect(screen.getByText("Reading…")).toBeTruthy();
     resolve(ok("second"));
@@ -70,11 +70,11 @@ describe("Viewer", () => {
     vi.mocked(invoke).mockResolvedValue(ok("# A"));
     const onClose = vi.fn();
     const { rerender } = render(
-      <Viewer root="/w" path="a.md" focused={false} onFill={() => {}} onClose={onClose} />,
+      <Viewer root="/w" selected={{ kind: "file", path: "a.md" }} focused={false} onFill={() => {}} onClose={onClose} />,
     );
     fireEvent.click(await screen.findByRole("button", { name: "Close file" }));
     expect(onClose).toHaveBeenCalledOnce();
-    rerender(<Viewer root="/w" path={null} focused={false} onFill={() => {}} onClose={onClose} />);
+    rerender(<Viewer root="/w" selected={null} focused={false} onFill={() => {}} onClose={onClose} />);
     expect(screen.queryByRole("button", { name: "Close file" })).toBeNull();
   });
 });
