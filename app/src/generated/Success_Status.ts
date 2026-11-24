@@ -26,6 +26,10 @@ export interface Status {
    * No change is recorded at all.
    */
   noChanges: boolean;
+  /**
+   * The plan machine's phase names, in order.
+   */
+  planPhases: string[];
   plans: Change[];
   vcs: string;
   [k: string]: unknown;

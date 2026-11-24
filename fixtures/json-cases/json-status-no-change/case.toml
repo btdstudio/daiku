@@ -12,7 +12,17 @@ stdout = '''
     "noChanges": true,
     "plans": [],
     "builds": [],
-    "closedBuilds": []
+    "closedBuilds": [],
+    "planPhases": [
+      "intake",
+      "research",
+      "explore",
+      "synthesis",
+      "spec",
+      "architecture",
+      "breakdown",
+      "publish"
+    ]
   },
   "warnings": []
 }

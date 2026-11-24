@@ -86,6 +86,8 @@ pub struct Status {
     pub builds: Vec<RepoBuilds>,
     /// The names of recorded build changes that are closed, sorted.
     pub closed_builds: Vec<String>,
+    /// The plan machine's phase names, in order.
+    pub plan_phases: Vec<String>,
 }
 
 /// `status <plan>`: a plan's progress and its builds.
@@ -408,6 +410,10 @@ impl crate::Workspace {
                 plans,
                 builds,
                 closed_builds,
+                plan_phases: crate::state::machine::PLAN
+                    .names()
+                    .map(String::from)
+                    .collect(),
             },
             warnings,
         })
