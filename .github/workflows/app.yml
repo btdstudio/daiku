@@ -42,6 +42,7 @@ jobs:
         run: |
           npm ci
           npm run gen:types
+          git add -N src/generated
           git diff --exit-code -- src/generated
           npx tsc -b
           npm run lint
