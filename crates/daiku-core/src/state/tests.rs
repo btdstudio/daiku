@@ -1013,3 +1013,44 @@ fn paths_from_the_dot_root_have_no_prefix() {
         "{err}"
     );
 }
+
+#[test]
+fn find_resolves_without_recording() {
+    let t = Temp::new();
+    let (env, _) = scripted(&t);
+    local(&t);
+    let s = Store::at(t.path(), &env).unwrap();
+    let plan = SeedOptions {
+        sources: vec!["plan/00_intake/1.md".into()],
+        ..opts()
+    };
+    s.seed("1-x", PLAN_LOOP, plan).unwrap();
+    let build = SeedOptions {
+        repos: vec!["app".into()],
+        ..opts()
+    };
+    s.seed("S-0001", BUILD_LOOP, build).unwrap();
+
+    let c = s.find("1-x").unwrap();
+    assert_eq!((c.name.as_str(), c.loop_.as_str()), ("1-x", PLAN_LOOP));
+    assert_eq!(c.sources, ["plan/00_intake/1.md"]);
+    let b = s.find("S-0001").unwrap();
+    assert_eq!(
+        (b.loop_.as_str(), b.repos.as_slice()),
+        (BUILD_LOOP, ["app".to_string()].as_slice())
+    );
+
+    // A plan folder that isn't recorded resolves, and find records nothing.
+    std::fs::create_dir_all(t.p("plan/specs/5-found")).unwrap();
+    let before = t.read("STATE.json");
+    let f = s.find("5-found").unwrap();
+    assert_eq!(f.loop_, PLAN_LOOP);
+    assert_eq!(t.read("STATE.json"), before);
+
+    for name in ["nope", "", "2-nofolder"] {
+        assert_eq!(
+            s.find(name).unwrap_err().to_string(),
+            format!("daiku: unknown change \"{name}\"")
+        );
+    }
+}

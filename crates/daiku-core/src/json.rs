@@ -114,6 +114,8 @@ pub fn error_kind(err: &Error) -> &'static str {
     match err {
         Error::WriteOutside { .. } => "WriteOutside",
         Error::WriteThroughSymlink { .. } => "WriteThroughSymlink",
+        Error::ReadOutside { .. } => "ReadOutside",
+        Error::ReadThroughSymlink { .. } => "ReadThroughSymlink",
         Error::SettingsParse { .. } => "SettingsParse",
         Error::SettingsNotObject { .. } => "SettingsNotObject",
         Error::InvalidGates { .. } => "InvalidGates",
