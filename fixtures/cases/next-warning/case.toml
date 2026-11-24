@@ -1,0 +1,12 @@
+args = ["next"]
+workspace = "next-mixed"
+
+[expect]
+exit = 0
+stdout = '''
+3-billing: start research
+2-payments: intake waiting on you
+N-0001: start its build
+S-0003: start its build
+'''
+stderr = "warning: build/tickets/N-0099.md: frontmatter: line 3: unterminated list\n"

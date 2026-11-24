@@ -1,0 +1,14 @@
+args = ["next", "--json"]
+workspace = "init"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "items": []
+  },
+  "warnings": []
+}
+'''

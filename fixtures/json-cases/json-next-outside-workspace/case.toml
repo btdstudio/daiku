@@ -1,0 +1,13 @@
+args = ["next", "--json"]
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "items": []
+  },
+  "warnings": []
+}
+'''

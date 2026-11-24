@@ -4,10 +4,10 @@
 
 use std::io::Write;
 
-use daiku_core::Workspace;
 use daiku_core::gofmt::quote;
 use daiku_core::plan::{adr, source};
 use daiku_core::room::{IdeaPromoteOptions, IdeaVerb, SourceNewOptions};
+use daiku_core::{NextItem, Workspace};
 
 use crate::display::field;
 use crate::{VERSION, finish, print_created_change, report, usage, workspace};
@@ -467,6 +467,36 @@ pub fn artifacts(args: &[String], stdout: &mut impl Write, stderr: &mut impl Wri
     finish(workspace().artifacts(change), stderr, |list| {
         for a in &list.artifacts {
             let _ = writeln!(stdout, "{}  {}", field(&a.phase), field(&a.path));
+        }
+    })
+}
+
+/// `daiku next`: one line per thing waiting on the person, or `nothing is waiting on
+/// you`. Each string is shown with ADR-0008's escapes.
+pub fn next(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
+    if !args.is_empty() {
+        let _ = writeln!(stderr, "{}", usage::usage_line(&["next"]));
+        return 1;
+    }
+    finish(workspace().next(), stderr, |list| {
+        if list.items.is_empty() {
+            let _ = writeln!(stdout, "nothing is waiting on you");
+        }
+        for item in &list.items {
+            match item {
+                NextItem::Approve { change, phase, .. } => {
+                    let _ = writeln!(stdout, "{}: {} waiting on you", field(change), field(phase));
+                }
+                NextItem::Start { change, phase, .. } => {
+                    let _ = writeln!(stdout, "{}: start {}", field(change), field(phase));
+                }
+                NextItem::Build { ticket, .. } => {
+                    let _ = writeln!(stdout, "{}: start its build", field(ticket));
+                }
+                _ => {
+                    let _ = writeln!(stdout, "{}: needs you", field("(unknown)"));
+                }
+            }
         }
     })
 }
