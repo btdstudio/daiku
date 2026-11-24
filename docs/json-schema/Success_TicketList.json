@@ -1,0 +1,174 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Success_for_TicketList",
+  "description": "A successful read: `data` is the serialised core value the command reads.",
+  "type": "object",
+  "required": [
+    "data",
+    "schema",
+    "warnings"
+  ],
+  "properties": {
+    "data": {
+      "$ref": "#/definitions/TicketList"
+    },
+    "schema": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "warnings": {
+      "description": "The operation's warnings, in order: what the text form prints to stderr as `warning: <message>`, without the prefix. Always present; empty when there are none.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "definitions": {
+    "Problem": {
+      "description": "One thing wrong with a ticket.",
+      "type": "object",
+      "required": [
+        "id",
+        "message",
+        "reference"
+      ],
+      "properties": {
+        "id": {
+          "description": "The ticket, or its path if the id isn't usable.",
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "reference": {
+          "description": "For a missing reference, the id it names.",
+          "type": "string"
+        }
+      }
+    },
+    "Text": {
+      "type": "string"
+    },
+    "TicketList": {
+      "description": "`tickets list`: every ticket, sorted by id then path, and the files that couldn't be read.",
+      "type": "object",
+      "required": [
+        "tickets",
+        "unreadable"
+      ],
+      "properties": {
+        "tickets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TicketView"
+          }
+        },
+        "unreadable": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Problem"
+          }
+        }
+      }
+    },
+    "TicketView": {
+      "description": "One ticket as a client shows it: its fields, where it came from, and its body.",
+      "type": "object",
+      "required": [
+        "body",
+        "change",
+        "changeClosed",
+        "dependsOn",
+        "drifted",
+        "external",
+        "frozen",
+        "id",
+        "inbox",
+        "labels",
+        "parent",
+        "path",
+        "repo",
+        "requirements",
+        "status",
+        "title",
+        "type"
+      ],
+      "properties": {
+        "body": {
+          "description": "The file's body, as its bytes (ADR-0004, ADR-0008).",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Text"
+            }
+          ]
+        },
+        "change": {
+          "description": "The plan folder the ticket was loaded from; empty for an inbox ticket.",
+          "type": "string"
+        },
+        "changeClosed": {
+          "description": "The plan's status is `closed`.",
+          "type": "boolean"
+        },
+        "dependsOn": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "drifted": {
+          "type": "boolean"
+        },
+        "external": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "frozen": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "inbox": {
+          "description": "Loaded from `build/tickets/`.",
+          "type": "boolean"
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "parent": {
+          "type": "string"
+        },
+        "path": {
+          "description": "Relative to the workspace, slash-separated.",
+          "type": "string"
+        },
+        "repo": {
+          "type": "string"
+        },
+        "requirements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

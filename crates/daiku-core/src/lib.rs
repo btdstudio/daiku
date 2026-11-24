@@ -39,6 +39,7 @@ pub use artifacts::{Artifact, ArtifactList};
 pub use env::{Clock, Cmd, Dirs, Env, Event, Events, Output, Process};
 pub use error::Error;
 pub use outcome::{Outcome, Warning};
+pub use tickets::{TicketList, TicketView};
 pub use workspace::Workspace;
 
 /// The crate's version, as Cargo built it.
