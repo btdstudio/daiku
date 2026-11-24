@@ -27,6 +27,31 @@ pub fn internal(message: &str) -> Value {
     }))
 }
 
+/// A `Failure` of kind `TooLarge`: a file over the viewer's cap. `bytes` is the
+/// file's size; the message names it in MiB to one decimal.
+pub fn too_large(bytes: usize) -> Value {
+    let tenths = (bytes as u128 * 10 + 524_288) / 1_048_576;
+    escape(serde_json::json!({
+        "schema": 1,
+        "error": {
+            "kind": "TooLarge",
+            "message": format!("file too large to show ({}.{} MiB)", tenths / 10, tenths % 10),
+        },
+    }))
+}
+
+/// A `Failure` of kind `NotOpen`: a command asked for a root the person hasn't
+/// opened (S-0020 security finding 1).
+pub fn not_open(root: &str) -> Value {
+    escape(serde_json::json!({
+        "schema": 1,
+        "error": {
+            "kind": "NotOpen",
+            "message": format!("daiku-app: won't read {root}: it isn't an open workspace"),
+        },
+    }))
+}
+
 pub(crate) fn shown(s: &str) -> String {
     // `display` only ever writes valid UTF-8 for valid UTF-8 input; the lossy
     // conversion can't fail and never returns the raw string.
@@ -90,6 +115,15 @@ mod tests {
         assert!(v["error"]["kind"].is_string());
         let msg = v["error"]["message"].as_str().unwrap();
         assert!(msg.contains("\\x1b[31m"), "{msg}");
+        assert!(!msg.contains('\u{1b}'));
+    }
+
+    #[test]
+    fn not_open_names_the_root_escaped() {
+        let v = not_open("/tmp/a\u{1b}b");
+        assert_eq!(v["error"]["kind"], "NotOpen");
+        let msg = v["error"]["message"].as_str().unwrap();
+        assert!(msg.contains("/tmp/a\\x1bb"), "{msg}");
         assert!(!msg.contains('\u{1b}'));
     }
 }
