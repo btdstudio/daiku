@@ -112,7 +112,17 @@ stdout = '''
         ]
       }
     ],
-    "closedBuilds": []
+    "closedBuilds": [],
+    "planPhases": [
+      "intake",
+      "research",
+      "explore",
+      "synthesis",
+      "spec",
+      "architecture",
+      "breakdown",
+      "publish"
+    ]
   },
   "warnings": []
 }

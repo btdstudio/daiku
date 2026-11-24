@@ -269,3 +269,23 @@ fn status_names_closed_builds() {
     assert!(open_builds(&st).is_empty());
     assert!(st.plans.is_empty());
 }
+
+/// `Status.plan_phases` is the plan machine's names, in order.
+#[test]
+fn status_names_plan_phases() {
+    let (_t, ws) = workspace("init");
+    let st = ws.status().unwrap().value;
+    assert_eq!(
+        st.plan_phases,
+        [
+            "intake",
+            "research",
+            "explore",
+            "synthesis",
+            "spec",
+            "architecture",
+            "breakdown",
+            "publish"
+        ]
+    );
+}

@@ -184,6 +184,7 @@
         "builds",
         "closedBuilds",
         "noChanges",
+        "planPhases",
         "plans",
         "vcs"
       ],
@@ -214,6 +215,13 @@
         "noChanges": {
           "description": "No change is recorded at all.",
           "type": "boolean"
+        },
+        "planPhases": {
+          "description": "The plan machine's phase names, in order.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "plans": {
           "type": "array",
