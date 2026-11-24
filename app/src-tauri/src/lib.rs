@@ -45,6 +45,7 @@ pub fn run() {
     let builder = builder.invoke_handler(tauri::generate_handler![
         commands::status,
         commands::tickets_list,
+        commands::next,
         commands::artifacts,
         commands::read_text,
         commands::idea_list,
@@ -59,6 +60,7 @@ pub fn run() {
     let builder = builder.invoke_handler(tauri::generate_handler![
         commands::status,
         commands::tickets_list,
+        commands::next,
         commands::artifacts,
         commands::read_text,
         commands::idea_list,
