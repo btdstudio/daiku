@@ -13,6 +13,7 @@ use serde::Serialize;
 
 use crate::outcome::{Outcome, Warning};
 use crate::plan::{SPECS_DIR, model, problems::problems as plan_problems, spec::Severity};
+use crate::state::machine::CLOSED;
 use crate::state::store::{Store, at, shown};
 use crate::state::{BUILD_LOOP, overview};
 use crate::text::Text;
@@ -155,6 +156,18 @@ pub struct TicketView {
 pub struct TicketList {
     pub tickets: Vec<TicketView>,
     pub unreadable: Vec<Problem>,
+}
+
+/// A ticket as `gather_tickets` found it, with where it came from.
+#[derive(Debug, Clone)]
+pub(crate) struct Gathered {
+    pub ticket: Ticket,
+    /// The plan folder the ticket was loaded from; empty for an inbox ticket.
+    pub change: String,
+    /// The plan's status is `closed`.
+    pub change_closed: bool,
+    /// Loaded from `build/tickets/`.
+    pub inbox: bool,
 }
 
 /// Go's `checkGate`: a gate not at the wanted status, through the gates policy.
@@ -550,23 +563,34 @@ impl crate::Workspace {
         }))
     }
 
-    /// `daiku tickets list`: every ticket of every plan change and the inbox with
-    /// its fields, sorted by id then path. It writes nothing and doesn't require a
-    /// ticket to pass `tickets check`; files that can't be parsed come back as
-    /// `unreadable`, and an IO error fails the call.
-    pub fn tickets_list(&self) -> Result<Outcome<TicketList>, Error> {
-        let store = self.store();
+    /// Every ticket of every plan change and the inbox, with where each came from,
+    /// and the files that couldn't be parsed (their ids relative to the root). Shared
+    /// by `tickets_list` and `next`.
+    pub(crate) fn gather_tickets(
+        &self,
+        store: &Store,
+    ) -> Result<(Vec<Gathered>, Vec<Problem>), Error> {
         let root = self.root();
-        let (mut tickets, mut unreadable) = (Vec::new(), Vec::new());
+        let (mut gathered, mut unreadable) = (Vec::new(), Vec::new());
         for c in store.plan_changes()? {
             let rel = ticket_dir_rel(&c.name);
             let (ts, bad) = ticket::load_dir(&at(root, &rel), &rel)?;
-            let closed = c.status == "closed";
-            tickets.extend(ts.iter().map(|t| view(t, root, &c.name, closed, false)));
+            let change_closed = c.status == CLOSED;
+            gathered.extend(ts.into_iter().map(|ticket| Gathered {
+                ticket,
+                change: c.name.clone(),
+                change_closed,
+                inbox: false,
+            }));
             unreadable.extend(bad);
         }
         let (ts, bad) = inbox::list(root)?;
-        tickets.extend(ts.iter().map(|t| view(t, root, "", false, true)));
+        gathered.extend(ts.into_iter().map(|ticket| Gathered {
+            ticket,
+            change: String::new(),
+            change_closed: false,
+            inbox: true,
+        }));
         let prefix = gofmt::to_slash(&root.to_string_lossy());
         unreadable.extend(bad.into_iter().map(|mut p| {
             if prefix != "."
@@ -576,6 +600,21 @@ impl crate::Workspace {
             }
             p
         }));
+        Ok((gathered, unreadable))
+    }
+
+    /// `daiku tickets list`: every ticket of every plan change and the inbox with
+    /// its fields, sorted by id then path. It writes nothing and doesn't require a
+    /// ticket to pass `tickets check`; files that can't be parsed come back as
+    /// `unreadable`, and an IO error fails the call.
+    pub fn tickets_list(&self) -> Result<Outcome<TicketList>, Error> {
+        let store = self.store();
+        let root = self.root();
+        let (gathered, unreadable) = self.gather_tickets(&store)?;
+        let mut tickets: Vec<TicketView> = gathered
+            .iter()
+            .map(|g| view(&g.ticket, root, &g.change, g.change_closed, g.inbox))
+            .collect();
         tickets.sort_by(|a, b| {
             (a.id.as_bytes(), a.path.as_bytes()).cmp(&(b.id.as_bytes(), b.path.as_bytes()))
         });
