@@ -84,6 +84,10 @@ pub fn run(command: &str, args: &[String], stdout: &mut impl Write) -> Option<u8
                 Err(e) => err(out, &e),
             },
             Some("status") => read(out, workspace().tickets_status()),
+            Some("list") => match rest[1..] {
+                [] => read(out, workspace().tickets_list()),
+                _ => usage_err(out, &usage::usage_line(&["tickets", "list"])),
+            },
             Some("order") => read(out, workspace().tickets_order()),
             None => usage_err(out, &usage::usage_text(&["tickets"])),
             _ => return None,

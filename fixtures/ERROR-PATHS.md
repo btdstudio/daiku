@@ -257,6 +257,17 @@ The classes:
 | corrupt | `tickets-status-corrupt-front-matter` |
 | other | `tickets-status`, `tickets-status-drifted`, `tickets-status-help-flag`, `tickets-status-mixed` |
 
+## daiku tickets list
+
+| Class | Cases |
+| --- | --- |
+| args | `tickets-list-extra-argument`, `tickets-list-unknown-flag` |
+| context | `tickets-list-outside-workspace` |
+| order | n/a: no phase order: works in any phase |
+| unsafe | n/a: writes nothing |
+| corrupt | `tickets-list` (a broken file goes under unreadable) |
+| other | `tickets-list-change-mismatch`, `tickets-list-control-chars`, `tickets-list-empty`, `tickets-list-help-flag`, `tickets-list-id-mismatch`, `tickets-list-planned-in-inbox` |
+
 ## daiku tickets order
 
 | Class | Cases |

@@ -1,0 +1,37 @@
+args = ["tickets", "list", "--json"]
+workspace = "plan-closed-change"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "tickets": [
+      {
+        "id": "S-0001",
+        "type": "story",
+        "title": "Sign ‮ in",
+        "repo": "a‮b",
+        "change": "2-billing",
+        "changeClosed": false,
+        "inbox": false,
+        "path": "plan/specs/2-billing/tickets/S-0001.md",
+        "status": "draft",
+        "dependsOn": [],
+        "parent": "",
+        "requirements": [
+          "R1"
+        ],
+        "labels": [],
+        "external": {},
+        "drifted": false,
+        "frozen": false,
+        "body": "\n## Notes\nA note.\n"
+      }
+    ],
+    "unreadable": []
+  },
+  "warnings": []
+}
+'''

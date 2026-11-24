@@ -1,0 +1,9 @@
+args = ["tickets", "list"]
+workspace = "plan-closed-change"
+
+[expect]
+exit = 0
+stdout = '''
+  draft  api  No id
+S-0003  draft  api  Id differs from file
+'''

@@ -9,6 +9,7 @@ usage:
   daiku tickets pull <file>                record a ticket fetched from a PM tool as X-<pm-id> in build/tickets/
   daiku tickets check                      validate every ticket
   daiku tickets status                     list tickets by draft, ready, published and drifted
+  daiku tickets list                       list every ticket with its fields, from every plan and the inbox
   daiku tickets order                      list tickets in publish order
   daiku tickets ready <id>... | --all [--force]
                                            ready draft tickets once breakdown is approved

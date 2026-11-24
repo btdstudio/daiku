@@ -178,6 +178,13 @@ pub const COMMANDS: &[Command] = &[
         raw: "",
     },
     Command {
+        path: &["tickets", "list"],
+        synopsis: "daiku tickets list",
+        summary: "list every ticket with its fields, from every plan and the inbox",
+        notes: "",
+        raw: "",
+    },
+    Command {
         path: &["tickets", "order"],
         synopsis: "daiku tickets order",
         summary: "list tickets in publish order",

@@ -1,0 +1,6 @@
+args = ["tickets", "list", "x"]
+workspace = "plan-published"
+
+[expect]
+exit = 1
+stderr = "usage: daiku tickets list\n"

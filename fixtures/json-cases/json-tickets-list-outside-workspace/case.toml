@@ -1,0 +1,14 @@
+args = ["tickets", "list", "--json"]
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "tickets": [],
+    "unreadable": []
+  },
+  "warnings": []
+}
+'''

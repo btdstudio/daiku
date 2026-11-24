@@ -38,6 +38,7 @@ const FORMS: &[(&str, Option<&str>, Option<&str>)] = &[
     ("idea show", None, None),
     ("tickets check", None, None),
     ("tickets status", None, None),
+    ("tickets list", None, None),
     ("tickets order", None, None),
     ("repo list", None, None),
     ("references check", None, None),
@@ -53,6 +54,7 @@ const FORMS: &[(&str, Option<&str>, Option<&str>)] = &[
 /// files each one takes.
 const NO_TWIN: &[(&str, &str)] = &[
     ("json-artifacts-usage", "artifacts-no-args"),
+    ("json-tickets-list-usage", "tickets-list-extra-argument"),
     ("json-tickets-check-corrupt-state", "status-corrupt-state"),
     ("json-tickets-status-corrupt-state", "status-corrupt-state"),
 ];
