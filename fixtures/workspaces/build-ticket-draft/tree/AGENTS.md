@@ -32,6 +32,7 @@ used yet has no sections here.
 | `daiku update` | refresh managed files to the installed version |
 | `daiku status [<plan-change>]` | show the active change and every open change by room and repo, or a plan's tickets and their builds |
 | `daiku artifacts <change>` | list a change's files by phase, for a plan or a build |
+| `daiku next` | list what is waiting on you: gates to approve, phases to start, tickets ready to build |
 | `daiku settings` | show/merge settings |
 | `daiku switch [--all] [<change>]` | list changes (`--all` includes closed ones), or switch the active change |
 | `daiku change close <change> --reason <r>` | close a change |
