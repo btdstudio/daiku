@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { queryClient } from "@/data/queryClient";
 import { Frame } from "@/frame/Frame";
 import { openRoot } from "@/frame/openWorkspace";
 import { useViewState } from "@/frame/viewState";
@@ -37,5 +39,9 @@ function Window({ measureRoot }: { measureRoot: string | null }) {
   }, [measureRoot, shown]);
 
   if (!ready) return null;
-  return <Frame state={state} dispatch={dispatch} />;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Frame state={state} dispatch={dispatch} />
+    </QueryClientProvider>
+  );
 }

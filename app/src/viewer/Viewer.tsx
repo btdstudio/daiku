@@ -2,18 +2,20 @@ import { PaneHeader } from "@/frame/PaneHeader";
 import { DevPicker } from "./DevPicker";
 import { FrontMatter } from "./FrontMatter";
 import { Markdown } from "./Markdown";
+import type { Selected } from "./selected";
 import { splitFrontMatter } from "./splitFrontMatter";
+import { TicketPanel } from "./TicketPanel";
 import { useReadText } from "./useReadText";
 
 interface Props {
   root: string | null;
-  /** A workspace-relative path, or null when no file is open. */
-  path: string | null;
+  /** The open file or ticket, or null when nothing is open. */
+  selected: Selected | null;
   focused: boolean;
   onFill: () => void;
   /** Dev only: choose a file from the picker. */
   onPick?: (path: string) => void;
-  /** Close the open file, back to the list (and, in dev, the picker). */
+  /** Close what's open, back to the list (and, in dev, the picker). */
   onClose?: () => void;
 }
 
@@ -23,9 +25,29 @@ function tooLarge(message: string): string {
   return n ? `File too large to show (${n} MiB)` : "File too large to show";
 }
 
-/** Shows one workspace file, read-only: front matter as a mono block, then the
- *  markdown body. */
-export function Viewer({ root, path, focused, onFill, onPick, onClose }: Props) {
+/** Shows the selection, read-only: a ticket in `TicketPanel`, or a workspace file with
+ *  its front matter as a mono block, then the markdown body. */
+export function Viewer({ root, selected, focused, onFill, onPick, onClose }: Props) {
+  if (selected?.kind === "ticket") {
+    return (
+      <TicketPanel
+        root={root}
+        ticketKey={selected.key}
+        focused={focused}
+        onFill={onFill}
+        onClose={onClose}
+      />
+    );
+  }
+  const path = selected?.kind === "file" ? selected.path : null;
+  return <FileViewer {...{ root, path, focused, onFill, onPick, onClose }} />;
+}
+
+interface FileProps extends Omit<Props, "selected"> {
+  path: string | null;
+}
+
+function FileViewer({ root, path, focused, onFill, onPick, onClose }: FileProps) {
   const read = useReadText(root, path);
   let body;
   if (read.state === "idle") {
