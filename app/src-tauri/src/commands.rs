@@ -3,6 +3,7 @@
 
 use std::path::PathBuf;
 
+use daiku_core::artifacts::ArtifactList;
 use daiku_core::{Error, Outcome, Workspace};
 use serde::Serialize;
 use serde_json::Value;
@@ -85,6 +86,68 @@ pub async fn read_text(app: AppHandle, root: String, rel: String) -> Value {
     match job {
         Ok(v) => v,
         Err(e) => envelope::internal(&e.to_string()),
+    }
+}
+
+/// The ideas of the workspace at `root`, with their bodies (core's `idea_list`).
+#[tauri::command]
+pub async fn idea_list(app: AppHandle, root: String) -> Value {
+    if let Some(no) = refuse(&app, &root) {
+        return no;
+    }
+    with_workspace(root, |ws| ws.idea_list()).await
+}
+
+/// The ADRs of the workspace at `root`, with their raw text (core's `adr_list`).
+#[tauri::command]
+pub async fn adr_list(app: AppHandle, root: String) -> Value {
+    if let Some(no) = refuse(&app, &root) {
+        return no;
+    }
+    with_workspace(root, |ws| ws.adr_list()).await
+}
+
+/// The text of a file that `artifacts` lists for `change`, named by its path as the
+/// envelope shows it (escaped). The path is matched against a fresh listing, never
+/// read as given: no match is `NotAnArtifact`, several are `AmbiguousArtifact`, and
+/// the one match is read by its raw path, under [`READ_CAP`].
+#[tauri::command]
+pub async fn read_artifact(app: AppHandle, root: String, change: String, path: String) -> Value {
+    if let Some(no) = refuse(&app, &root) {
+        return no;
+    }
+    let job = tauri::async_runtime::spawn_blocking(move || {
+        let ws = Workspace::open(PathBuf::from(root), app_env());
+        read_listed(&ws, &change, &path)
+    })
+    .await;
+    match job {
+        Ok(v) => v,
+        Err(e) => envelope::internal(&e.to_string()),
+    }
+}
+
+/// The raw path of the one artifact of `change` whose escaped path is `path`, or the
+/// Failure to return instead.
+fn find_artifact(list: &ArtifactList, change: &str, path: &str) -> Result<String, Value> {
+    let mut matches = list
+        .artifacts
+        .iter()
+        .filter(|a| envelope::shown(&a.path) == path);
+    match (matches.next(), matches.next()) {
+        (Some(a), None) => Ok(a.path.clone()),
+        (None, _) => Err(envelope::not_an_artifact(path, change)),
+        (Some(_), Some(_)) => Err(envelope::ambiguous_artifact(path, change)),
+    }
+}
+
+fn read_listed(ws: &Workspace, change: &str, path: &str) -> Value {
+    match ws.artifacts(change) {
+        Err(e) => envelope::reply::<()>(Err(e)),
+        Ok(out) => match find_artifact(&out.value, change, path) {
+            Ok(raw) => read_capped(ws, &raw),
+            Err(failure) => failure,
+        },
     }
 }
 
@@ -264,6 +327,113 @@ mod tests {
         assert_eq!(tickets.len(), 1);
         assert_eq!(tickets[0]["title"], "Fix typo");
         assert_eq!(tickets[0]["inbox"], true);
+    }
+
+    /// A plan with an `intake` and a `research` folder, ready for files.
+    fn plan(ws: &Workspace) -> String {
+        let made = ws.change_new(&ChangeNewOptions {
+            title: "Auth".into(),
+            repos: vec![],
+            rev: String::new(),
+            body: "goal".into(),
+            idea: 0,
+            version: "dev".into(),
+        });
+        made.result.unwrap().value.change.name
+    }
+
+    #[test]
+    fn read_artifact_opens_an_esc_named_file_by_its_escaped_path() {
+        let (dir, ws) = workspace();
+        let change = plan(&ws);
+        put(
+            &dir,
+            &format!("plan/01_research/{change}/a\u{1b}b.md"),
+            b"x\x1b[31m\nbody\n",
+        );
+        let v = read_listed(
+            &ws,
+            &change,
+            &format!("plan/01_research/{change}/a\\x1bb.md"),
+        );
+        assert_eq!(v["data"], "x\\x1b[31m\nbody\n", "{v}");
+        // The intake lists too, by its plain path.
+        let list = ws.artifacts(&change).unwrap().value;
+        let intake = list
+            .artifacts
+            .iter()
+            .find(|a| a.phase == "intake")
+            .unwrap()
+            .path
+            .clone();
+        let body = read_listed(&ws, &change, &intake);
+        assert!(body["data"].as_str().unwrap().ends_with("goal\n"), "{body}");
+    }
+
+    #[test]
+    fn read_artifact_refuses_an_unlisted_path() {
+        let (dir, ws) = workspace();
+        let change = plan(&ws);
+        put(&dir, "secret.md", b"no");
+        for path in [
+            "secret.md",
+            "../secret.md",
+            "STATE.json",
+            "",
+            "plan/00_intake",
+        ] {
+            let v = read_listed(&ws, &change, path);
+            assert_eq!(v["error"]["kind"], "NotAnArtifact", "{path}: {v}");
+            assert!(v.get("data").is_none());
+        }
+    }
+
+    #[test]
+    fn read_artifact_refuses_two_files_with_one_escaped_path() {
+        let (dir, ws) = workspace();
+        let change = plan(&ws);
+        // A literal backslash-x1b and a real ESC both show as `a\x1bb.md`.
+        put(
+            &dir,
+            &format!("plan/01_research/{change}/a\\x1bb.md"),
+            b"one",
+        );
+        put(
+            &dir,
+            &format!("plan/01_research/{change}/a\u{1b}b.md"),
+            b"two",
+        );
+        let v = read_listed(
+            &ws,
+            &change,
+            &format!("plan/01_research/{change}/a\\x1bb.md"),
+        );
+        assert_eq!(v["error"]["kind"], "AmbiguousArtifact", "{v}");
+        assert!(v.get("data").is_none());
+    }
+
+    #[test]
+    fn read_artifact_keeps_the_cap_and_unknown_changes() {
+        let (dir, ws) = workspace();
+        let change = plan(&ws);
+        put(
+            &dir,
+            &format!("plan/01_research/{change}/big.md"),
+            &vec![b'a'; READ_CAP + 1],
+        );
+        let v = read_listed(&ws, &change, &format!("plan/01_research/{change}/big.md"));
+        assert_eq!(v["error"]["kind"], "TooLarge", "{v}");
+        let v = read_listed(&ws, "nope", "x");
+        assert_eq!(v["error"]["kind"], "UnknownChange");
+    }
+
+    #[test]
+    fn idea_list_and_adr_list_return_their_envelopes() {
+        let (_dir, ws) = workspace();
+        let v = envelope::reply(ws.idea_list());
+        assert_eq!(v["data"].as_array().map(Vec::len), Some(0), "{v}");
+        let v = envelope::reply(ws.adr_list());
+        assert_eq!(v["data"].as_array().map(Vec::len), Some(0), "{v}");
     }
 
     /// `refuse` answers an unopened root with this Failure before core runs.
