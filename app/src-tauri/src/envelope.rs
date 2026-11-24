@@ -40,6 +40,30 @@ pub fn too_large(bytes: usize) -> Value {
     }))
 }
 
+/// A `Failure` of kind `NotAnArtifact`: `read_artifact` was asked for a path that
+/// `artifacts` doesn't list for the change.
+pub fn not_an_artifact(path: &str, change: &str) -> Value {
+    escape(serde_json::json!({
+        "schema": 1,
+        "error": {
+            "kind": "NotAnArtifact",
+            "message": format!("{path} isn't a file of {change}"),
+        },
+    }))
+}
+
+/// A `Failure` of kind `AmbiguousArtifact`: two or more listed files escape to the
+/// same path, so the path can't say which one to read.
+pub fn ambiguous_artifact(path: &str, change: &str) -> Value {
+    escape(serde_json::json!({
+        "schema": 1,
+        "error": {
+            "kind": "AmbiguousArtifact",
+            "message": format!("{path} names more than one file of {change}"),
+        },
+    }))
+}
+
 /// A `Failure` of kind `NotOpen`: a command asked for a root the person hasn't
 /// opened (S-0020 security finding 1).
 pub fn not_open(root: &str) -> Value {
