@@ -1,6 +1,6 @@
 import { BookOpen, Lightbulb, List, Scale, type LucideIcon } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { COLUMN_LABEL, LIST_ORDER, type ListColumn } from "@/build/groups";
+import { COLUMN_LABEL, LIST_ORDER } from "@/build/groups";
 import { MARKS } from "@/build/marks";
 import type { Tab } from "./viewState";
 
@@ -16,15 +16,15 @@ const GROUPS: Record<Tab, { key: string; label: string; icon: LucideIcon }[]> = 
 
 interface Props {
   tab: Tab;
-  /** Each Build group's whole size; the Plan tab and a missing count show 0. */
-  counts?: Partial<Record<ListColumn, number>>;
+  /** Each group's whole size, keyed by group name; a missing count shows 0. */
+  counts?: Record<string, number>;
   /** The tab's list, shown in the overlay. */
   children: ReactNode;
 }
 
-/** The folded list (D9, D15): 52px, each group's icon with a count (Build's from its
- *  list, Plan's 0 until S-0022). Clicking opens the list as a 340px overlay over the viewer's right
- *  edge; Escape or a click outside closes it. Local state, not view state. */
+/** The folded list (D9, D15): 52px, each group's icon with a count (Build's and
+ *  Plan's from their lists). Clicking opens the list as a 340px overlay over the viewer's
+ *  right edge; Escape or a click outside closes it. Local state, not view state. */
 export function ListRail({ tab, counts, children }: Props) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -58,7 +58,7 @@ export function ListRail({ tab, counts, children }: Props) {
           <span key={key} title={label} className="flex flex-col items-center gap-0.5 text-ink-faint">
             <Icon className="size-4" />
             <span className="font-mono text-label">
-              {tab === "build" ? (counts?.[key as ListColumn] ?? 0) : 0}
+              {counts?.[key] ?? 0}
             </span>
           </span>
         ))}

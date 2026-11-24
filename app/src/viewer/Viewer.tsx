@@ -1,91 +1,40 @@
 import { PaneHeader } from "@/frame/PaneHeader";
-import { DevPicker } from "./DevPicker";
-import { FrontMatter } from "./FrontMatter";
-import { Markdown } from "./Markdown";
+import { AdrPanel } from "@/plan/AdrPanel";
+import { IdeaPanel } from "@/plan/IdeaPanel";
+import { PlanPanel } from "@/plan/PlanPanel";
 import type { Selected } from "./selected";
-import { splitFrontMatter } from "./splitFrontMatter";
 import { TicketPanel } from "./TicketPanel";
-import { useReadText } from "./useReadText";
 
 interface Props {
   root: string | null;
-  /** The open file or ticket, or null when nothing is open. */
+  /** The open ticket, plan, idea or ADR, or null when nothing is open. */
   selected: Selected | null;
   focused: boolean;
   onFill: () => void;
-  /** Dev only: choose a file from the picker. */
-  onPick?: (path: string) => void;
-  /** Close what's open, back to the list (and, in dev, the picker). */
+  /** Close what's open, back to the list. */
   onClose?: () => void;
 }
 
-/** "File too large to show (N MiB)" for the `TooLarge` Failure, from its message. */
-function tooLarge(message: string): string {
-  const n = /\(([\d.]+) MiB\)/.exec(message)?.[1];
-  return n ? `File too large to show (${n} MiB)` : "File too large to show";
-}
-
-/** Shows the selection, read-only: a ticket in `TicketPanel`, or a workspace file with
- *  its front matter as a mono block, then the markdown body. */
-export function Viewer({ root, selected, focused, onFill, onPick, onClose }: Props) {
-  if (selected?.kind === "ticket") {
-    return (
-      <TicketPanel
-        root={root}
-        ticketKey={selected.key}
-        focused={focused}
-        onFill={onFill}
-        onClose={onClose}
-      />
-    );
+/** Shows the selection, read-only, each kind in its own panel. */
+export function Viewer({ root, selected, focused, onFill, onClose }: Props) {
+  const common = { root, focused, onFill, onClose };
+  switch (selected?.kind) {
+    case "ticket":
+      return <TicketPanel {...common} ticketKey={selected.key} />;
+    case "plan":
+      return <PlanPanel {...common} name={selected.name} />;
+    case "idea":
+      return <IdeaPanel {...common} id={selected.id} />;
+    case "adr":
+      return <AdrPanel {...common} number={selected.number} />;
+    default:
+      return (
+        <section aria-label="Viewer" className="flex h-full min-w-0 flex-col bg-surface-window">
+          <PaneHeader title="Viewer" focused={focused} onFill={onFill} />
+          <div className="min-h-0 flex-1 overflow-auto">
+            <p className="p-4 text-list text-ink-faint">Open a file from the list</p>
+          </div>
+        </section>
+      );
   }
-  const path = selected?.kind === "file" ? selected.path : null;
-  return <FileViewer {...{ root, path, focused, onFill, onPick, onClose }} />;
-}
-
-interface FileProps extends Omit<Props, "selected"> {
-  path: string | null;
-}
-
-function FileViewer({ root, path, focused, onFill, onPick, onClose }: FileProps) {
-  const read = useReadText(root, path);
-  let body;
-  if (read.state === "idle") {
-    body = (
-      <>
-        <p className="p-4 text-list text-ink-faint">Open a file from the list</p>
-        {import.meta.env.DEV && root !== null && onPick && (
-          <DevPicker root={root} onPick={onPick} />
-        )}
-      </>
-    );
-  } else if (read.state === "loading") {
-    body = <p className="p-4 text-list text-ink-faint">Reading…</p>;
-  } else if (read.state === "failed") {
-    const { kind, message } = read.failure.error;
-    body = (
-      <p role="alert" className="p-4 text-list text-ink-muted">
-        {kind === "TooLarge" ? tooLarge(message) : message}
-      </p>
-    );
-  } else {
-    const { front, body: md } = splitFrontMatter(read.text);
-    body = (
-      <article className="p-4">
-        {front !== null && <FrontMatter text={front} />}
-        <Markdown source={md} />
-      </article>
-    );
-  }
-  return (
-    <section aria-label="Viewer" className="flex h-full min-w-0 flex-col bg-surface-window">
-      <PaneHeader
-        title={path ?? "Viewer"}
-        focused={focused}
-        onFill={onFill}
-        onClose={path !== null ? onClose : undefined}
-      />
-      <div className="min-h-0 flex-1 overflow-auto">{body}</div>
-    </section>
-  );
 }

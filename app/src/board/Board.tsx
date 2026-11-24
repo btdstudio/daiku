@@ -1,18 +1,20 @@
 import { PaneHeader } from "@/frame/PaneHeader";
 import type { Tab } from "@/frame/viewState";
+import type { Selected } from "@/viewer/selected";
 import { BuildBoard } from "./BuildBoard";
+import { PlanBoard } from "./PlanBoard";
 
 interface Props {
   tab: Tab;
   root: string | null;
-  /** A ticket card was chosen: its `TicketView.path`. */
-  onSelect: (path: string) => void;
+  /** A card was chosen: a ticket (by its `TicketView.path`) or a plan (by name). */
+  onSelect: (sel: Selected) => void;
   onRestore: () => void;
 }
 
 /** The board, shown only as a focus, so its button always restores the split. The
- *  Build tab shows the Build board; the Plan board arrives in S-0022. Choosing a card
- *  selects its ticket and leaves Board focus for the split, where the viewer is. */
+ *  tab picks the board. Choosing a card selects it and leaves Board focus for the
+ *  split, where the viewer is. */
 export function Board({ tab, root, onSelect, onRestore }: Props) {
   return (
     <section aria-label="Board" className="flex h-full min-w-0 flex-col bg-surface-window">
@@ -20,13 +22,19 @@ export function Board({ tab, root, onSelect, onRestore }: Props) {
       {tab === "build" ? (
         <BuildBoard
           root={root}
-          onSelect={(path) => {
-            onSelect(path);
+          onSelect={(key) => {
+            onSelect({ kind: "ticket", key });
             onRestore();
           }}
         />
       ) : (
-        <p className="p-4 text-list text-ink-faint">Arrives in S-0022.</p>
+        <PlanBoard
+          root={root}
+          onSelect={(name) => {
+            onSelect({ kind: "plan", name });
+            onRestore();
+          }}
+        />
       )}
     </section>
   );
