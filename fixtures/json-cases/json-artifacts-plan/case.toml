@@ -1,0 +1,87 @@
+args = ["artifacts", "1-auth-flow", "--json"]
+workspace = "plan-published"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "change": {
+      "name": "1-auth-flow",
+      "loop": "plan",
+      "phase": "publish",
+      "status": "complete",
+      "gates": {
+        "architecture": "approved",
+        "breakdown": "approved",
+        "explore": "skipped",
+        "intake": "approved",
+        "publish": "complete",
+        "research": "skipped",
+        "spec": "approved",
+        "synthesis": "skipped"
+      },
+      "reasons": {
+        "explore": "no repo in the intake",
+        "research": "known domain",
+        "synthesis": "fewer than two repos in scope"
+      },
+      "sources": [
+        "plan/00_intake/1.md"
+      ],
+      "repos": [],
+      "updatedAt": "{TIMESTAMP}"
+    },
+    "phases": [
+      "intake",
+      "research",
+      "explore",
+      "synthesis",
+      "spec",
+      "architecture",
+      "breakdown",
+      "publish"
+    ],
+    "artifacts": [
+      {
+        "phase": "intake",
+        "path": "plan/00_intake/1.md"
+      },
+      {
+        "phase": "research",
+        "path": "plan/01_research/1-auth-flow/oauth.md"
+      },
+      {
+        "phase": "research",
+        "path": "plan/01_research/1-auth-flow/sessions.md"
+      },
+      {
+        "phase": "explore",
+        "path": "plan/02_explore/1-auth-flow/api.md"
+      },
+      {
+        "phase": "synthesis",
+        "path": "plan/02_explore/1-auth-flow/synthesis.md"
+      },
+      {
+        "phase": "spec",
+        "path": "plan/specs/1-auth-flow/functional-spec.md"
+      },
+      {
+        "phase": "architecture",
+        "path": "plan/specs/1-auth-flow/architecture.md"
+      },
+      {
+        "phase": "breakdown",
+        "path": "plan/specs/1-auth-flow/tickets/E-0001.md"
+      },
+      {
+        "phase": "breakdown",
+        "path": "plan/specs/1-auth-flow/tickets/S-0002.md"
+      }
+    ]
+  },
+  "warnings": []
+}
+'''

@@ -1,0 +1,5 @@
+args = ["artifacts", "1-auth-flow"]
+
+[expect]
+exit = 1
+stderr = "daiku: unknown change \"1-auth-flow\"\n"

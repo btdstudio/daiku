@@ -1,0 +1,14 @@
+args = ["artifacts", "--json"]
+workspace = "plan-published"
+
+[expect]
+exit = 1
+stdout = '''
+{
+  "schema": 1,
+  "error": {
+    "kind": "Usage",
+    "message": "usage: daiku artifacts <change>"
+  }
+}
+'''

@@ -41,6 +41,10 @@ pub fn run(command: &str, args: &[String], stdout: &mut impl Write) -> Option<u8
             0,
         ),
         "settings" => read(out, workspace().settings()),
+        "artifacts" => match rest.as_slice() {
+            [change] if !change.starts_with('-') => read(out, workspace().artifacts(change)),
+            _ => usage_err(out, &usage::usage_line(&["artifacts"])),
+        },
         "status" => match rest.as_slice() {
             [] => read(out, workspace().status()),
             [plan] if !plan.starts_with('-') => read(out, workspace().status_plan(plan)),

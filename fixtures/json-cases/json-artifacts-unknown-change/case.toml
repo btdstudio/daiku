@@ -1,0 +1,14 @@
+args = ["artifacts", "9-nope", "--json"]
+workspace = "plan-published"
+
+[expect]
+exit = 1
+stdout = '''
+{
+  "schema": 1,
+  "error": {
+    "kind": "UnknownChange",
+    "message": "daiku: unknown change \"9-nope\""
+  }
+}
+'''

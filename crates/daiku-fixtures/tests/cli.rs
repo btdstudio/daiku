@@ -197,7 +197,7 @@ fn checked_in_cases_cover_every_usage_entry() {
     let out = fixtures(&["coverage"], &root);
     let s = text(&out.stdout);
     assert_eq!(out.status.code(), Some(0), "{s}");
-    assert_eq!(s, "45 of 45 covered\n");
+    assert_eq!(s, "46 of 46 covered\n");
 }
 
 // ---- T10: the self-test case suite ----

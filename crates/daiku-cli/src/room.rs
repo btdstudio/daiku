@@ -9,6 +9,7 @@ use daiku_core::gofmt::quote;
 use daiku_core::plan::{adr, source};
 use daiku_core::room::{IdeaPromoteOptions, IdeaVerb, SourceNewOptions};
 
+use crate::display::field;
 use crate::{VERSION, finish, print_created_change, report, usage, workspace};
 
 /// The workspace, once Go's handler has loaded its settings: `source` and `adr`
@@ -450,6 +451,24 @@ fn idea_promote(args: &[String], stdout: &mut impl Write, stderr: &mut impl Writ
         }
         _ => code,
     }
+}
+
+/// `daiku artifacts <change>`: one `phase  path` line per file, in list order, each
+/// string shown with ADR-0008's escapes.
+pub fn artifacts(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
+    let [change] = args else {
+        let _ = writeln!(stderr, "{}", usage::usage_line(&["artifacts"]));
+        return 1;
+    };
+    if change.starts_with('-') {
+        let _ = writeln!(stderr, "{}", usage::usage_line(&["artifacts"]));
+        return 1;
+    }
+    finish(workspace().artifacts(change), stderr, |list| {
+        for a in &list.artifacts {
+            let _ = writeln!(stdout, "{}  {}", field(&a.phase), field(&a.path));
+        }
+    })
 }
 
 /// Go's `runOverview`. Exit codes: 0 written or current; 1 an error, or `--check`

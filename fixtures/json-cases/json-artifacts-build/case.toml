@@ -1,0 +1,67 @@
+args = ["artifacts", "S-0002", "--json"]
+workspace = "build-implement"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "change": {
+      "name": "S-0002",
+      "loop": "build",
+      "phase": "implement",
+      "status": "in-progress",
+      "gates": {
+        "design": "approved",
+        "implement": "in-progress",
+        "requirements": "approved",
+        "tasks": "approved",
+        "ticket": "approved"
+      },
+      "reasons": {},
+      "sources": [
+        "plan/specs/1-auth-flow/tickets/S-0002.md"
+      ],
+      "repos": [
+        "api"
+      ],
+      "updatedAt": "{TIMESTAMP}"
+    },
+    "phases": [
+      "ticket",
+      "requirements",
+      "design",
+      "tasks",
+      "implement",
+      "test",
+      "review",
+      "security",
+      "ship"
+    ],
+    "artifacts": [
+      {
+        "phase": "ticket",
+        "path": "plan/specs/1-auth-flow/tickets/S-0002.md"
+      },
+      {
+        "phase": "requirements",
+        "path": "build/api/changes/S-0002/requirements.md"
+      },
+      {
+        "phase": "design",
+        "path": "build/api/changes/S-0002/design.md"
+      },
+      {
+        "phase": "tasks",
+        "path": "build/api/changes/S-0002/tasks.json"
+      },
+      {
+        "phase": "test",
+        "path": "build/api/changes/S-0002/test-results.md"
+      }
+    ]
+  },
+  "warnings": []
+}
+'''

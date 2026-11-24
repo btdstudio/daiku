@@ -1,0 +1,13 @@
+args = ["artifacts", "1-auth-flow"]
+workspace = "plan-published"
+
+[expect]
+exit = 0
+stdout = '''
+intake  plan/00_intake/1.md
+research  plan/01_research/1-auth-flow/a\u202eb.md
+spec  plan/specs/1-auth-flow/functional-spec.md
+architecture  plan/specs/1-auth-flow/architecture.md
+breakdown  plan/specs/1-auth-flow/tickets/E-0001.md
+breakdown  plan/specs/1-auth-flow/tickets/S-0002.md
+'''
