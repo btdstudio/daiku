@@ -1,0 +1,92 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "./theme/tokens.css";
+
+@theme inline {
+  --font-sans: var(--font-sans-family);
+  --font-mono: var(--font-mono-family);
+  --font-heading: var(--font-sans-family);
+
+  --color-surface-window: var(--surface-window);
+  --color-surface-chrome: var(--surface-chrome);
+  --color-surface-terminal: var(--surface-terminal);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-selected: var(--surface-selected);
+  --color-surface-next: var(--surface-next);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-attention: var(--attention);
+  --color-attention-ink: var(--attention-ink);
+  --color-on-attention: var(--on-attention);
+  --color-prompt: var(--prompt);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --text-title: var(--text-title);
+  --text-body: var(--text-body);
+  --text-list: var(--text-list);
+  --text-label: var(--text-label);
+
+  --radius-sm: var(--radius-1);
+  --radius-md: var(--radius-2);
+  --radius-lg: var(--radius-3);
+  --radius-xl: var(--radius-window);
+}
+
+/* shadcn's variables, set from our tokens. */
+:root {
+  --background: var(--surface-window);
+  --foreground: var(--ink);
+  --card: var(--surface-raised);
+  --card-foreground: var(--ink);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--ink);
+  --primary: var(--surface-selected);
+  --primary-foreground: var(--ink);
+  --secondary: var(--surface-raised);
+  --secondary-foreground: var(--ink-secondary);
+  --muted: var(--surface-raised);
+  --muted-foreground: var(--ink-muted);
+  --accent: var(--surface-selected);
+  --accent-foreground: var(--ink);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--prompt);
+  --radius: var(--radius-3);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-surface-window text-ink;
+    font-size: var(--text-body);
+    margin: 0;
+  }
+}
