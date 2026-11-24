@@ -139,7 +139,7 @@ fn plan_folder(c: &Change) -> String {
 }
 
 /// Go's `plannedID`: an E-, F-, S- or T- id.
-fn planned_id(id: &str) -> bool {
+pub(crate) fn planned_id(id: &str) -> bool {
     let prefix = id.split('-').next().unwrap_or("");
     prefix != ticket::NATIVE_PREFIX && prefix != ticket::PULLED_PREFIX
 }
