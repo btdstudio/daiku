@@ -27,7 +27,7 @@ pub fn internal(message: &str) -> Value {
     }))
 }
 
-fn shown(s: &str) -> String {
+pub(crate) fn shown(s: &str) -> String {
     // `display` only ever writes valid UTF-8 for valid UTF-8 input; the lossy
     // conversion can't fail and never returns the raw string.
     String::from_utf8_lossy(&display(s.as_bytes(), Display::Document)).into_owned()
