@@ -62,6 +62,15 @@ pub async fn tickets_list(app: AppHandle, root: String) -> Value {
     with_workspace(root, |ws| ws.tickets_list()).await
 }
 
+/// Core's `next` for the workspace at `root`: what is waiting on the person, first to last.
+#[tauri::command]
+pub async fn next(app: AppHandle, root: String) -> Value {
+    if let Some(no) = refuse(&app, &root) {
+        return no;
+    }
+    with_workspace(root, |ws| ws.next()).await
+}
+
 /// A change's existing files by phase (core's `artifacts`).
 #[tauri::command]
 pub async fn artifacts(app: AppHandle, root: String, change: String) -> Value {
@@ -327,6 +336,27 @@ mod tests {
         assert_eq!(tickets.len(), 1);
         assert_eq!(tickets[0]["title"], "Fix typo");
         assert_eq!(tickets[0]["inbox"], true);
+    }
+
+    #[test]
+    fn next_returns_the_envelope_of_the_list() {
+        let (_dir, ws) = workspace();
+        let v = envelope::reply(ws.next());
+        assert_eq!(v["data"]["items"].as_array().unwrap().len(), 0, "{v}");
+        ws.change_new(&ChangeNewOptions {
+            title: "Auth".into(),
+            repos: vec![],
+            rev: String::new(),
+            body: "goal".into(),
+            idea: 0,
+            version: "dev".into(),
+        })
+        .result
+        .unwrap();
+        ws.gate("intake", "await-approval", "", false).unwrap();
+        let v = envelope::reply(ws.next());
+        assert_eq!(v["data"]["items"][0]["kind"], "approve", "{v}");
+        assert_eq!(v["data"]["items"][0]["phase"], "intake", "{v}");
     }
 
     /// A plan with an `intake` and a `research` folder, ready for files.
