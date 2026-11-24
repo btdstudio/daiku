@@ -106,6 +106,10 @@ pub fn probe(root: &str) -> WorkspaceRef {
 pub struct ViewStateStore {
     path: PathBuf,
     state: Mutex<ViewState>,
+    /// Roots the person opened this session, beyond the saved open set: a root
+    /// that `probe_workspace` found to be a workspace. Commands that read a
+    /// workspace accept only these and the open set (S-0020 security finding 1).
+    allowed: Mutex<Vec<String>>,
 }
 
 fn dedupe(roots: Vec<String>) -> Vec<String> {
@@ -142,11 +146,33 @@ impl ViewStateStore {
         ViewStateStore {
             path,
             state: Mutex::new(state),
+            allowed: Mutex::new(Vec::new()),
         }
     }
 
     fn lock(&self) -> MutexGuard<'_, ViewState> {
         self.state.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// Records a root the person opened this session (a probe that found a
+    /// workspace), so commands accept it before the next save lands.
+    pub fn allow(&self, root: &str) {
+        let mut allowed = self.allowed.lock().unwrap_or_else(|e| e.into_inner());
+        if !allowed.iter().any(|r| r == root) {
+            allowed.push(root.to_string());
+        }
+    }
+
+    /// Whether a command may read the workspace at `root`: it's in the open set, or
+    /// was opened this session.
+    pub fn allows(&self, root: &str) -> bool {
+        self.lock().open.iter().any(|r| r == root)
+            || self
+                .allowed
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .iter()
+                .any(|r| r == root)
     }
 
     /// A copy of the current state.
@@ -378,5 +404,22 @@ mod tests {
         assert_eq!(names(Path::new(&a)), before);
         assert_eq!(names(&Path::new(&a).join(".daiku")), before_daiku);
         assert_eq!(names(ws.path()), vec!["a".to_string()]);
+    }
+
+    #[test]
+    fn allows_only_open_or_opened_roots() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let ws = workspace(dir.path(), "ws");
+        let store = ViewStateStore::load(&dir.path().join("cfg"));
+        assert!(!store.allows(&ws));
+        assert!(!store.allows("/"));
+        store.allow(&ws);
+        assert!(store.allows(&ws));
+        assert!(!store.allows("/"));
+        let other = workspace(dir.path(), "other");
+        let mut view = store.current();
+        view.open = vec![other.clone()];
+        store.save(view);
+        assert!(store.allows(&other));
     }
 }
