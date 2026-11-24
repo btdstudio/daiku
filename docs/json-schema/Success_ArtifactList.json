@@ -1,0 +1,134 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Success_for_ArtifactList",
+  "description": "A successful read: `data` is the serialised core value the command reads.",
+  "type": "object",
+  "required": [
+    "data",
+    "schema",
+    "warnings"
+  ],
+  "properties": {
+    "data": {
+      "$ref": "#/definitions/ArtifactList"
+    },
+    "schema": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "warnings": {
+      "description": "The operation's warnings, in order: what the text form prints to stderr as `warning: <message>`, without the prefix. Always present; empty when there are none.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "definitions": {
+    "Artifact": {
+      "description": "One existing file a change produced, and the phase it belongs to.",
+      "type": "object",
+      "required": [
+        "path",
+        "phase"
+      ],
+      "properties": {
+        "path": {
+          "description": "Workspace-relative, `/`-separated.",
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        }
+      }
+    },
+    "ArtifactList": {
+      "description": "A change's files in phase order, with the phases of its machine.",
+      "type": "object",
+      "required": [
+        "artifacts",
+        "change",
+        "phases"
+      ],
+      "properties": {
+        "artifacts": {
+          "description": "Within a phase, paths are sorted bytewise.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Artifact"
+          }
+        },
+        "change": {
+          "$ref": "#/definitions/Change"
+        },
+        "phases": {
+          "description": "The machine's phase names in order (plan: eight, build: nine).",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "Change": {
+      "description": "One change's progress through its loop. `gates` holds only started phases.",
+      "type": "object",
+      "required": [
+        "gates",
+        "loop",
+        "name",
+        "phase",
+        "reasons",
+        "repos",
+        "sources",
+        "status",
+        "updatedAt"
+      ],
+      "properties": {
+        "gates": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "loop": {
+          "description": "`plan` or `build`; empty for a change that isn't recorded or found.",
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "reasons": {
+          "description": "Why each skipped phase was skipped.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "repos": {
+          "description": "Logical repo names from `REPOS.json`.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
