@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { Board } from "@/board/Board";
 import { BuildList } from "@/build/BuildList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -36,8 +36,22 @@ export function Frame({ state, dispatch }: Props) {
 
   const list =
     view.tab === "build" ? <BuildList onFill={toBoard} /> : <PlanList onFill={toBoard} />;
+  const root = selected?.root ?? null;
+  // The open file: not view state yet (S-0021 decides). Selecting another workspace
+  // closes it, so coming back shows the list again (reset during render, React's
+  // pattern for state that follows a prop).
+  const [opened, setOpened] = useState<{ root: string | null; path: string | null }>({
+    root,
+    path: null,
+  });
+  if (opened.root !== root) setOpened({ root, path: null });
+  const path = opened.root === root ? opened.path : null;
   const viewer = (
     <Viewer
+      root={root}
+      path={path}
+      onPick={(p) => setOpened({ root, path: p })}
+      onClose={() => setOpened({ root, path: null })}
       focused={view.focus === "viewer"}
       onFill={() => setFocus(view.focus === "viewer" ? "split" : "viewer")}
     />
