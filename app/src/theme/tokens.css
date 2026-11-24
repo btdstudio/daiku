@@ -1,0 +1,54 @@
+/* The design system's tokens (docs/app/design.md, The look). Dark only. */
+:root {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --surface-window: #1a1a1c;
+  --surface-chrome: #1d1d20;
+  --surface-terminal: #141416;
+  --surface-raised: #26262a;
+  --surface-selected: #3a3a40;
+  --surface-next: #2b2a26;
+
+  /* Lines */
+  --line: #2e2e33;
+
+  /* Ink */
+  --ink: #ececef;
+  --ink-secondary: #c9c9cf;
+  --ink-muted: #a4a4ab;
+  --ink-faint: #9a9aa2;
+
+  /* Attention: the one accent */
+  --attention: #f0b45a;
+  --attention-ink: #f0c27a;
+  --on-attention: #1a1a1c;
+
+  /* Prompt and links */
+  --prompt: #7aa7ff;
+
+  /* Type */
+  --font-sans-family: "Inter", system-ui, sans-serif;
+  --font-mono-family: "JetBrains Mono", ui-monospace, monospace;
+  --text-title: 20px;
+  --text-body: 13px;
+  --text-list: 12px;
+  --text-label: 11px;
+  --text-id: 12px;
+  --text-terminal: 12px;
+  --tracking-label: 0.06em;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+
+  /* Radii */
+  --radius-1: 4px;
+  --radius-2: 6px;
+  --radius-3: 8px;
+  --radius-window: 12px;
+  --radius-pill: 9999px;
+}
