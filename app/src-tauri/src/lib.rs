@@ -44,6 +44,7 @@ pub fn run() {
     #[cfg(not(feature = "measure"))]
     let builder = builder.invoke_handler(tauri::generate_handler![
         commands::status,
+        commands::tickets_list,
         commands::artifacts,
         commands::read_text,
         commands::measure_root,
@@ -54,6 +55,7 @@ pub fn run() {
     #[cfg(feature = "measure")]
     let builder = builder.invoke_handler(tauri::generate_handler![
         commands::status,
+        commands::tickets_list,
         commands::artifacts,
         commands::read_text,
         commands::measure_root,
