@@ -1,0 +1,9 @@
+args = ["tickets", "list", "--help"]
+
+[expect]
+exit = 0
+stdout = '''
+usage: daiku tickets list
+
+list every ticket with its fields, from every plan and the inbox
+'''

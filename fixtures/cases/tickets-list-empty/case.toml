@@ -1,0 +1,5 @@
+args = ["tickets", "list"]
+workspace = "plan-intake-draft"
+
+[expect]
+exit = 0

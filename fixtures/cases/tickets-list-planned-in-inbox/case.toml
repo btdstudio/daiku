@@ -1,0 +1,7 @@
+args = ["tickets", "list"]
+workspace = "plan-closed-change"
+
+[expect]
+exit = 0
+stdout = "S-0001  draft  api  Planned in the inbox\n"
+stderr = "✗ S-0001: planned tickets live under plan/specs/, not in build/tickets/\n"

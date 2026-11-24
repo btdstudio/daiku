@@ -1,0 +1,6 @@
+args = ["tickets", "list"]
+workspace = "plan-closed-change"
+
+[expect]
+exit = 0
+stdout = "S-0001  draft  a\\u202eb  Sign \\u202e in\n"

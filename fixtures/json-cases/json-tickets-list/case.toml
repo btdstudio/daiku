@@ -1,0 +1,131 @@
+args = ["tickets", "list", "--json"]
+workspace = "plan-closed-change"
+
+[expect]
+exit = 0
+stdout = '''
+{
+  "schema": 1,
+  "data": {
+    "tickets": [
+      {
+        "id": "N-0001",
+        "type": "task",
+        "title": "Fix the thing",
+        "repo": "api",
+        "change": "",
+        "changeClosed": false,
+        "inbox": true,
+        "path": "build/tickets/N-0001.md",
+        "status": "draft",
+        "dependsOn": [],
+        "parent": "",
+        "requirements": [
+          "R1"
+        ],
+        "labels": [],
+        "external": {},
+        "drifted": false,
+        "frozen": false,
+        "body": "\n## Notes\nA note.\n"
+      },
+      {
+        "id": "S-0001",
+        "type": "story",
+        "title": "Closed plan story",
+        "repo": "api",
+        "change": "1-auth-flow",
+        "changeClosed": true,
+        "inbox": false,
+        "path": "plan/specs/1-auth-flow/tickets/S-0001.md",
+        "status": "ready",
+        "dependsOn": [],
+        "parent": "",
+        "requirements": [
+          "R1"
+        ],
+        "labels": [],
+        "external": {},
+        "drifted": false,
+        "frozen": false,
+        "body": "\n## Notes\nA note.\n"
+      },
+      {
+        "id": "S-0003",
+        "type": "story",
+        "title": "Invoices",
+        "repo": "",
+        "change": "2-billing",
+        "changeClosed": false,
+        "inbox": false,
+        "path": "plan/specs/2-billing/tickets/S-0003.md",
+        "status": "",
+        "dependsOn": [],
+        "parent": "",
+        "requirements": [
+          "R1"
+        ],
+        "labels": [],
+        "external": {},
+        "drifted": false,
+        "frozen": false,
+        "body": "\nbad � byte\n"
+      },
+      {
+        "id": "S-0004",
+        "type": "story",
+        "title": "Drifted",
+        "repo": "web",
+        "change": "2-billing",
+        "changeClosed": false,
+        "inbox": false,
+        "path": "plan/specs/2-billing/tickets/S-0004.md",
+        "status": "published",
+        "dependsOn": [],
+        "parent": "",
+        "requirements": [
+          "R1"
+        ],
+        "labels": [],
+        "external": {
+          "jira": "PAY-4"
+        },
+        "drifted": true,
+        "frozen": true,
+        "body": "\n## Notes\nA note.\n"
+      },
+      {
+        "id": "S-0005",
+        "type": "story",
+        "title": "Frozen",
+        "repo": "web",
+        "change": "2-billing",
+        "changeClosed": false,
+        "inbox": false,
+        "path": "plan/specs/2-billing/tickets/S-0005.md",
+        "status": "published",
+        "dependsOn": [],
+        "parent": "",
+        "requirements": [
+          "R1"
+        ],
+        "labels": [],
+        "external": {
+          "jira": "PAY-5"
+        },
+        "drifted": false,
+        "frozen": true,
+        "body": "\n## Notes\nA note.\n"
+      }
+    ],
+    "unreadable": [
+      {
+        "id": "plan/specs/2-billing/tickets/broken.md",
+        "message": "frontmatter: line 3: unterminated list",
+        "reference": ""
+      }
+    ]
+  },
+  "warnings": []
+}
+'''

@@ -7,6 +7,7 @@ use daiku_core::Outcome;
 use daiku_core::gofmt::quote;
 use daiku_core::tickets::{PublishResult, ReadyResult, ReadyTargets, TicketNewOptions};
 
+use crate::display::field;
 use crate::{finish, parse_transition, report, usage, workspace};
 
 /// Go's `runTickets`.
@@ -16,6 +17,7 @@ pub fn tickets(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write
         Some("new") => new(rest, stdout, stderr),
         Some("check") => check(stdout, stderr),
         Some("status") => status(stdout, stderr),
+        Some("list") => list(rest, stdout, stderr),
         Some("order") => order(stdout, stderr),
         Some("ready") => ready(rest, stdout, stderr),
         Some("mark-published") => mark_published(rest, stdout, stderr),
@@ -143,6 +145,43 @@ fn status(stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
                     b.name,
                     b.ids.len(),
                     b.ids.join(" ")
+                );
+            }
+            for p in &o.value.unreadable {
+                let _ = writeln!(stderr, "✗ {p}");
+            }
+            warn(&o, stderr);
+            0
+        }
+    }
+}
+
+/// `daiku tickets list`: one `id  status  repo  title` line per ticket, each field
+/// shown with ADR-0008's escapes and `-` for an empty status or repo. Unlike
+/// `tickets status`, an argument is a usage error.
+fn list(args: &[String], stdout: &mut impl Write, stderr: &mut impl Write) -> u8 {
+    if !args.is_empty() {
+        let _ = writeln!(stderr, "{}", usage::usage_line(&["tickets", "list"]));
+        return 1;
+    }
+    match workspace().tickets_list() {
+        Err(e) => fail(stderr, &report(&e)),
+        Ok(o) => {
+            let or_dash = |s: &str| {
+                if s.is_empty() {
+                    "-".to_string()
+                } else {
+                    field(s)
+                }
+            };
+            for t in &o.value.tickets {
+                let _ = writeln!(
+                    stdout,
+                    "{}  {}  {}  {}",
+                    field(&t.id),
+                    or_dash(&t.status),
+                    or_dash(&t.repo),
+                    field(&t.title)
                 );
             }
             for p in &o.value.unreadable {

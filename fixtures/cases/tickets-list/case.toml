@@ -1,0 +1,13 @@
+args = ["tickets", "list"]
+workspace = "plan-closed-change"
+
+[expect]
+exit = 0
+stdout = '''
+N-0001  draft  api  Fix the thing
+S-0001  ready  api  Closed plan story
+S-0003  -  -  Invoices
+S-0004  published  web  Drifted
+S-0005  published  web  Frozen
+'''
+stderr = "✗ plan/specs/2-billing/tickets/broken.md: frontmatter: line 3: unterminated list\n"
