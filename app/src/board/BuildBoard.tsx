@@ -92,19 +92,22 @@ export function BuildBoard({ root, onSelect, nextId }: Props) {
           </select>
         </label>
       </div>
-      <QueryFeedback warnings={board.warnings} error={board.error} />
-      {board.unreadable.length > 0 && (
-        <details className="px-3 py-2 text-list text-ink-muted">
-          <summary className="cursor-pointer">{board.unreadable.length} unreadable</summary>
-          <ul className="mt-1 flex flex-col gap-1">
-            {board.unreadable.map((p, i) => (
-              <li key={`${p.id}:${i}`}>
-                <span className="font-mono text-id">{p.id}</span> {p.message}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
+      {/* Capped, so many warnings scroll here instead of pushing the cards out. */}
+      <div className="max-h-1/3 shrink-0 overflow-auto">
+        <QueryFeedback warnings={board.warnings} error={board.error} />
+        {board.unreadable.length > 0 && (
+          <details className="px-3 py-2 text-list text-ink-muted">
+            <summary className="cursor-pointer">{board.unreadable.length} unreadable</summary>
+            <ul className="mt-1 flex flex-col gap-1">
+              {board.unreadable.map((p, i) => (
+                <li key={`${p.id}:${i}`}>
+                  <span className="font-mono text-id">{p.id}</span> {p.message}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </div>
       {!board.loading && noTickets && board.error === null && (
         <p className="p-4 text-list text-ink-faint">No tickets yet</p>
       )}

@@ -29,7 +29,10 @@ export function PlanBoard({ root, onSelect, nextPlan }: Props) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <QueryFeedback warnings={status.warnings} error={status.error} />
+      {/* Capped, so many warnings scroll here instead of pushing the cards out. */}
+      <div className="max-h-1/3 shrink-0 overflow-auto">
+        <QueryFeedback warnings={status.warnings} error={status.error} />
+      </div>
       {status.isPending && root !== null && <p className="p-4 text-list text-ink-faint">Loading…</p>}
       {status.data && plans.length === 0 && (
         <p className="px-3 pt-3 text-list text-ink-faint">No open plans</p>
