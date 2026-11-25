@@ -7,16 +7,17 @@
 //! Nothing is written under a workspace.
 
 use std::collections::{HashMap, HashSet};
-use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, RecvTimeoutError};
 use std::sync::{Arc, Mutex, MutexGuard};
-use std::thread::{self, JoinHandle};
+use std::thread;
 use std::time::Duration;
 
+use daiku_core::settings::Settings;
 use daiku_core::watch::classify;
-use daiku_core::{Changed, WatchPath, Workspace};
-use notify::PathOp;
+use daiku_core::{Changed, WatchPath, Workspace, gofmt};
+use notify::event::ModifyKind;
+use notify::{EventKind, RecursiveMode};
 use notify_debouncer_full::{DebounceEventResult, DebouncedEvent, new_debouncer};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -81,6 +82,72 @@ impl EventSink for AppEventSink {
     }
 }
 
+/// Folders whose own creation, removal or rename can change what the views show
+/// although `classify` names nothing for them.
+const CONTAINERS: [&str; 4] = ["plan", "plan/specs", "build", "build/tickets"];
+
+/// Whether an event creates, removes or renames its path, rather than changing
+/// what's in it.
+fn structural(kind: &EventKind) -> bool {
+    matches!(
+        kind,
+        EventKind::Create(_) | EventKind::Remove(_) | EventKind::Modify(ModifyKind::Name(_))
+    )
+}
+
+/// The ADR folder the settings name, relative to the root and empty for the root
+/// itself. `None` when the settings can't be read, as while they're half written.
+fn adr_dir(ws: &Workspace) -> Option<PathBuf> {
+    let dir = ws.settings().ok()?.value.effective.adr_dir;
+    // An empty setting means the default folder.
+    let dir = if dir.is_empty() {
+        Settings::default().adr_dir
+    } else {
+        dir
+    };
+    let dir = gofmt::to_slash(&gofmt::clean(&dir));
+    Some(if dir == "." {
+        PathBuf::new()
+    } else {
+        dir.into()
+    })
+}
+
+/// The watches an ADR folder needs beyond core's: none inside a room, which is
+/// watched whole; otherwise the folder and each folder above it, so that creating
+/// any of them is seen.
+fn adr_watches(ws: &Workspace, dir: &Path) -> Vec<WatchPath> {
+    let root = ws.root();
+    let rooms = ws.watch_paths();
+    let mut above: Vec<&Path> = dir
+        .ancestors()
+        .filter(|p| !p.as_os_str().is_empty())
+        .collect();
+    above.reverse();
+    if above
+        .first()
+        .is_some_and(|top| rooms.iter().any(|w| w.path == root.join(top)))
+    {
+        return Vec::new();
+    }
+    above
+        .into_iter()
+        .map(|p| WatchPath {
+            path: root.join(p),
+            recursive: false,
+        })
+        .collect()
+}
+
+/// Whether an event on `rel` can change the ADRs listed from `dir`: a Markdown
+/// file in it, the folder itself, or a folder above it that was created, removed
+/// or renamed.
+fn touches_adrs(dir: &Path, rel: &Path, kind: &EventKind) -> bool {
+    rel == dir
+        || (rel.parent() == Some(dir) && rel.extension().is_some_and(|e| e == "md"))
+        || (structural(kind) && dir.starts_with(rel))
+}
+
 /// Convert one debounced batch into a payload, or `None` when there is nothing
 /// to emit (design D4).
 ///
@@ -88,9 +155,18 @@ impl EventSink for AppEventSink {
 /// * Any event with `Flag::Rescan` → reload all (events were lost).
 /// * Any event path equal to `root` → reload all (the root itself changed).
 /// * Any event path that can't be made relative to `root` → reload all.
+/// * One of [`CONTAINERS`] created, removed or renamed → reload all (a whole
+///   folder can move with only its own event).
 /// * Otherwise classify each relative path, drop ignored ones and deduplicate
 ///   the rest in first-seen order. An all-ignored batch is `None`.
-fn classify_batch(root: &str, events: &[DebouncedEvent], error: bool) -> Option<WorkspaceChanged> {
+/// * A path that can change the ADRs listed from `adr`, the folder the settings
+///   name, is also [`Changed::Adr`]: `classify` knows only the default folder.
+fn classify_batch(
+    root: &str,
+    adr: &Path,
+    events: &[DebouncedEvent],
+    error: bool,
+) -> Option<WorkspaceChanged> {
     if error {
         return Some(WorkspaceChanged::reload_all(root));
     }
@@ -111,10 +187,14 @@ fn classify_batch(root: &str, events: &[DebouncedEvent], error: bool) -> Option<
                 // relative to it is now suspect.
                 return Some(WorkspaceChanged::reload_all(root));
             }
-            if let Some(c) = classify(rel)
-                && seen.insert(c.clone())
-            {
-                changed.push(c);
+            if structural(&event.kind) && CONTAINERS.iter().any(|c| rel == Path::new(c)) {
+                return Some(WorkspaceChanged::reload_all(root));
+            }
+            let adr = touches_adrs(adr, rel, &event.kind).then_some(Changed::Adr);
+            for c in classify(rel).into_iter().chain(adr) {
+                if seen.insert(c.clone()) {
+                    changed.push(c);
+                }
             }
         }
     }
@@ -129,39 +209,76 @@ fn classify_batch(root: &str, events: &[DebouncedEvent], error: bool) -> Option<
     }
 }
 
-/// The watch paths a worker still wants to register: their folders don't exist
-/// yet. The worker re-checks them after each event batch and never creates
-/// them (design D3).
+/// Which watch paths a worker has registered and which it still wants to: their
+/// folders don't exist, vanished, or couldn't be watched. It never creates one
+/// (design D3).
 #[derive(Debug, Default)]
 struct WatchPlan {
     missing: Vec<WatchPath>,
-}
-
-/// Split the desired watch paths into those that exist now (to register in one
-/// batch) and those that don't (retried later). `exists` is the caller's
-/// predicate, keeping this bookkeeping free of filesystem creation.
-fn split_watch_paths(
-    watch: Vec<WatchPath>,
-    exists: impl Fn(&Path) -> bool,
-) -> (Vec<WatchPath>, WatchPlan) {
-    let (register, missing) = watch.into_iter().partition(|w| exists(&w.path));
-    (register, WatchPlan { missing })
+    registered: Vec<WatchPath>,
+    /// The missing paths whose last registration failed, so a repeated failure
+    /// isn't reported again.
+    failed: HashSet<PathBuf>,
 }
 
 impl WatchPlan {
-    /// Re-check the still-missing paths: return those that now exist (ready to
-    /// register) and keep the rest. Never creates a path.
-    fn retry(&mut self, exists: impl Fn(&Path) -> bool) -> Vec<WatchPath> {
-        let mut ready = Vec::new();
-        self.missing.retain(|w| {
-            if exists(&w.path) {
-                ready.push(w.clone());
-                false
+    fn new(watch: Vec<WatchPath>) -> WatchPlan {
+        WatchPlan {
+            missing: watch,
+            ..WatchPlan::default()
+        }
+    }
+
+    /// Try to register every missing path that exists, one at a time, so one
+    /// failure doesn't hold back the rest. A failed path stays missing. Returns
+    /// whether the views may now be stale: a path was registered (changes made
+    /// before then went unseen) or failed for the first time.
+    fn register(
+        &mut self,
+        exists: impl Fn(&Path) -> bool,
+        mut watch: impl FnMut(&WatchPath) -> bool,
+    ) -> bool {
+        let mut stale = false;
+        for w in std::mem::take(&mut self.missing) {
+            if !exists(&w.path) {
+                self.failed.remove(&w.path);
+                self.missing.push(w);
+            } else if watch(&w) {
+                self.failed.remove(&w.path);
+                self.registered.push(w);
+                stale = true;
             } else {
-                true
+                stale |= self.failed.insert(w.path.clone());
+                self.missing.push(w);
             }
-        });
-        ready
+        }
+        stale
+    }
+
+    /// Stop wanting `old` and want `new` instead. Returns the registered paths
+    /// that are no longer wanted.
+    fn replace(&mut self, old: &[WatchPath], new: Vec<WatchPath>) -> Vec<WatchPath> {
+        let dropped = |w: &WatchPath| old.contains(w) && !new.contains(w);
+        self.missing.retain(|w| !dropped(w));
+        self.failed
+            .retain(|p| !old.iter().any(|w| &w.path == p && !new.contains(w)));
+        let (gone, kept): (Vec<_>, Vec<_>) = std::mem::take(&mut self.registered)
+            .into_iter()
+            .partition(dropped);
+        self.registered = kept;
+        self.missing
+            .extend(new.into_iter().filter(|w| !old.contains(w)));
+        gone
+    }
+
+    /// Move the registered paths `lost` accepts back to missing and return them.
+    fn take_lost(&mut self, lost: impl Fn(&Path) -> bool) -> Vec<WatchPath> {
+        let (gone, kept): (Vec<_>, Vec<_>) = std::mem::take(&mut self.registered)
+            .into_iter()
+            .partition(|w| lost(&w.path));
+        self.registered = kept;
+        self.missing.extend(gone.iter().cloned());
+        gone
     }
 }
 
@@ -170,76 +287,125 @@ type Debouncer = notify_debouncer_full::Debouncer<
     notify_debouncer_full::RecommendedCache,
 >;
 
-/// A running per-root watcher (design D2-D3). Dropping it — or calling
-/// [`Worker::stop`] — signals the worker and joins its thread, so no further
-/// event for this root is emitted afterwards.
-pub struct Worker {
-    handle: Option<JoinHandle<()>>,
-    stop: Arc<AtomicBool>,
+/// The way out for one worker's payloads, shut when the worker is stopped.
+struct Gate {
+    sink: Arc<dyn EventSink>,
+    shut: Mutex<bool>,
 }
 
-impl Worker {
-    /// Signal the worker to stop and wait for its thread to finish.
-    pub fn stop(mut self) {
-        self.shutdown();
+impl Gate {
+    fn lock(&self) -> MutexGuard<'_, bool> {
+        self.shut.lock().unwrap_or_else(|e| e.into_inner())
     }
 
-    fn shutdown(&mut self) {
-        self.stop.store(true, Ordering::SeqCst);
-        if let Some(handle) = self.handle.take() {
-            let _ = handle.join();
+    fn is_shut(&self) -> bool {
+        *self.lock()
+    }
+
+    fn shut(&self) {
+        *self.lock() = true;
+    }
+
+    /// Emit unless shut. The lock is held while emitting, so nothing leaves after
+    /// [`shut`](Self::shut) has returned.
+    fn emit(&self, payload: WorkspaceChanged) {
+        let shut = self.lock();
+        if !*shut {
+            self.sink.emit(payload);
         }
     }
 }
 
+/// A running per-root watcher (design D2-D3). Dropping it — or calling
+/// [`Worker::stop`] — shuts its gate, so no further event for this root is
+/// emitted afterwards, and its thread then ends by itself. Neither waits for the
+/// thread, which may still be walking a large tree to register it.
+pub struct Worker {
+    gate: Arc<Gate>,
+}
+
+impl Worker {
+    /// Stop the worker.
+    pub fn stop(self) {}
+}
+
 impl Drop for Worker {
     fn drop(&mut self) {
-        self.shutdown();
+        self.gate.shut();
     }
 }
 
 /// Start a watcher worker for `root`, emitting classified payloads to `sink`
 /// (design D2-D3).
 pub fn spawn_worker(root: String, sink: Arc<dyn EventSink>) -> Worker {
-    let stop = Arc::new(AtomicBool::new(false));
-    let thread_stop = stop.clone();
-    let handle = thread::spawn(move || run_worker(root, sink, thread_stop));
-    Worker {
-        handle: Some(handle),
-        stop,
+    let gate = Arc::new(Gate {
+        sink,
+        shut: Mutex::new(false),
+    });
+    let thread_gate = gate.clone();
+    thread::spawn(move || run_worker(root, &thread_gate));
+    Worker { gate }
+}
+
+/// What one worker is watching.
+struct Watched {
+    ws: Workspace,
+    plan: WatchPlan,
+    /// The ADR folder as last read from the settings.
+    adr: PathBuf,
+}
+
+impl Watched {
+    fn new(root: &str) -> Watched {
+        let ws = Workspace::open(root, app_env());
+        let adr = adr_dir(&ws).unwrap_or_else(|| Settings::default().adr_dir.into());
+        let mut watch = ws.watch_paths();
+        watch.extend(adr_watches(&ws, &adr));
+        Watched {
+            plan: WatchPlan::new(watch),
+            adr,
+            ws,
+        }
+    }
+
+    /// Read the ADR folder again and follow it if it moved. Returns the watches to
+    /// drop.
+    fn follow_adr_dir(&mut self) -> Vec<WatchPath> {
+        let Some(dir) = adr_dir(&self.ws).filter(|dir| *dir != self.adr) else {
+            return Vec::new();
+        };
+        let old = adr_watches(&self.ws, &self.adr);
+        let new = adr_watches(&self.ws, &dir);
+        self.adr = dir;
+        self.plan.replace(&old, new)
     }
 }
 
-fn run_worker(root: String, sink: Arc<dyn EventSink>, stop: Arc<AtomicBool>) {
-    let ws = Workspace::open(root.as_str(), app_env());
-    let (existing, mut plan) = split_watch_paths(ws.watch_paths(), |p| p.exists());
+fn run_worker(root: String, gate: &Gate) {
+    let mut watched = Watched::new(&root);
 
     let (tx, rx) = mpsc::channel::<DebounceEventResult>();
     let mut debouncer = match new_debouncer(DEBOUNCE, None, tx) {
         Ok(debouncer) => debouncer,
         Err(_) => {
             // A debouncer that can't start can't be trusted: reload all.
-            sink.emit(WorkspaceChanged::reload_all(&root));
+            gate.emit(WorkspaceChanged::reload_all(&root));
             return;
         }
     };
 
-    register_batch(&mut debouncer, &existing, &root, &*sink);
+    watched
+        .plan
+        .register(Path::exists, |w| watch(&mut debouncer, w, gate));
+    // Anything read before the watches were in place may have changed unseen.
+    gate.emit(WorkspaceChanged::reload_all(&root));
 
-    while !stop.load(Ordering::SeqCst) {
+    while !gate.is_shut() {
         match rx.recv_timeout(IDLE) {
             Ok(result) => {
-                // A batch arrived: retry any missing registrations first.
-                let ready = plan.retry(|p| p.exists());
-                register_batch(&mut debouncer, &ready, &root, &*sink);
-                match result {
-                    Ok(events) => {
-                        if let Some(payload) = classify_batch(&root, &events, false) {
-                            sink.emit(payload);
-                        }
-                    }
-                    // A watcher error: reload every query for this root.
-                    Err(_) => sink.emit(WorkspaceChanged::reload_all(&root)),
+                let payload = handle_batch(&root, &mut watched, &mut debouncer, gate, result);
+                if let Some(payload) = payload {
+                    gate.emit(payload);
                 }
             }
             Err(RecvTimeoutError::Timeout) => {}
@@ -249,37 +415,57 @@ fn run_worker(root: String, sink: Arc<dyn EventSink>, stop: Arc<AtomicBool>) {
     // Dropping `debouncer` stops its internal thread.
 }
 
-/// Register `paths` in one batch (design D2). A registration failure takes the
-/// reload-all path; already-registered watches keep running.
-fn register_batch(
-    debouncer: &mut Debouncer,
-    paths: &[WatchPath],
+/// Bring the watches up to date with one batch, then say what to emit for it.
+fn handle_batch(
     root: &str,
-    sink: &dyn EventSink,
-) {
-    if paths.is_empty() {
-        return;
+    watched: &mut Watched,
+    debouncer: &mut Debouncer,
+    gate: &Gate,
+    result: DebounceEventResult,
+) -> Option<WorkspaceChanged> {
+    let events = result.as_deref().unwrap_or_default();
+    for w in watched.follow_adr_dir() {
+        let _ = debouncer.unwatch(&w.path);
     }
-    let ops: Vec<PathOp> = paths
-        .iter()
-        .map(|w| {
-            if w.recursive {
-                PathOp::watch_recursive(w.path.clone())
-            } else {
-                PathOp::watch_non_recursive(w.path.clone())
-            }
-        })
-        .collect();
-    if debouncer.update_paths(ops).is_err() {
-        sink.emit(WorkspaceChanged::reload_all(root));
+    let plan = &mut watched.plan;
+    // A room that is gone, or was removed or renamed and is back, has lost its
+    // watch on some platforms: drop it, to be registered afresh.
+    let base = Path::new(root);
+    let lost = plan.take_lost(|room| {
+        room != base
+            && (!room.exists()
+                || events
+                    .iter()
+                    .any(|e| structural(&e.kind) && e.paths.iter().any(|p| p == room)))
+    });
+    for w in &lost {
+        // The OS may have dropped it already.
+        let _ = debouncer.unwatch(&w.path);
     }
+    let registered = plan.register(Path::exists, |w| watch(debouncer, w, gate));
+    if registered || !lost.is_empty() {
+        return Some(WorkspaceChanged::reload_all(root));
+    }
+    // A watcher error reloads every query for this root.
+    classify_batch(root, &watched.adr, events, result.is_err())
+}
+
+/// Register one path (design D2). A stopped worker registers nothing more.
+fn watch(debouncer: &mut Debouncer, w: &WatchPath, gate: &Gate) -> bool {
+    let mode = if w.recursive {
+        RecursiveMode::Recursive
+    } else {
+        RecursiveMode::NonRecursive
+    };
+    !gate.is_shut() && debouncer.watch(&w.path, mode).is_ok()
 }
 
 /// One worker per open workspace root (design D1). [`sync`](Self::sync) is the
 /// only way the set changes: it starts added roots, leaves running ones alone
-/// and stops every root that left the set or lost authorization — joining its
-/// thread before it returns, so a closed root cannot emit afterwards. Dropping
-/// the registry stops every worker, which is the application-exit path.
+/// and stops every root that left the set or lost authorization, so a closed root
+/// cannot emit once it returns. It doesn't wait for worker threads, so it's safe
+/// on the main thread. Dropping the registry stops every worker, which is the
+/// application-exit path.
 pub struct WatchRegistry {
     sink: Arc<dyn EventSink>,
     workers: Mutex<HashMap<String, Worker>>,
@@ -308,8 +494,7 @@ impl WatchRegistry {
             }
         }
         let mut workers = self.lock();
-        // Stop the removed and disallowed roots first: each join finishes before
-        // this call returns (design D3).
+        // Stop the removed and disallowed roots first (design D3).
         let gone: Vec<String> = workers
             .keys()
             .filter(|root| !want.contains(root))
@@ -351,8 +536,12 @@ mod tests {
     use super::*;
     use std::time::Instant;
 
-    use notify::event::{Flag, ModifyKind};
-    use notify::{Event, EventKind};
+    use notify::Event;
+    use notify::event::{CreateKind, Flag, RemoveKind, RenameMode};
+
+    fn default_adr() -> &'static Path {
+        Path::new("plan/04_architecture/adr")
+    }
 
     fn modify(root: &Path, rel: &str) -> DebouncedEvent {
         DebouncedEvent::new(
@@ -376,7 +565,8 @@ mod tests {
             modify(root, "STATE.json"),
             modify(root, "plan/specs/4-x/tickets/S-1.md"),
         ];
-        let payload = classify_batch(&root.to_string_lossy(), &events, false).unwrap();
+        let payload =
+            classify_batch(&root.to_string_lossy(), default_adr(), &events, false).unwrap();
         assert!(!payload.reload_all);
         assert_eq!(
             payload.changed,
@@ -395,7 +585,8 @@ mod tests {
         let dir = tempfile::TempDir::new().unwrap();
         let root = dir.path();
         let events = [modify(root, "STATE.json"), modify(root, "STATE.json")];
-        let payload = classify_batch(&root.to_string_lossy(), &events, false).unwrap();
+        let payload =
+            classify_batch(&root.to_string_lossy(), default_adr(), &events, false).unwrap();
         assert_eq!(payload.changed, vec![Changed::State]);
     }
 
@@ -408,7 +599,8 @@ mod tests {
             modify(root, "plan/specs/4-x/tickets/S-1.md"),
             modify(root, "STATE.json"),
         ];
-        let payload = classify_batch(&root.to_string_lossy(), &events, false).unwrap();
+        let payload =
+            classify_batch(&root.to_string_lossy(), default_adr(), &events, false).unwrap();
         assert_eq!(
             payload.changed,
             vec![
@@ -431,7 +623,7 @@ mod tests {
             modify(root, ".DS_Store"),
         ];
         assert_eq!(
-            classify_batch(&root.to_string_lossy(), &events, false),
+            classify_batch(&root.to_string_lossy(), default_adr(), &events, false),
             None
         );
     }
@@ -441,7 +633,8 @@ mod tests {
         let dir = tempfile::TempDir::new().unwrap();
         let root = dir.path();
         let events = [modify(root, "STATE.json"), rescan()];
-        let payload = classify_batch(&root.to_string_lossy(), &events, false).unwrap();
+        let payload =
+            classify_batch(&root.to_string_lossy(), default_adr(), &events, false).unwrap();
         assert_eq!(
             payload,
             WorkspaceChanged::reload_all(&root.to_string_lossy())
@@ -452,7 +645,7 @@ mod tests {
     fn callback_error_reloads_all() {
         let dir = tempfile::TempDir::new().unwrap();
         let root = dir.path();
-        let payload = classify_batch(&root.to_string_lossy(), &[], true).unwrap();
+        let payload = classify_batch(&root.to_string_lossy(), default_adr(), &[], true).unwrap();
         assert_eq!(
             payload,
             WorkspaceChanged::reload_all(&root.to_string_lossy())
@@ -465,7 +658,8 @@ mod tests {
         let root = dir.path();
         // A path equal to the root itself: the workspace root changed.
         let events = [modify(root, "")];
-        let payload = classify_batch(&root.to_string_lossy(), &events, false).unwrap();
+        let payload =
+            classify_batch(&root.to_string_lossy(), default_adr(), &events, false).unwrap();
         assert_eq!(
             payload,
             WorkspaceChanged::reload_all(&root.to_string_lossy())
@@ -479,7 +673,8 @@ mod tests {
         let other = tempfile::TempDir::new().unwrap();
         // A path from a different temp dir can't be made relative to `root`.
         let events = [modify(other.path(), "STATE.json")];
-        let payload = classify_batch(&root.to_string_lossy(), &events, false).unwrap();
+        let payload =
+            classify_batch(&root.to_string_lossy(), default_adr(), &events, false).unwrap();
         assert_eq!(
             payload,
             WorkspaceChanged::reload_all(&root.to_string_lossy())
@@ -501,41 +696,28 @@ mod tests {
     }
 
     #[test]
-    fn split_registers_existing_and_retries_missing_without_creating() {
+    fn register_takes_what_exists_and_retries_the_rest_without_creating() {
         let dir = tempfile::TempDir::new().unwrap();
         let root = dir.path();
         let ws = Workspace::open(root, app_env());
-        let (register, mut plan) = split_watch_paths(ws.watch_paths(), |p| p.exists());
+        let mut plan = WatchPlan::new(ws.watch_paths());
 
         // Only the root exists; the five recursive rooms are missing.
+        assert!(plan.register(Path::exists, |_| true));
         assert_eq!(
-            register,
+            plan.registered,
             vec![WatchPath {
                 path: root.to_path_buf(),
                 recursive: false,
             }]
         );
         assert_eq!(plan.missing.len(), 5);
-        // The bookkeeping created nothing.
-        for w in &plan.missing {
-            assert!(
-                !w.path.exists(),
-                "{:?} should not have been created",
-                w.path
-            );
-        }
+        assert!(!plan.register(Path::exists, |_| true), "nothing new");
 
-        // A room created later becomes registered by retry, without creating
-        // the still-missing rooms.
+        // A room created later is registered, without creating the others.
         std::fs::create_dir(root.join("plan")).unwrap();
-        let ready = plan.retry(|p| p.exists());
-        assert_eq!(
-            ready,
-            vec![WatchPath {
-                path: root.join("plan"),
-                recursive: true,
-            }]
-        );
+        assert!(plan.register(Path::exists, |_| true));
+        assert_eq!(plan.registered.last().unwrap().path, root.join("plan"));
         assert_eq!(plan.missing.len(), 4);
         for w in &plan.missing {
             assert!(
@@ -544,6 +726,155 @@ mod tests {
                 w.path
             );
         }
+
+        // A lost room goes back to missing and can be registered again.
+        let lost = plan.take_lost(|p| p == root.join("plan"));
+        assert_eq!(lost.len(), 1);
+        assert_eq!(plan.missing.len(), 5);
+        assert!(plan.register(Path::exists, |_| true));
+        assert_eq!(plan.missing.len(), 4);
+    }
+
+    #[test]
+    fn a_failed_registration_holds_back_no_other_and_is_retried() {
+        let watch: Vec<WatchPath> = ["a", "b", "c"]
+            .map(|p| WatchPath {
+                path: p.into(),
+                recursive: true,
+            })
+            .into();
+        let mut plan = WatchPlan::new(watch);
+
+        assert!(plan.register(|_| true, |w| w.path != Path::new("a")));
+        assert_eq!(plan.registered.len(), 2);
+        assert_eq!(plan.missing.len(), 1);
+
+        // The same failure again is not news.
+        assert!(!plan.register(|_| true, |_| false));
+        assert_eq!(plan.missing.len(), 1);
+
+        assert!(plan.register(|_| true, |_| true));
+        assert_eq!(plan.registered.len(), 3);
+        assert!(plan.missing.is_empty());
+        assert!(plan.failed.is_empty());
+    }
+
+    #[test]
+    fn a_container_folder_created_removed_or_renamed_reloads_all() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let root = dir.path();
+        let at = root.to_string_lossy();
+        for rel in CONTAINERS {
+            for kind in [
+                EventKind::Create(CreateKind::Folder),
+                EventKind::Remove(RemoveKind::Folder),
+                EventKind::Modify(ModifyKind::Name(RenameMode::Any)),
+            ] {
+                let event =
+                    DebouncedEvent::new(Event::new(kind).add_path(root.join(rel)), Instant::now());
+                assert_eq!(
+                    classify_batch(&at, default_adr(), &[event], false),
+                    Some(WorkspaceChanged::reload_all(&at)),
+                    "{rel} {kind:?}"
+                );
+            }
+        }
+        // A change to what's in one is left to the paths inside it.
+        assert_eq!(
+            classify_batch(&at, default_adr(), &[modify(root, "build/tickets")], false),
+            None
+        );
+    }
+
+    #[test]
+    fn a_custom_adr_folder_is_classified() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let root = dir.path();
+        let at = root.to_string_lossy();
+        let adr = Path::new("docs/adr");
+        let changed =
+            |event: DebouncedEvent| classify_batch(&at, adr, &[event], false).map(|p| p.changed);
+        assert_eq!(
+            changed(modify(root, "docs/adr/0001-x.md")),
+            Some(vec![Changed::Adr])
+        );
+        assert_eq!(changed(modify(root, "docs/adr")), Some(vec![Changed::Adr]));
+        assert_eq!(changed(modify(root, "docs/adr/0001-x.md.swp")), None);
+        assert_eq!(changed(modify(root, "docs/other.md")), None);
+        assert_eq!(changed(modify(root, "docs")), None);
+        let renamed = DebouncedEvent::new(
+            Event::new(EventKind::Modify(ModifyKind::Name(RenameMode::Any)))
+                .add_path(root.join("docs")),
+            Instant::now(),
+        );
+        assert_eq!(changed(renamed), Some(vec![Changed::Adr]));
+
+        // A folder inside a room keeps what `classify` says too.
+        let payload = classify_batch(
+            &at,
+            Path::new("plan/decisions/log"),
+            &[modify(root, "plan/decisions/log/0001-x.md")],
+            false,
+        )
+        .unwrap();
+        assert!(payload.changed.contains(&Changed::Adr), "{payload:?}");
+        assert_eq!(payload.changed.len(), 2);
+    }
+
+    #[test]
+    fn the_adr_folder_follows_the_settings() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let root = workspace(dir.path(), "ws");
+        let at = Path::new(&root);
+        let settings = |text: &str| put(&root, ".daiku/settings.json", text);
+        let paths = |w: &Watched| -> Vec<PathBuf> {
+            w.plan.missing.iter().map(|w| w.path.clone()).collect()
+        };
+
+        let mut watched = Watched::new(&root);
+        assert_eq!(watched.adr, default_adr());
+        assert_eq!(watched.plan.missing.len(), 6, "a room needs no more");
+
+        settings(r#"{"adrDir": "./docs/adr/"}"#);
+        assert!(watched.follow_adr_dir().is_empty());
+        assert_eq!(watched.adr, Path::new("docs/adr"));
+        assert_eq!(paths(&watched)[6..], [at.join("docs"), at.join("docs/adr")]);
+        watched.plan.register(Path::exists, |_| true);
+        std::fs::create_dir_all(at.join("docs/adr")).unwrap();
+        watched.plan.register(Path::exists, |_| true);
+
+        // Half-written settings change nothing.
+        settings("{");
+        assert!(watched.follow_adr_dir().is_empty());
+        assert_eq!(watched.adr, Path::new("docs/adr"));
+
+        // A shared parent stays; the folder no longer named is dropped.
+        settings(r#"{"adrDir": "docs/decisions"}"#);
+        let gone = watched.follow_adr_dir();
+        assert_eq!(gone.len(), 1);
+        assert_eq!(gone[0].path, at.join("docs/adr"));
+        assert!(paths(&watched).contains(&at.join("docs/decisions")));
+
+        settings("{}");
+        let gone = watched.follow_adr_dir();
+        assert_eq!(gone.len(), 1);
+        assert_eq!(gone[0].path, at.join("docs"));
+        assert!(!paths(&watched).contains(&at.join("docs/decisions")));
+    }
+
+    #[test]
+    fn a_stopped_worker_emits_nothing() {
+        let (tx, rx) = mpsc::channel();
+        let gate = Arc::new(Gate {
+            sink: Arc::new(ChannelSink(tx)),
+            shut: Mutex::new(false),
+        });
+        let worker = Worker { gate: gate.clone() };
+        gate.emit(WorkspaceChanged::reload_all("/a"));
+        assert!(rx.try_recv().is_ok());
+        worker.stop();
+        gate.emit(WorkspaceChanged::reload_all("/a"));
+        assert!(rx.try_recv().is_err());
     }
 
     /// How long a real-watcher test waits for an expected event.
@@ -635,7 +966,8 @@ mod tests {
         std::fs::write(Path::new(root).join(rel), text).unwrap();
     }
 
-    /// Write `rel` under `root` and return the payload it produced. The write
+    /// Write `rel` under `root` and return the classified payload it produced,
+    /// passing over reload-all ones (a starting worker sends one). The write
     /// repeats — a change landing before the worker has registered its paths is
     /// missed by the OS — until a payload arrives or `deadline` passes.
     fn put_until(
@@ -647,8 +979,10 @@ mod tests {
         for attempt in 1.. {
             put(root, rel, &format!("attempt {attempt}"));
             let wait_until = (Instant::now() + Duration::from_secs(2)).min(deadline);
-            if let Some(payload) = next_for(rx, root, wait_until) {
-                return Some(payload);
+            while let Some(payload) = next_for(rx, root, wait_until) {
+                if !payload.reload_all {
+                    return Some(payload);
+                }
             }
             if Instant::now() >= deadline {
                 return None;
@@ -818,5 +1152,85 @@ mod tests {
                 "a room created after start never became watched"
             );
         }
+    }
+    /// The next reload-all payload for `root` before `deadline`.
+    fn next_reload(rx: &mpsc::Receiver<WorkspaceChanged>, root: &str, deadline: Instant) -> bool {
+        std::iter::from_fn(|| next_for(rx, root, deadline)).any(|p| p.reload_all)
+    }
+
+    /// A started registry for one new workspace, past its worker's ready signal.
+    fn started(
+        dir: &Path,
+        cfg: &Path,
+        rooms: &[&str],
+    ) -> (String, WatchRegistry, mpsc::Receiver<WorkspaceChanged>) {
+        let root = workspace(dir, "ws");
+        for room in rooms {
+            std::fs::create_dir(Path::new(&root).join(room)).unwrap();
+        }
+        let (registry, rx, store) = harness(cfg);
+        store.allow(&root);
+        registry.sync(std::slice::from_ref(&root), |r| store.allows(r));
+        assert!(
+            next_reload(&rx, &root, Instant::now() + EVENTUAL),
+            "no reload once the watches were in place"
+        );
+        (root, registry, rx)
+    }
+
+    #[test]
+    fn a_new_room_reloads_all_for_what_it_already_holds() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let cfg = tempfile::TempDir::new().unwrap();
+        let (root, _registry, rx) = started(dir.path(), cfg.path(), &[]);
+        drain_for(&rx, &root, QUIET);
+
+        // The room and its file appear at once, as `daiku idea new` makes them.
+        std::fs::create_dir_all(Path::new(&root).join("ideas/1-x")).unwrap();
+        put(&root, "ideas/1-x/summary.md", "x");
+        assert!(next_reload(&rx, &root, Instant::now() + EVENTUAL));
+    }
+
+    #[test]
+    fn a_recreated_room_is_watched_again() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let cfg = tempfile::TempDir::new().unwrap();
+        let (root, _registry, rx) = started(dir.path(), cfg.path(), &["ideas"]);
+        drain_for(&rx, &root, QUIET);
+        let room = Path::new(&root).join("ideas");
+
+        std::fs::remove_dir(&room).unwrap();
+        assert!(next_reload(&rx, &root, Instant::now() + EVENTUAL));
+        std::fs::create_dir(&room).unwrap();
+        assert!(next_reload(&rx, &root, Instant::now() + EVENTUAL));
+        drain_for(&rx, &root, QUIET);
+        assert!(
+            drain_for(&rx, &root, QUIET).is_empty(),
+            "registering again set off more reloads"
+        );
+
+        std::fs::create_dir(room.join("1-x")).unwrap();
+        let want = Changed::Idea { id: 1 };
+        assert!(next_matching(&rx, &root, &want, Instant::now() + EVENTUAL).is_some());
+    }
+    #[test]
+    fn a_custom_adr_folder_is_watched_once_the_settings_name_it() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let cfg = tempfile::TempDir::new().unwrap();
+        let (root, _registry, rx) = started(dir.path(), cfg.path(), &[]);
+        drain_for(&rx, &root, QUIET);
+
+        put(&root, ".daiku/settings.json", r#"{"adrDir": "docs/adr"}"#);
+        assert!(next_for(&rx, &root, Instant::now() + EVENTUAL).is_some());
+        drain_for(&rx, &root, QUIET);
+
+        // The folder and the one above it are made after the setting.
+        std::fs::create_dir_all(Path::new(&root).join("docs/adr")).unwrap();
+        assert!(next_reload(&rx, &root, Instant::now() + EVENTUAL));
+        drain_for(&rx, &root, QUIET);
+
+        put(&root, "docs/adr/0001-x.md", "x");
+        let deadline = Instant::now() + EVENTUAL;
+        assert!(next_matching(&rx, &root, &Changed::Adr, deadline).is_some());
     }
 }
