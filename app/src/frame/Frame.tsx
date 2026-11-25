@@ -197,6 +197,7 @@ export function Frame({ state, dispatch }: Props) {
           tab={view.tab}
           active={active ? { name: active.name, phase: active.phase } : null}
           warnings={warnings}
+          error={nudge.error}
           nudge={nudge.text}
           onNudge={nudge.target(nudge.item) ? onNudge : undefined}
         />

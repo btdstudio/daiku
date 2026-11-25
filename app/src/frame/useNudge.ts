@@ -23,6 +23,9 @@ export interface Nudge {
   /** Every warning from `next` and `tickets`, `next` first (`S-0019`); the item, marks
    *  and targets are unchanged by it. */
   warnings: string[];
+  /** The latest `next` read failure, shown beside the nudge; a refetch failure keeps
+   *  the last data, so the item, marks and target stay. */
+  error: unknown;
   /** Where clicking the item goes, or null when it goes nowhere. */
   target: (item: NextItem | undefined) => { tab: Tab; sel: Selected } | null;
 }
@@ -89,6 +92,7 @@ export function useNudge(root: string | null, fold: Fold): Nudge {
       next.warnings.length > 0 || tickets.warnings.length > 0
         ? [...next.warnings, ...tickets.warnings]
         : NO_WARNINGS,
+    error: next.error,
     target,
   };
 }
