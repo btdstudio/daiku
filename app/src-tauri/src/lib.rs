@@ -16,8 +16,14 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            let dir = app.path().app_config_dir()?;
-            let store = ViewStateStore::load(&dir);
+            #[cfg(not(feature = "measure"))]
+            let store = {
+                let dir = app.path().app_config_dir()?;
+                ViewStateStore::load(&dir)
+            };
+            #[cfg(feature = "measure")]
+            let store = ViewStateStore::isolated();
+
             let saved = store.current().window;
             app.manage(store);
             app.manage(WatchRegistry::new(Arc::new(AppEventSink::new(

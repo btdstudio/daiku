@@ -12,6 +12,8 @@ use crate::envelope::shown;
 
 /// Recents hold at most this many roots.
 const RECENTS_CAP: usize = 10;
+/// Open workspaces hold at most this many roots.
+const OPEN_CAP: usize = 32;
 const FILE: &str = "view-state.json";
 
 #[derive(Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Debug)]
@@ -104,7 +106,7 @@ pub fn probe(root: &str) -> WorkspaceRef {
 }
 
 pub struct ViewStateStore {
-    path: PathBuf,
+    path: Option<PathBuf>,
     state: Mutex<ViewState>,
     /// Roots the person opened this session, beyond the saved open set: a root
     /// that `probe_workspace` found to be a workspace. Commands that read a
@@ -123,31 +125,56 @@ fn dedupe(roots: Vec<String>) -> Vec<String> {
 }
 
 impl ViewStateStore {
+    /// An in-memory store that never reads or writes to disk (used for measure builds).
+    #[allow(dead_code)]
+    pub fn isolated() -> ViewStateStore {
+        ViewStateStore {
+            path: None,
+            state: Mutex::new(ViewState::default()),
+            allowed: Mutex::new(Vec::new()),
+        }
+    }
+
     /// Reads `<dir>/view-state.json`. A missing, unreadable or unparseable file gives
-    /// the defaults and is left as it is (design D4). Roots that are no longer
-    /// workspaces are dropped in memory (design D5). Never writes.
+    /// the defaults and is left as it is (design D4). Never writes. Does not probe
+    /// workspaces so startup is non-blocking (D4).
+    #[allow(dead_code)]
     pub fn load(dir: &Path) -> ViewStateStore {
         let path = dir.join(FILE);
         let mut state = fs::read(&path)
             .ok()
             .and_then(|b| serde_json::from_slice::<ViewState>(&b).ok())
             .unwrap_or_default();
-        state.open = dedupe(state.open)
-            .into_iter()
-            .filter(|r| probe(r).is_workspace)
-            .collect();
+        state.open = dedupe(state.open).into_iter().take(OPEN_CAP).collect();
         state.recents = dedupe(state.recents)
             .into_iter()
-            .filter(|r| probe(r).is_workspace)
             .take(RECENTS_CAP)
             .collect();
         let keep = state.selected.take().filter(|s| state.open.contains(s));
         state.selected = keep.or_else(|| state.open.first().cloned());
         ViewStateStore {
-            path,
+            path: Some(path),
             state: Mutex::new(state),
             allowed: Mutex::new(Vec::new()),
         }
+    }
+
+    /// Prunes roots that are no longer workspaces in memory and adjusts selection.
+    pub fn prune(&self) -> ViewState {
+        let mut state = self.lock();
+        state.open = dedupe(std::mem::take(&mut state.open))
+            .into_iter()
+            .take(OPEN_CAP)
+            .filter(|r| probe(r).is_workspace)
+            .collect();
+        state.recents = dedupe(std::mem::take(&mut state.recents))
+            .into_iter()
+            .take(RECENTS_CAP)
+            .filter(|r| probe(r).is_workspace)
+            .collect();
+        let keep = state.selected.take().filter(|s| state.open.contains(s));
+        state.selected = keep.or_else(|| state.open.first().cloned());
+        state.clone()
     }
 
     fn lock(&self) -> MutexGuard<'_, ViewState> {
@@ -212,20 +239,24 @@ impl ViewStateStore {
     }
 
     /// Atomic write (design D3): a temp file beside the target, then rename. A
-    /// failure is logged and ignored: view state is a convenience.
+    /// failure is logged and ignored: view state is a convenience. If `path` is
+    /// `None` (an isolated store), writes are a no-op.
     fn write(&self, state: &ViewState) {
-        if let Err(e) = self.try_write(state) {
-            eprintln!("daiku-app: couldn't write {}: {e}", self.path.display());
+        let Some(path) = &self.path else {
+            return;
+        };
+        if let Err(e) = self.try_write(path, state) {
+            eprintln!("daiku-app: couldn't write {}: {e}", path.display());
         }
     }
 
-    fn try_write(&self, state: &ViewState) -> std::io::Result<()> {
-        let dir = self.path.parent().unwrap_or(Path::new("."));
+    fn try_write(&self, path: &Path, state: &ViewState) -> std::io::Result<()> {
+        let dir = path.parent().unwrap_or(Path::new("."));
         fs::create_dir_all(dir)?;
         let tmp = dir.join(format!("{FILE}.tmp"));
         let json = serde_json::to_vec_pretty(state).map_err(std::io::Error::other)?;
         fs::write(&tmp, json)?;
-        fs::rename(&tmp, &self.path)
+        fs::rename(&tmp, path)
     }
 }
 
@@ -320,7 +351,7 @@ mod tests {
         };
         fs::write(cfg.path().join(FILE), serde_json::to_vec(&view).unwrap()).unwrap();
         let store = ViewStateStore::load(cfg.path());
-        let got = store.current();
+        let got = store.prune();
         assert_eq!(got.open, vec![real.clone()]);
         assert_eq!(got.recents, vec![real.clone()]);
         assert_eq!(got.selected, Some(real));
@@ -335,7 +366,7 @@ mod tests {
             ..ViewState::default()
         };
         fs::write(cfg.path().join(FILE), serde_json::to_vec(&view).unwrap()).unwrap();
-        let got = ViewStateStore::load(cfg.path()).current();
+        let got = ViewStateStore::load(cfg.path()).prune();
         assert!(got.open.is_empty());
         assert_eq!(got.selected, None);
     }
@@ -421,5 +452,54 @@ mod tests {
         view.open = vec![other.clone()];
         store.save(view);
         assert!(store.allows(&other));
+    }
+
+    #[test]
+    fn open_cap_truncates_to_thirty_two() {
+        let cfg = TempDir::new().unwrap();
+        let ws = TempDir::new().unwrap();
+        let roots: Vec<String> = (0..40)
+            .map(|i| workspace(ws.path(), &format!("ws{i}")))
+            .collect();
+        let view = ViewState {
+            open: roots,
+            ..ViewState::default()
+        };
+        fs::write(cfg.path().join(FILE), serde_json::to_vec(&view).unwrap()).unwrap();
+        let store = ViewStateStore::load(cfg.path());
+        assert_eq!(store.current().open.len(), 32);
+        assert_eq!(store.prune().open.len(), 32);
+    }
+
+    #[test]
+    fn load_does_not_probe_filesystem() {
+        let cfg = TempDir::new().unwrap();
+        let view = ViewState {
+            open: vec!["/non/existent/path/ws".to_string()],
+            ..ViewState::default()
+        };
+        fs::write(cfg.path().join(FILE), serde_json::to_vec(&view).unwrap()).unwrap();
+        let store = ViewStateStore::load(cfg.path());
+        assert_eq!(
+            store.current().open,
+            vec!["/non/existent/path/ws".to_string()]
+        );
+        assert!(store.prune().open.is_empty());
+    }
+
+    #[test]
+    fn isolated_store_never_reads_or_writes_file() {
+        let store = ViewStateStore::isolated();
+        assert_eq!(store.current(), ViewState::default());
+        store.set_window(Size {
+            width: 1000.0,
+            height: 600.0,
+        });
+        store.save(ViewState {
+            open: vec!["/some/root".to_string()],
+            ..ViewState::default()
+        });
+        store.flush();
+        assert_eq!(store.current().open, vec!["/some/root".to_string()]);
     }
 }

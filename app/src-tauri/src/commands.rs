@@ -220,10 +220,11 @@ fn read_capped(ws: &Workspace, rel: &str) -> Value {
 }
 
 /// The saved view state with a [`WorkspaceRef`] for every root in it. Plain values,
-/// not the envelope: these aren't core calls.
+/// not the envelope: these aren't core calls. Pruning runs off the main thread here.
 #[tauri::command]
 pub fn view_state_load(store: State<ViewStateStore>) -> Value {
-    serde_json::json!({ "state": store.current(), "refs": store.refs() })
+    let state = store.prune();
+    serde_json::json!({ "state": state, "refs": store.refs() })
 }
 
 /// Replaces the saved view state (the window size stays Rust's) and writes it.
