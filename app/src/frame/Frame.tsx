@@ -182,7 +182,12 @@ export function Frame({ state, dispatch }: Props) {
           focus={view.focus}
           onFocus={setFocus}
         />
-        <div className="grid min-h-0" style={{ gridTemplateColumns: columns }}>
+        {/* The explicit row keeps long content inside its pane: an implicit row grows to
+            the content's height, and the window scrolls the status bar away. */}
+        <div
+          className="grid min-h-0 grid-rows-[minmax(0,1fr)]"
+          style={{ gridTemplateColumns: columns }}
+        >
           <WorkspacesRail open={open} selected={view.selected} dispatch={dispatch} />
           {body}
         </div>
