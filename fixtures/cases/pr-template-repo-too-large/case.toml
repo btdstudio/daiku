@@ -1,0 +1,9 @@
+args = ["pr", "--template"]
+workspace = "build-implement"
+git = true
+tools = ["git"]
+skip_on = ["windows"]
+
+[expect]
+exit = 1
+stderr = "daiku: cannot read .github/pull_request_template.md: template exceeds 65536 bytes\n"
