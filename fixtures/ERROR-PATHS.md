@@ -519,7 +519,7 @@ The classes:
 | order | n/a: no phase order: works in any phase |
 | unsafe | n/a: daiku writes nothing; gh opens the pull request |
 | corrupt | `pr-corrupt-state` |
-| other | `pr-body-file-gh-missing`, `pr-body-file-missing`, `pr-gh-missing`, `pr-help-flag`, `pr-template`, `pr-template-repo`, `pr-template-repo-precedence`, `pr-title-gh-missing` |
+| other | `pr-body-file-gh-missing`, `pr-body-file-missing`, `pr-gh-missing`, `pr-help-flag`, `pr-template`, `pr-template-repo`, `pr-template-repo-precedence`, `pr-template-repo-too-large`, `pr-title-gh-missing` |
 
 ## daiku check
 

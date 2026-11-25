@@ -1004,6 +1004,18 @@ fn render_body_with_no_links_adds_no_markers() {
     assert_eq!(render_body(marked, ""), marked);
 }
 
+#[test]
+fn render_body_appends_when_an_opening_marker_has_no_close() {
+    let text = "## L\n\n<!-- daiku:links -->\n\nan old note\n";
+    let out = render_body(text, "new\n");
+    assert_eq!(
+        out,
+        "## L\n\n<!-- daiku:links -->\n\nan old note\n\n<!-- daiku:links -->\nnew\n<!-- /daiku:links -->\n"
+    );
+    assert_eq!(out.matches(LINKS_OPEN).count(), 2);
+    assert_eq!(out.matches(LINKS_CLOSE).count(), 1);
+}
+
 /// The lookup's match, without its warnings.
 fn found(dir: &std::path::Path) -> Option<(String, String)> {
     find_repo_template(dir).unwrap().value
@@ -1049,6 +1061,33 @@ fn repo_template_that_isnt_utf8_is_an_error_naming_the_path() {
     assert!(
         err.starts_with("daiku: cannot read pull_request_template.md: "),
         "{err}"
+    );
+}
+
+#[test]
+fn repo_template_over_the_size_limit_is_an_error() {
+    let t = Temp::new();
+    t.write(
+        ".github/pull_request_template.md",
+        &"x".repeat(MAX_REPO_TEMPLATE_BYTES + 1),
+    );
+    let err = find_repo_template(t.path()).unwrap_err().to_string();
+    assert_eq!(
+        err,
+        format!(
+            "daiku: cannot read .github/pull_request_template.md: template exceeds {MAX_REPO_TEMPLATE_BYTES} bytes"
+        )
+    );
+}
+
+#[test]
+fn repo_template_at_the_size_limit_is_accepted() {
+    let t = Temp::new();
+    let text = "x".repeat(MAX_REPO_TEMPLATE_BYTES);
+    t.write(".github/pull_request_template.md", &text);
+    assert_eq!(
+        found(t.path()),
+        Some((".github/pull_request_template.md".into(), text))
     );
 }
 
