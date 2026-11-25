@@ -27,13 +27,21 @@ export function chipLabels(names: string[]): string[] {
     for (const i of colliding(labels)) labels[i] = tiers[t](names[i]);
   }
   // Still colliding: the first letter and a 1-based position among the stuck
-  // names that share that first letter, so the numbers never repeat.
+  // names that share that first letter, skipping any label already in use.
+  const stuck = colliding(labels);
+  const stuckSet = new Set(stuck);
+  const used = new Set(labels.filter((_, i) => !stuckSet.has(i)));
   const counts = new Map<string, number>();
-  for (const i of colliding(labels)) {
+  for (const i of stuck) {
     const letter = firstChar(names[i]);
-    const n = (counts.get(letter) ?? 0) + 1;
+    let n = (counts.get(letter) ?? 0) + 1;
+    while (used.has(`${letter}${n}`)) {
+      n++;
+    }
     counts.set(letter, n);
-    labels[i] = `${letter}${n}`;
+    const label = `${letter}${n}`;
+    labels[i] = label;
+    used.add(label);
   }
   return labels;
 }
