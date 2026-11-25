@@ -146,6 +146,15 @@ fn add_splits_committed_and_local() {
     );
 }
 
+/// N-0014 AC3: names that only look close to Windows-unsafe names are accepted.
+#[test]
+fn add_accepts_windows_lookalikes() {
+    let mut r = Registry::default();
+    for name in ["console", "nulls", "com10", "a.b", "a-"] {
+        r.add(name, "https://github.com/org/x", "").unwrap();
+    }
+}
+
 #[test]
 fn add_defaults_the_branch_and_refuses_bad_input() {
     let mut r = Registry::default();
@@ -166,6 +175,26 @@ fn add_defaults_the_branch_and_refuses_bad_input() {
             "a/b",
             "https://github.com/org/x",
             "daiku: invalid repo name \"a/b\" (use lowercase letters, digits, '.', '_' and '-')",
+        ),
+        (
+            "a.",
+            "https://github.com/org/x",
+            "daiku: invalid repo name \"a.\" (a trailing '.' is not allowed on Windows)",
+        ),
+        (
+            "con",
+            "https://github.com/org/x",
+            "daiku: invalid repo name \"con\" (reserved device names are not allowed on Windows)",
+        ),
+        (
+            "nul.git",
+            "https://github.com/org/x",
+            "daiku: invalid repo name \"nul.git\" (reserved device names are not allowed on Windows)",
+        ),
+        (
+            "com1",
+            "https://github.com/org/x",
+            "daiku: invalid repo name \"com1\" (reserved device names are not allowed on Windows)",
         ),
         (
             "ext",
@@ -361,21 +390,37 @@ fn registry_json(bad: &str) -> String {
     )
 }
 
-/// N-0004 AC1: a hand-edited name that `add` would refuse fails the load, with the
-/// file named, and nothing is written.
+/// N-0004 AC1/N-0014: a hand-edited name that `add` would refuse fails the load,
+/// with the file named, and nothing is written.
 #[test]
 fn load_refuses_a_bad_name() {
-    for bad in ["../outside", "a/b", ".hidden", "Web", ""] {
+    for (bad, reason) in [
+        (
+            "../outside",
+            "use lowercase letters, digits, '.', '_' and '-'",
+        ),
+        ("a/b", "use lowercase letters, digits, '.', '_' and '-'"),
+        (".hidden", "use lowercase letters, digits, '.', '_' and '-'"),
+        ("Web", "use lowercase letters, digits, '.', '_' and '-'"),
+        ("", "use lowercase letters, digits, '.', '_' and '-'"),
+        ("a.", "a trailing '.' is not allowed on Windows"),
+        ("con", "reserved device names are not allowed on Windows"),
+        (
+            "nul.git",
+            "reserved device names are not allowed on Windows",
+        ),
+        ("com1", "reserved device names are not allowed on Windows"),
+    ] {
         let t = crate::testutil::Temp::new();
         let json = registry_json(bad);
         t.write("REPOS.json", &json);
         let err = load(t.path()).unwrap_err();
         assert!(
-            matches!(&err, Error::InvalidRepoName { name, path: Some(_) } if name == bad),
+            matches!(&err, Error::InvalidRepoName { name, path: Some(_), .. } if name == bad),
             "{bad:?}: {err:?}"
         );
         let want = format!(
-            "daiku: {}: invalid repo name {} (use lowercase letters, digits, '.', '_' and '-')",
+            "daiku: {}: invalid repo name {} ({reason})",
             t.path()
                 .join("REPOS.json")
                 .to_string_lossy()

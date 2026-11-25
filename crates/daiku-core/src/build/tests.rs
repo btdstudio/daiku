@@ -302,7 +302,7 @@ fn doctor_clone_refuses_a_bad_name_before_cloning() {
 
     let err = ws.repo_doctor(true, Some(&into)).unwrap_err();
     assert!(
-        matches!(&err, Error::InvalidRepoName { name, path: Some(_) } if name == "../outside"),
+        matches!(&err, Error::InvalidRepoName { name, path: Some(_), .. } if name == "../outside"),
         "{err:?}"
     );
     assert!(events.0.borrow().is_empty(), "no clone started");
