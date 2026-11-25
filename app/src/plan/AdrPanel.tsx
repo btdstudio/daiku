@@ -1,9 +1,10 @@
+import { failureText } from "@/data/envelope";
 import { useAdrs } from "@/data/hooks";
+import { QueryFeedback } from "@/data/QueryFeedback";
 import { PaneHeader } from "@/frame/PaneHeader";
 import { FrontMatter } from "@/viewer/FrontMatter";
 import { Markdown } from "@/viewer/Markdown";
 import { splitFrontMatter } from "@/viewer/splitFrontMatter";
-import { failureText } from "./PlanPanel";
 
 interface Props {
   root: string | null;
@@ -50,6 +51,7 @@ export function AdrPanel({ root, number, focused, onFill, onClose }: Props) {
             {failureText(adrs.error)}
           </p>
         )}
+        <QueryFeedback warnings={adrs.warnings} />
         {body}
       </div>
     </section>

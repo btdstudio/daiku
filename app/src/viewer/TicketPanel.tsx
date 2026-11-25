@@ -2,9 +2,15 @@ import { PaneHeader } from "@/frame/PaneHeader";
 import { Badges } from "@/build/Badges";
 import { StatusText } from "@/build/StatusText";
 import { useBuildBoard } from "@/build/useBuildBoard";
+import { useReadText } from "@/data/hooks";
+import { QueryFeedback } from "@/data/QueryFeedback";
 import type { ReactNode } from "react";
 import type { TicketView } from "@/generated/TicketView";
 import { Markdown } from "./Markdown";
+import { splitFrontMatter } from "./splitFrontMatter";
+
+/** Shared, so a view without warnings doesn't allocate one each render. */
+const EMPTY_WARNINGS: string[] = [];
 
 interface Props {
   root: string | null;
@@ -31,15 +37,26 @@ function fields(t: TicketView): [string, ReactNode][] {
   return rows.filter(([, v]) => v !== "");
 }
 
-/** A ticket in the viewer (design D11): its fields, badges, build and body, from the
- *  loaded `TicketView`. It reads no file. */
+/** A ticket in the viewer (design D11): its fields, badges and build from the loaded
+ *  `TicketView`, and its body read through `read_text` (`S-0019` D7). The list's body
+ *  holds until the read resolves; a failed read keeps the last good text and metadata. */
 export function TicketPanel({ root, ticketKey, focused, onFill, onClose }: Props) {
   const board = useBuildBoard(root);
   const t = board.tickets.find((x) => x.path === ticketKey);
   const info = t ? board.builds.get(t.id) : undefined;
+  const read = useReadText(root, t?.path ?? null);
+
+  const warnings =
+    board.warnings.length > 0 || read.warnings.length > 0
+      ? [...board.warnings, ...read.warnings]
+      : EMPTY_WARNINGS;
+  const error = board.error ?? read.error;
 
   let body;
   if (t) {
+    // The list body is only the initial/fallback source; a successful read supplies
+    // the current raw text. Its front matter would duplicate the fields above.
+    const source = splitFrontMatter(read.data ?? t.body).body;
     body = (
       <article className="p-4">
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-list">
@@ -60,7 +77,7 @@ export function TicketPanel({ root, ticketKey, focused, onFill, onClose }: Props
           </p>
         )}
         <div className="mt-3">
-          <Markdown source={t.body} />
+          <Markdown source={source} />
         </div>
       </article>
     );
@@ -84,7 +101,10 @@ export function TicketPanel({ root, ticketKey, focused, onFill, onClose }: Props
         onFill={onFill}
         onClose={onClose}
       />
-      <div className="min-h-0 flex-1 overflow-auto">{body}</div>
+      <div className="min-h-0 flex-1 overflow-auto">
+        {t && <QueryFeedback warnings={warnings} error={error} />}
+        {body}
+      </div>
     </section>
   );
 }

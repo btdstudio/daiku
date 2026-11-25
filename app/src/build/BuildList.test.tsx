@@ -17,6 +17,8 @@ function serve(s: Reply, t: Reply) {
 }
 const tickets = (list: TicketView[], unreadable: unknown[] = []) =>
   ok({ tickets: list, unreadable });
+/** A success envelope carrying core's warnings. */
+const warns = (data: unknown, warnings: string[]) => ({ schema: 1, data, warnings });
 
 function show(onSelect = vi.fn(), root = "/w") {
   const client = makeQueryClient();
@@ -108,14 +110,34 @@ describe("BuildList", () => {
     expect(onSelect).toHaveBeenCalledWith("plan/specs/4-plan/tickets/S-1.md");
   });
 
-  it("shows an error over the last data after a failed refetch", async () => {
-    serve(ok(status([])), tickets([ticket("S-1")]));
+  it("shows both queries' warnings in query order, beside the rows", async () => {
+    serve(
+      warns(status([]), ["status warning"]),
+      warns({ tickets: [ticket("S-1")], unreadable: [] }, ["tickets warning"]),
+    );
+    show();
+    await screen.findByText("Title S-1");
+    const list = screen.getByText("status warning").closest("ul") as HTMLElement;
+    expect(within(list).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
+      "status warning",
+      "tickets warning",
+    ]);
+    expect(screen.getByText("Title S-1")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("shows an error over the last data and warnings after a failed refetch", async () => {
+    serve(
+      ok(status([])),
+      warns({ tickets: [ticket("S-1")], unreadable: [] }, ["kept warning"]),
+    );
     const { client } = show();
     await screen.findByText("Title S-1");
-    serve(fail("Io", "disk went away"), tickets([ticket("S-1")]));
+    serve(ok(status([])), fail("Io", "disk went away"));
     await client.refetchQueries();
-    expect((await screen.findByRole("alert")).textContent).toContain("disk went away");
+    expect((await screen.findByRole("alert")).textContent).toBe("Io: disk went away");
     expect(screen.getByText("Title S-1")).toBeTruthy();
+    expect(screen.getByText("kept warning")).toBeTruthy();
   });
 
   it("shows an unreadable count that expands to the messages", async () => {

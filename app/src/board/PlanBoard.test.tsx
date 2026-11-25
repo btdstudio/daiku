@@ -19,6 +19,8 @@ function show(onSelect = vi.fn()) {
   return { client, onSelect };
 }
 const col = (name: string) => screen.getByRole("group", { name });
+/** A success envelope carrying core's warnings. */
+const warns = (data: unknown, warnings: string[]) => ({ schema: 1, data, warnings });
 
 describe("PlanBoard", () => {
   beforeEach(() => vi.mocked(invoke).mockReset());
@@ -60,13 +62,23 @@ describe("PlanBoard", () => {
     expect(await screen.findByText("No open plans")).toBeTruthy();
   });
 
-  it("keeps the last cards under an error after a failed refetch", async () => {
+  it("shows status warnings with the cards", async () => {
+    vi.mocked(invoke).mockResolvedValue(
+      warns(planStatus([plan("1-a", { phase: "spec" })]), ["status warning"]),
+    );
+    show();
+    await screen.findByText("1-a");
+    expect(screen.getByText("status warning")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("keeps the last cards under a Kind: message error after a failed refetch", async () => {
     vi.mocked(invoke).mockResolvedValue(ok(planStatus([plan("1-a")])));
     const { client } = show();
     await screen.findByText("1-a");
     vi.mocked(invoke).mockResolvedValue(fail("Io", "disk went away"));
     await client.refetchQueries();
-    expect((await screen.findByRole("alert")).textContent).toContain("disk went away");
+    expect((await screen.findByRole("alert")).textContent).toBe("Io: disk went away");
     expect(screen.getByText("1-a")).toBeTruthy();
   });
 });

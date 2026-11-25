@@ -21,6 +21,9 @@ function serve(s: unknown, ideas: Idea[] | unknown, adrs: Adr[] | unknown) {
   });
 }
 
+/** A success envelope carrying core's warnings. */
+const warns = (data: unknown, warnings: string[]) => ({ schema: 1, data, warnings });
+
 function show(onSelect = vi.fn(), root = "/w") {
   const client = makeQueryClient();
   const ui = (r: string) => (
@@ -103,13 +106,34 @@ describe("PlanList", () => {
     ]);
   });
 
+  it("shows the three queries' warnings in query order, beside the lists", async () => {
+    serve(
+      warns(st(["1-a"]), ["status warning"]),
+      warns([idea(1)], ["ideas warning"]),
+      warns([adr(1)], ["adrs warning"]),
+    );
+    show();
+    await screen.findByText("1-a");
+    const list = screen.getByText("status warning").closest("ul") as HTMLElement;
+    expect(within(list).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
+      "status warning",
+      "ideas warning",
+      "adrs warning",
+    ]);
+    expect(screen.getByText("1-a")).toBeTruthy();
+    expect(screen.getByText("Idea 1")).toBeTruthy();
+    expect(screen.getByText("Decision 1")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("shows an error over the last data after a failed refetch", async () => {
-    serve(ok(st(["1-a"])), [idea(1)], [adr(1)]);
+    serve(warns(st(["1-a"]), ["kept warning"]), [idea(1)], [adr(1)]);
     const { client } = show();
     await screen.findByText("1-a");
-    serve(ok(st(["1-a"])), fail("Io", "disk went away"), [adr(1)]);
+    serve(fail("Io", "disk went away"), [idea(1)], [adr(1)]);
     await client.refetchQueries();
-    expect((await screen.findByRole("alert")).textContent).toContain("disk went away");
+    expect((await screen.findByRole("alert")).textContent).toBe("Io: disk went away");
+    expect(screen.getByText("kept warning")).toBeTruthy();
     expect(screen.getByText("Idea 1")).toBeTruthy();
     expect(screen.getByText("1-a")).toBeTruthy();
   });

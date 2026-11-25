@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { type BuildInfo, buildIndex } from "@/board/columns";
 import type { Column } from "@/board/columns";
-import { FailureError } from "@/data/envelope";
+import { failureText } from "@/data/envelope";
 import { useStatus, useTickets } from "@/data/hooks";
 import type { Problem } from "@/generated/Problem";
 import type { TicketView } from "@/generated/TicketView";
@@ -16,17 +16,17 @@ export interface BuildBoard {
   /** Every ticket placed in its column (all five), unfiltered. */
   columns: Record<Column, TicketView[]>;
   counts: Record<ListColumn, number>;
-  /** The first failure of either query; the last data stays in the other fields. */
+  /** Every warning from both queries, status first; the data stays in its fields. */
+  warnings: string[];
+  /** The first failure of either query, as `failureText` gives it; the last data stays
+   *  in the other fields. */
   error: string | null;
   loading: boolean;
 }
 
 const EMPTY_TICKETS: TicketView[] = [];
 const EMPTY_PROBLEMS: Problem[] = [];
-
-function message(e: unknown): string {
-  return e instanceof FailureError ? e.failure.error.message : String(e);
-}
+const EMPTY_WARNINGS: string[] = [];
 
 /** The two queries joined once: tickets placed in columns by build state (D6). A
  *  failed refetch keeps the last data, with `error` set. */
@@ -50,6 +50,10 @@ export function useBuildBoard(root: string | null): BuildBoard {
   }, [statusData, ticketData]);
 
   const err = status.error ?? tickets.error;
+  const warnings =
+    status.warnings.length > 0 || tickets.warnings.length > 0
+      ? [...status.warnings, ...tickets.warnings]
+      : EMPTY_WARNINGS;
   return {
     tickets: joined.list,
     unreadable: ticketData?.unreadable ?? EMPTY_PROBLEMS,
@@ -58,7 +62,8 @@ export function useBuildBoard(root: string | null): BuildBoard {
     groups: joined.groups,
     columns: joined.columns,
     counts: joined.counts,
-    error: err ? message(err) : null,
+    warnings,
+    error: err ? failureText(err) : null,
     loading: root !== null && (status.isPending || tickets.isPending) && !err,
   };
 }
