@@ -15,9 +15,11 @@ interface Props {
 export function WorkspacesRail({ open, selected, dispatch }: Props) {
   const labels = chipLabels(open.map((w) => w.name));
   return (
+    // Many workspaces scroll here. No scrollbar: an always-shown one would clip the
+    // chips' close buttons. WebKit at the macOS floor lacks `scrollbar-width`.
     <nav
       aria-label="Workspaces"
-      className="flex w-[52px] shrink-0 flex-col items-center gap-2 border-r border-line bg-surface-chrome py-3"
+      className="flex min-h-0 w-[52px] shrink-0 flex-col items-center gap-2 overflow-y-auto border-r border-line bg-surface-chrome py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {open.map((w, i) => (
         <div key={w.root} className="group/chip relative">
