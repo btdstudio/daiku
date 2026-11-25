@@ -991,6 +991,20 @@ mod tests {
         None
     }
 
+    /// Write `STATE.json` until the worker for `root` reports it, then let the
+    /// queue settle. macOS can report the fixture's own `settings.json` write
+    /// late, in the same batch as the first change, so exact payloads are only
+    /// asserted for writes made after this returns.
+    fn wait_live(rx: &mpsc::Receiver<WorkspaceChanged>, root: &str) {
+        let deadline = Instant::now() + EVENTUAL;
+        while !put_until(rx, root, "STATE.json", deadline)
+            .expect("no State event")
+            .changed
+            .contains(&Changed::State)
+        {}
+        drain_for(rx, root, QUIET);
+    }
+
     #[test]
     fn a_state_json_write_emits_state() {
         let dir = tempfile::TempDir::new().unwrap();
@@ -1000,8 +1014,9 @@ mod tests {
         store.allow(&root);
         registry.sync(std::slice::from_ref(&root), |r| store.allows(r));
 
-        let payload =
-            put_until(&rx, &root, "STATE.json", Instant::now() + EVENTUAL).expect("no State event");
+        wait_live(&rx, &root);
+        put(&root, "STATE.json", "{}");
+        let payload = next_for(&rx, &root, Instant::now() + EVENTUAL).expect("no State event");
         assert_eq!(payload.changed, vec![Changed::State]);
         assert!(!payload.reload_all);
     }
@@ -1018,9 +1033,7 @@ mod tests {
         registry.sync(&roots, |r| store.allows(r));
         assert_eq!(registry.lock().len(), 1);
 
-        // Confirm the worker is live, then let its queue settle.
-        put_until(&rx, &root, "STATE.json", Instant::now() + EVENTUAL).expect("no State event");
-        drain_for(&rx, &root, QUIET);
+        wait_live(&rx, &root);
 
         // One write, one event.
         put(&root, "STATE.json", "{}");
@@ -1040,7 +1053,8 @@ mod tests {
         let (registry, rx, store) = harness(cfg.path());
         store.allow(&root);
         registry.sync(std::slice::from_ref(&root), |r| store.allows(r));
-        put_until(&rx, &root, "STATE.json", Instant::now() + EVENTUAL).expect("no State event");
+        // Nothing emitted before the close may be left queued.
+        wait_live(&rx, &root);
 
         registry.sync(&[], |r| store.allows(r));
         assert!(
@@ -1089,15 +1103,8 @@ mod tests {
         registry.sync(&[a.clone(), b.clone()], |r| store.allows(r));
         assert_eq!(registry.lock().len(), 2);
 
-        // Both workers are live; then each queue settles.
-        let payload =
-            put_until(&rx, &a, "STATE.json", Instant::now() + EVENTUAL).expect("no event for a");
-        assert_eq!(payload.changed, vec![Changed::State]);
-        drain_for(&rx, &a, QUIET);
-        let payload =
-            put_until(&rx, &b, "STATE.json", Instant::now() + EVENTUAL).expect("no event for b");
-        assert_eq!(payload.changed, vec![Changed::State]);
-        drain_for(&rx, &b, QUIET);
+        wait_live(&rx, &a);
+        wait_live(&rx, &b);
 
         put(&a, "STATE.json", "{}");
         let payload = next_for(&rx, &a, Instant::now() + EVENTUAL).expect("no event for a");
