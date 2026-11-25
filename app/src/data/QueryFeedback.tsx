@@ -18,7 +18,7 @@ const SEPARATOR = " · ";
 export function QueryFeedback({ warnings, error, inline = false }: Props) {
   const failure = error == null ? null : failureText(error);
   if (inline) {
-    const all = failure === null ? warnings : [...warnings, failure];
+    const all = failure === null ? warnings : [failure, ...warnings];
     return all.length === 0 ? null : (
       <span data-slot="feedback" className={INLINE}>
         {all.join(SEPARATOR)}

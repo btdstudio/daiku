@@ -95,6 +95,29 @@ describe("StatusBar", () => {
     expect(screen.getByRole("button", { name: "Next: N-1 is a draft." })).toBeTruthy();
   });
 
+  it("shows a next failure beside the kept nudge, with the kind visible before long warnings", () => {
+    const onNudge = vi.fn();
+    const { container } = render(
+      <StatusBar
+        fold="wide"
+        name="ws"
+        tab="build"
+        warnings={["a long warning that should truncate before it hides the failure"]}
+        error={new Error("Io: disk went away")}
+        nudge="Next: N-1 is a draft."
+        onNudge={onNudge}
+      />,
+    );
+    const feedback = container.querySelector('[data-slot="feedback"]') as HTMLElement;
+    expect(feedback.textContent).toBe(
+      "Error: Io: disk went away · a long warning that should truncate before it hides the failure",
+    );
+    expect(feedback.className).toContain("truncate");
+    expect((container.querySelector("footer") as HTMLElement).className).toContain("h-[30px]");
+    fireEvent.click(screen.getByRole("button", { name: "Next: N-1 is a draft." }));
+    expect(onNudge).toHaveBeenCalledOnce();
+  });
+
   it("adds nothing for no warnings, keeping the 30px bar and its left text", () => {
     const { container } = render(<StatusBar fold="folded" name="ws" tab="plan" nudge={null} />);
     expect(container.querySelector('[data-slot="feedback"]')).toBeNull();
@@ -113,10 +136,17 @@ const item: NextItem = {
   since: null,
 };
 
-/** Core's replies, each with the warnings the test asks for. */
-function serve(items: NextItem[], warnings: { next?: string[]; tickets?: string[] } = {}) {
+type NextReply =
+  | { ok: true; data: { items: NextItem[] }; warnings?: string[] }
+  | { ok: false; error: { kind: string; message: string } };
+
+/** Core's replies, each with the warnings/failure the test asks for. */
+function serve(next: NextReply, warnings: { tickets?: string[] } = {}) {
   const replies: Record<string, unknown> = {
-    next: { schema: 1, data: { items }, warnings: warnings.next ?? [] },
+    next:
+      next.ok
+        ? { schema: 1, data: next.data, warnings: next.warnings ?? [] }
+        : { schema: 1, error: next.error },
     tickets_list: {
       schema: 1,
       data: { tickets: [ticket("N-0020", { status: "draft" })], unreadable: [] },
@@ -141,11 +171,11 @@ function nudged() {
   return renderHook(() => useNudge("/w", "wide"), { wrapper: Wrapper });
 }
 
-describe("useNudge warnings", () => {
+describe("useNudge warnings and errors", () => {
   beforeEach(() => vi.mocked(invoke).mockReset());
 
   it("exposes next's then tickets' warnings, leaving the item, marks and target alone", async () => {
-    serve([item], { next: ["next warning"], tickets: ["tickets warning"] });
+    serve({ ok: true, data: { items: [item] }, warnings: ["next warning"] }, { tickets: ["tickets warning"] });
     const { result } = nudged();
 
     await waitFor(() =>
@@ -154,6 +184,7 @@ describe("useNudge warnings", () => {
       ),
     );
     expect(result.current.warnings).toEqual(["next warning", "tickets warning"]);
+    expect(result.current.error).toBeNull();
     expect(result.current.item).toEqual(item);
     expect(result.current.nextTicket).toBe("N-0020");
     expect(result.current.target(result.current.item)).toEqual({
@@ -163,11 +194,52 @@ describe("useNudge warnings", () => {
   });
 
   it("has no warnings when both queries carry none", async () => {
-    serve([]);
+    serve({ ok: true, data: { items: [] } });
     const { result } = nudged();
 
     await waitFor(() => expect(result.current.text).toBe("Nothing is waiting on you"));
     expect(result.current.warnings).toEqual([]);
+    expect(result.current.error).toBeNull();
     expect(result.current.item).toBeUndefined();
+  });
+
+  it("keeps the last nudge when a later next read fails (AC1)", async () => {
+    serve({ ok: true, data: { items: [item] } });
+    const client = makeQueryClient();
+    const Wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    const { result } = renderHook(() => useNudge("/w", "wide"), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.nextTicket).toBe("N-0020"));
+
+    serve({ ok: false, error: { kind: "Io", message: "disk went away" } });
+    await client.invalidateQueries({ queryKey: ["/w", "next"] });
+    await waitFor(() => expect(result.current.error).toBeTruthy());
+    expect(result.current.text).toBe("Next: N-0020 is a draft. Start its build when you're ready.");
+    expect(result.current.item).toEqual(item);
+    expect(result.current.nextTicket).toBe("N-0020");
+  });
+
+  it("shows a failure when next has never loaded (AC2)", async () => {
+    serve({ ok: false, error: { kind: "Io", message: "disk went away" } });
+    const { result } = nudged();
+    await waitFor(() => expect(result.current.error).toBeTruthy());
+    expect(result.current.text).toBeNull();
+    expect(result.current.item).toBeUndefined();
+  });
+
+  it("clears the failure when next succeeds again (AC3)", async () => {
+    serve({ ok: false, error: { kind: "Io", message: "disk went away" } });
+    const client = makeQueryClient();
+    const Wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    const { result } = renderHook(() => useNudge("/w", "wide"), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.error).toBeTruthy());
+
+    serve({ ok: true, data: { items: [item] } });
+    await client.invalidateQueries({ queryKey: ["/w", "next"] });
+    await waitFor(() => expect(result.current.error).toBeNull());
+    expect(result.current.text).toBe("Next: N-0020 is a draft. Start its build when you're ready.");
   });
 });

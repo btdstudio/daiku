@@ -11,6 +11,8 @@ interface Props {
   active?: { name: string; phase: string } | null;
   /** Core's warnings, status first then the nudge's queries (`S-0019`), as text. */
   warnings?: string[];
+  /** The latest `next` read failure, shown beside the nudge as text. */
+  error?: unknown;
   /** The nudge's text, or null for none. Rendered as text, never HTML. */
   nudge: string | null;
   /** Makes the nudge a button; without it the text is shown but not clickable. */
@@ -20,8 +22,8 @@ interface Props {
 const NUDGE = "min-w-0 max-w-[60%] truncate whitespace-nowrap text-attention-ink";
 
 /** 30px. Left: the workspace, the tab (wide only, D14) and the active change with its
- *  phase. Right: the queries' warnings (S-0019) and the nudge (S-0023). */
-export function StatusBar({ fold, name, tab, active, warnings = [], nudge, onNudge }: Props) {
+ *  phase. Right: the queries' warnings/error (S-0019) and the nudge (S-0023). */
+export function StatusBar({ fold, name, tab, active, warnings = [], error, nudge, onNudge }: Props) {
   return (
     <footer className="flex h-[30px] shrink-0 items-center justify-between gap-3 border-t border-line bg-surface-chrome px-3 text-label text-ink-muted">
       <span className="min-w-0 truncate">
@@ -35,9 +37,9 @@ export function StatusBar({ fold, name, tab, active, warnings = [], nudge, onNud
           </span>
         )}
       </span>
-      {(warnings.length > 0 || nudge !== null) && (
+      {(warnings.length > 0 || error != null || nudge !== null) && (
         <span className="flex min-w-0 items-center justify-end gap-3">
-          <QueryFeedback inline warnings={warnings} />
+          <QueryFeedback inline warnings={warnings} error={error} />
           {nudge !== null &&
             (onNudge ? (
               <button

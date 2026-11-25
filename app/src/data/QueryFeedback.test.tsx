@@ -28,12 +28,12 @@ describe("QueryFeedback", () => {
     expect(container.innerHTML).toBe("");
   });
 
-  it("puts the inline variant on one line", () => {
+  it("puts the inline variant on one line, with the failure first so its kind stays visible", () => {
     const { container } = render(
       <QueryFeedback inline warnings={["one", "two"]} error={failed("Syntax", "truncated")} />,
     );
     expect(container.querySelectorAll("p")).toHaveLength(0);
-    expect(container.textContent).toBe("one · two · Syntax: truncated");
+    expect(container.textContent).toBe("Syntax: truncated · one · two");
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
