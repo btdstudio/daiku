@@ -22,10 +22,11 @@ tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 daiku-core = { path = "../../crates/daiku-core" }
+notify = "9"
+notify-debouncer-full = "0.8"
 
 [features]
 measure = []
 
 [dev-dependencies]
 tempfile = "3"
-notify = "8"
