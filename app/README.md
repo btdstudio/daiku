@@ -73,3 +73,13 @@ subset of the Inter and JetBrains Mono fonts.
 
 To measure again: `npm run measure -- <path to a daiku workspace>`. It reads that
 workspace and changes only a copy of it.
+
+The production watcher's figure (S-0019 AC1: `daiku gate` to the visible update,
+target 1 s) is **unverified** as of 2026-11-24: it needs a release `.app` with a
+window open and a person watching the view change, which a terminal-only
+environment (macOS 27.2.1, Apple M4) cannot do. The method for that run: build with
+`npm run tauri build -- --bundles app`, open a workspace at a plan phase awaiting
+approval, run `daiku gate <phase> await-approval`, and time from the command's exit
+to the status bar and the views showing the new gate state; 10 runs, median. Until
+then the raw-watcher row above stays the recorded baseline, and it bounds the event
+side: the 150 ms debounce, the IPC round trip and the refetch are what remain.

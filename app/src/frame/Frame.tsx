@@ -4,6 +4,7 @@ import { BuildList } from "@/build/BuildList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useStatus } from "@/data/hooks";
+import { useLiveUpdates } from "@/data/live";
 import { useBuildBoard } from "@/build/useBuildBoard";
 import { PlanList } from "@/plan/PlanList";
 import { usePlanTab } from "@/plan/usePlanTab";
@@ -24,11 +25,18 @@ interface Props {
   dispatch: (a: Action) => void;
 }
 
+/** Shared, so a status bar without warnings doesn't allocate one each render. */
+const NO_WARNINGS: string[] = [];
+
 /** The window: title bar, workspaces rail, the panes for the fold and focus, and the
  *  status bar. No terminal column (R10). */
 export function Frame({ state, dispatch }: Props) {
   const fold = useFold();
   const { view, refs, notWorkspace } = state;
+  // One watcher per open workspace (`S-0019`): the hook sends the whole open set and
+  // the backend reconciles. No watcher state enters view state.
+  useLiveUpdates(view.open);
+
   const refOf = (root: string): WorkspaceRef | undefined => refs[root];
   const open = view.open.map(refOf).filter((r): r is WorkspaceRef => r !== undefined);
   const recents = view.recents.map(refOf).filter((r): r is WorkspaceRef => r !== undefined);
@@ -57,7 +65,14 @@ export function Frame({ state, dispatch }: Props) {
 
   // The nudge (S-0023): the status bar's text, the marks and the click.
   const nudge = useNudge(root, fold);
-  const active = useStatus(root).data?.active?.change;
+  const status = useStatus(root);
+  const active = status.data?.active?.change;
+  // The status bar's feedback (`S-0019`): status's warnings, then the nudge's `next` and
+  // `tickets`, in query order.
+  const warnings =
+    status.warnings.length > 0 || nudge.warnings.length > 0
+      ? [...status.warnings, ...nudge.warnings]
+      : NO_WARNINGS;
   const nextGroup = view.tab === "build" ? nudge.buildGroup : nudge.planGroup;
   const nudgeClicks = useRef(0);
   const onNudge = () => {
@@ -176,6 +191,7 @@ export function Frame({ state, dispatch }: Props) {
           name={selected?.name ?? null}
           tab={view.tab}
           active={active ? { name: active.name, phase: active.phase } : null}
+          warnings={warnings}
           nudge={nudge.text}
           onNudge={nudge.target(nudge.item) ? onNudge : undefined}
         />

@@ -20,9 +20,15 @@ export interface Nudge {
   buildGroup: string | undefined;
   /** "Plans" when a plan is marked. */
   planGroup: string | undefined;
+  /** Every warning from `next` and `tickets`, `next` first (`S-0019`); the item, marks
+   *  and targets are unchanged by it. */
+  warnings: string[];
   /** Where clicking the item goes, or null when it goes nowhere. */
   target: (item: NextItem | undefined) => { tab: Tab; sel: Selected } | null;
 }
+
+/** Shared, so a nudge without warnings doesn't allocate one each render. */
+const NO_WARNINGS: string[] = [];
 
 /** The nudge (S-0023 D4): `next` and `tickets` on every tab, the first item's text and
  *  its marked targets. */
@@ -79,6 +85,10 @@ export function useNudge(root: string | null, fold: Fold): Nudge {
     nextPlan,
     buildGroup,
     planGroup: nextPlan !== null ? "Plans" : undefined,
+    warnings:
+      next.warnings.length > 0 || tickets.warnings.length > 0
+        ? [...next.warnings, ...tickets.warnings]
+        : NO_WARNINGS,
     target,
   };
 }
