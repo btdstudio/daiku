@@ -1,5 +1,6 @@
 import { Lock } from "lucide-react";
 import { useState } from "react";
+import { QueryFeedback } from "@/data/QueryFeedback";
 import { DRAFT_INK, NEXT_MARK } from "@/frame/marks";
 import { PaneHeader } from "@/frame/PaneHeader";
 import { Badges } from "./Badges";
@@ -33,11 +34,7 @@ export function BuildList({ root, onFill, onSelect, nextId }: Props) {
     <section aria-label="Build list" className="flex h-full min-w-0 flex-col bg-surface-chrome">
       <PaneHeader title="Build" focused={false} onFill={onFill} />
       <div className="min-h-0 flex-1 overflow-auto">
-        {board.error !== null && (
-          <p role="alert" className="px-3 py-2 text-list text-ink-muted">
-            {board.error}
-          </p>
-        )}
+        <QueryFeedback warnings={board.warnings} error={board.error} />
         {board.unreadable.length > 0 && (
           <details className="px-3 py-2 text-list text-ink-muted">
             <summary className="cursor-pointer">{board.unreadable.length} unreadable</summary>

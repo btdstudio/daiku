@@ -7,7 +7,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 import { invoke } from "@tauri-apps/api/core";
 import { makeQueryClient } from "@/data/queryClient";
 import { BuildBoard } from "./BuildBoard";
-import { build, ok, status, ticket } from "./fixtures";
+import { build, fail, ok, status, ticket } from "./fixtures";
 
 const all = [
   ticket("S-1", { status: "draft", repo: "daiku" }),
@@ -32,9 +32,10 @@ const s = status(
   ["S-6"],
 );
 
-function show(root = "/w", onSelect = vi.fn()) {
+function show(root = "/w", onSelect = vi.fn(), replies: { status?: unknown } = {}) {
+  const statusReply = replies.status ?? ok(s);
   vi.mocked(invoke).mockImplementation(async (cmd: string) =>
-    cmd === "status" ? ok(s) : ok({ tickets: all, unreadable: [] }),
+    cmd === "status" ? statusReply : ok({ tickets: all, unreadable: [] }),
   );
   const client = makeQueryClient();
   const ui = (r: string) => (
@@ -43,7 +44,7 @@ function show(root = "/w", onSelect = vi.fn()) {
     </QueryClientProvider>
   );
   const view = render(ui(root));
-  return { rerootTo: (r: string) => view.rerender(ui(r)) };
+  return { client, rerootTo: (r: string) => view.rerender(ui(r)) };
 }
 
 const col = (name: string) => screen.getByRole("group", { name });
@@ -113,5 +114,21 @@ describe("BuildBoard", () => {
     show("/w", onSelect);
     fireEvent.click(await screen.findByText("Title S-4"));
     expect(onSelect).toHaveBeenCalledWith("plan/specs/4-plan/tickets/S-4.md");
+  });
+
+  it("shows warnings with the cards, then keeps them and the cards after a failed refetch", async () => {
+    const { client } = show("/w", vi.fn(), {
+      status: { schema: 1, data: s, warnings: ["status warning"] },
+    });
+    await screen.findByText("Title S-1");
+    expect(screen.getByText("status warning")).toBeTruthy();
+
+    vi.mocked(invoke).mockImplementation(async (cmd: string) =>
+      cmd === "status" ? fail("Io", "disk went away") : ok({ tickets: all, unreadable: [] }),
+    );
+    await client.refetchQueries();
+    expect((await screen.findByRole("alert")).textContent).toBe("Io: disk went away");
+    expect(screen.getByText("Title S-1")).toBeTruthy();
+    expect(screen.getByText("status warning")).toBeTruthy();
   });
 });

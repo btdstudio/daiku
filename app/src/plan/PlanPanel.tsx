@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { FailureError } from "@/data/envelope";
+import { failureText } from "@/data/envelope";
 import { useArtifacts, useReadArtifact } from "@/data/hooks";
+import { QueryFeedback } from "@/data/QueryFeedback";
 import { PaneHeader } from "@/frame/PaneHeader";
 import { FrontMatter } from "@/viewer/FrontMatter";
 import { Markdown } from "@/viewer/Markdown";
@@ -20,18 +21,7 @@ interface Props {
   onClose?: () => void;
 }
 
-/** "File too large to show (N MiB)" for the `TooLarge` Failure, from its message. */
-export function tooLarge(message: string): string {
-  const n = /\(([\d.]+) MiB\)/.exec(message)?.[1];
-  return n ? `File too large to show (${n} MiB)` : "File too large to show";
-}
-
-/** A query's failure as text: `TooLarge` reworded, others as "Kind: message". */
-export function failureText(e: unknown): string {
-  if (!(e instanceof FailureError)) return String(e);
-  const { kind, message } = e.failure.error;
-  return kind === "TooLarge" ? tooLarge(message) : `${kind}: ${message}`;
-}
+const EMPTY_WARNINGS: string[] = [];
 
 function Dot({ status }: { status: string }) {
   const style =
@@ -102,6 +92,10 @@ export function PlanPanel({ root, name, initialPhase, nonce, focused, onFill, on
   }
 
   const error = artifacts.error ?? read.error;
+  const warnings =
+    artifacts.warnings.length > 0 || read.warnings.length > 0
+      ? [...artifacts.warnings, ...read.warnings]
+      : EMPTY_WARNINGS;
   return (
     <section aria-label="Viewer" className="flex h-full min-w-0 flex-col bg-surface-window">
       <PaneHeader title={name} focused={focused} onFill={onFill} onClose={onClose} />
@@ -111,6 +105,7 @@ export function PlanPanel({ root, name, initialPhase, nonce, focused, onFill, on
             {failureText(error)}
           </p>
         )}
+        <QueryFeedback warnings={warnings} />
         {strip === null && artifacts.isPending && (
           <p className="p-4 text-list text-ink-faint">Reading…</p>
         )}

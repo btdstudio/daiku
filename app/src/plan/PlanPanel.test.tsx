@@ -1,5 +1,5 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
@@ -34,6 +34,9 @@ function serve(l: ArtifactList) {
     return path in TEXTS ? ok(TEXTS[path]) : fail("NotAnArtifact", "nope");
   });
 }
+
+/** A success envelope carrying core's warnings. */
+const warns = (data: unknown, warnings: string[]) => ({ schema: 1, data, warnings });
 
 function show(name = "4-plan", root = "/w", initialPhase?: string) {
   const client = makeQueryClient();
@@ -144,6 +147,23 @@ describe("PlanPanel", () => {
     phase("intake");
     await screen.findByText("Intake body");
     expect(chip("intake").getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("shows artifacts and read warnings in query order, beside the file", async () => {
+    vi.mocked(invoke).mockImplementation(async (cmd: string, args?: unknown) => {
+      if (cmd === "artifacts") return warns(list({ phase: "spec" }), ["artifacts warning"]);
+      const path = (args as { path?: string } | undefined)?.path ?? "";
+      return path in TEXTS ? warns(TEXTS[path], ["read warning"]) : fail("NotAnArtifact", "nope");
+    });
+    show();
+    await screen.findByText("First spec");
+    const feedback = screen.getByText("artifacts warning").closest("ul") as HTMLElement;
+    expect(within(feedback).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
+      "artifacts warning",
+      "read warning",
+    ]);
+    expect(screen.getByText("First spec")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("shows a read failure inline", async () => {

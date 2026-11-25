@@ -12,6 +12,7 @@ import {
   repoOptions,
 } from "@/build/groups";
 import { useBuildBoard } from "@/build/useBuildBoard";
+import { QueryFeedback } from "@/data/QueryFeedback";
 import { DRAFT_INK, NEXT_MARK } from "@/frame/marks";
 import type { BuildInfo } from "./columns";
 import type { TicketView } from "@/generated/TicketView";
@@ -91,11 +92,7 @@ export function BuildBoard({ root, onSelect, nextId }: Props) {
           </select>
         </label>
       </div>
-      {board.error !== null && (
-        <p role="alert" className="px-3 py-2 text-list text-ink-muted">
-          {board.error}
-        </p>
-      )}
+      <QueryFeedback warnings={board.warnings} error={board.error} />
       {board.unreadable.length > 0 && (
         <details className="px-3 py-2 text-list text-ink-muted">
           <summary className="cursor-pointer">{board.unreadable.length} unreadable</summary>

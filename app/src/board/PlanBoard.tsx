@@ -1,4 +1,4 @@
-import { FailureError } from "@/data/envelope";
+import { QueryFeedback } from "@/data/QueryFeedback";
 import { NEXT_MARK } from "@/frame/marks";
 import { useStatus } from "@/data/hooks";
 import type { Change } from "@/generated/Change";
@@ -21,12 +21,6 @@ export function PlanBoard({ root, onSelect, nextPlan }: Props) {
   const status = useStatus(root);
   const phases = status.data?.planPhases ?? NONE;
   const plans = status.data?.plans ?? NONE;
-  const error =
-    status.error instanceof FailureError
-      ? status.error.failure.error.message
-      : status.error
-        ? String(status.error)
-        : null;
 
   const byColumn = new Map<string, Change[]>(phases.map((p) => [p, []]));
   for (const p of [...plans].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))) {
@@ -35,11 +29,7 @@ export function PlanBoard({ root, onSelect, nextPlan }: Props) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {error !== null && (
-        <p role="alert" className="px-3 py-2 text-list text-ink-muted">
-          {error}
-        </p>
-      )}
+      <QueryFeedback warnings={status.warnings} error={status.error} />
       {status.isPending && root !== null && <p className="p-4 text-list text-ink-faint">Loading…</p>}
       {status.data && plans.length === 0 && (
         <p className="px-3 pt-3 text-list text-ink-faint">No open plans</p>

@@ -1,6 +1,7 @@
 import { BookOpen, Lightbulb, List, Scale, type LucideIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { visibleRows } from "@/build/groups";
+import { QueryFeedback } from "@/data/QueryFeedback";
 import { NEXT_MARK } from "@/frame/marks";
 import { PaneHeader } from "@/frame/PaneHeader";
 import type { Selected } from "@/viewer/selected";
@@ -74,11 +75,7 @@ export function PlanList({ root, onFill, onSelect, nextPlan }: Props) {
     <section aria-label="Plan list" className="flex h-full min-w-0 flex-col bg-surface-chrome">
       <PaneHeader title="Plan" focused={false} onFill={onFill} />
       <div className="min-h-0 flex-1 overflow-auto">
-        {tab.error !== null && (
-          <p role="alert" className="px-3 py-2 text-list text-ink-muted">
-            {tab.error}
-          </p>
-        )}
+        <QueryFeedback warnings={tab.warnings} error={tab.error} />
         {tab.loading && <p className="p-4 text-list text-ink-faint">Loading…</p>}
         {group(
           "Plans",

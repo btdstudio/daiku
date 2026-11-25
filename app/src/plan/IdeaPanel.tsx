@@ -1,7 +1,8 @@
+import { failureText } from "@/data/envelope";
 import { useIdeas } from "@/data/hooks";
+import { QueryFeedback } from "@/data/QueryFeedback";
 import { PaneHeader } from "@/frame/PaneHeader";
 import { Markdown } from "@/viewer/Markdown";
-import { failureText } from "./PlanPanel";
 
 interface Props {
   root: string | null;
@@ -59,6 +60,7 @@ export function IdeaPanel({ root, id, focused, onFill, onClose }: Props) {
             {failureText(ideas.error)}
           </p>
         )}
+        <QueryFeedback warnings={ideas.warnings} />
         {body}
       </div>
     </section>
