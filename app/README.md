@@ -1,13 +1,11 @@
 # daiku app
 
-> **Work in progress.** Phase one isn't usable yet, and nothing is released: the
-> daiku releases ship only the CLI. Build from source only to work on the app.
+> **Work in progress.** Nothing is released: the daiku releases ship only the CLI.
+> Build from source only to work on the app.
 
 The daiku app is a desktop window onto a daiku workspace. It reads the same folders
-the CLI does, through `daiku-core`, and shows what the CLI's `--json` shows. This
-folder holds the first scaffold: one placeholder screen that opens a folder and shows
-its `status`. See [docs/app/design.md](../docs/app/design.md) for what the app is
-meant to become.
+the CLI does, through `daiku-core`, and shows what the CLI's `--json` shows. See
+[docs/app/design.md](../docs/app/design.md) for what the app is meant to become.
 
 The app is a Tauri 2 shell around a Vite, React and TypeScript frontend. Its Rust
 crate, `src-tauri/`, is its own Cargo workspace, so the root `cargo` commands, CI and
@@ -56,8 +54,7 @@ and stays. Checked on 2026-11-23.
 ## Measurements
 
 Targets come from the architecture: a cold start of 2 s and a watcher delay of 1 s.
-A median worse than twice its target is called out here, and raised before the
-production watcher (S-0019) is built.
+A median worse than twice its target is called out here.
 
 | What | Method | Machine | Date | Result | Target |
 |---|---|---|---|---|---|
@@ -68,7 +65,7 @@ production watcher (S-0019) is built.
 Neither median is over twice its target. The watcher figure is negative because the
 probe sees the write a few milliseconds before the `daiku` command exits: the delay
 from write to event is under about 20 ms here. This is the raw watcher; the
-debounced watcher of S-0019 will add its own delay. The bundle includes every
+production watcher (S-0019) adds its own debounce on top. The bundle includes every
 subset of the Inter and JetBrains Mono fonts.
 
 To measure again: `npm run measure -- <path to a daiku workspace>`. It reads that
