@@ -48,8 +48,8 @@ export const artifactsKey = (root: string | null, change: string | null) =>
   [root, "artifacts", change] as const;
 export const readArtifactKey = (root: string | null, change: string | null, path: string | null) =>
   [root, "read_artifact", change, path] as const;
-export const readTextKey = (root: string | null, rel: string | null) =>
-  [root, "read_text", rel] as const;
+export const readTicketKey = (root: string | null, path: string | null) =>
+  [root, "read_ticket", path] as const;
 
 export function useStatus(root: string | null) {
   return useCoreQuery(
@@ -111,11 +111,12 @@ export function useReadArtifact(root: string | null, change: string | null, path
   );
 }
 
-/** One open file's text, by its workspace-relative path; off until both are set. */
-export function useReadText(root: string | null, rel: string | null): CoreQueryResult<string> {
+/** One listed ticket's file, by its path as `tickets_list` shows it; off until both are
+ *  set. */
+export function useReadTicket(root: string | null, path: string | null): CoreQueryResult<string> {
   return useCoreQuery(
-    readTextKey(root, rel),
-    () => call<string>("read_text", { root, rel }).then(envelope),
-    root !== null && rel !== null,
+    readTicketKey(root, path),
+    () => call<string>("read_ticket", { root, path }).then(envelope),
+    root !== null && path !== null,
   );
 }

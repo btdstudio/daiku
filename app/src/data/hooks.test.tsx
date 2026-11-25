@@ -10,7 +10,7 @@ import { status } from "@/board/fixtures";
 import { failureText, FailureError } from "@/data/envelope";
 import type { Status } from "@/generated/Status";
 import type { Envelope } from "@/lib/envelope";
-import { readTextKey, useReadText, useStatus } from "./hooks";
+import { readTicketKey, useReadTicket, useStatus } from "./hooks";
 import { makeQueryClient } from "./queryClient";
 
 const success = <T,>(data: T, warnings: string[] = []): Envelope<T> => ({
@@ -106,39 +106,39 @@ describe("useCoreQuery", () => {
   });
 });
 
-describe("useReadText", () => {
+describe("useReadTicket", () => {
   beforeEach(() => vi.mocked(call).mockReset());
 
-  it("keys and calls read_text with the root and relative path", async () => {
-    expect(readTextKey("/w", "build/tickets/N-0001.md")).toEqual([
+  it("keys and calls read_ticket with the root and shown path", async () => {
+    expect(readTicketKey("/w", "build/tickets/N-0001.md")).toEqual([
       "/w",
-      "read_text",
+      "read_ticket",
       "build/tickets/N-0001.md",
     ]);
     vi.mocked(call).mockResolvedValue(success("# Ticket", ["no front matter"]));
     const { Wrapper, client } = setup();
-    const { result } = renderHook(() => useReadText("/w", "build/tickets/N-0001.md"), {
+    const { result } = renderHook(() => useReadTicket("/w", "build/tickets/N-0001.md"), {
       wrapper: Wrapper,
     });
 
     await waitFor(() => expect(result.current.data).toBe("# Ticket"));
     expect(result.current.warnings).toEqual(["no front matter"]);
-    expect(call).toHaveBeenCalledWith("read_text", {
+    expect(call).toHaveBeenCalledWith("read_ticket", {
       root: "/w",
-      rel: "build/tickets/N-0001.md",
+      path: "build/tickets/N-0001.md",
     });
-    expect(client.getQueryState(readTextKey("/w", "build/tickets/N-0001.md"))?.status).toBe(
+    expect(client.getQueryState(readTicketKey("/w", "build/tickets/N-0001.md"))?.status).toBe(
       "success",
     );
   });
 
   it("stays off while either argument is null", async () => {
     const { Wrapper, client } = setup();
-    const { result } = renderHook(() => useReadText("/w", null), { wrapper: Wrapper });
+    const { result } = renderHook(() => useReadTicket("/w", null), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.isPending).toBe(true));
     expect(call).not.toHaveBeenCalled();
     expect(result.current.data).toBeUndefined();
     expect(result.current.warnings).toEqual([]);
-    expect(client.getQueryState(readTextKey("/w", null))?.fetchStatus).toBe("idle");
+    expect(client.getQueryState(readTicketKey("/w", null))?.fetchStatus).toBe("idle");
   });
 });

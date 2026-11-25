@@ -64,6 +64,30 @@ pub fn ambiguous_artifact(path: &str, change: &str) -> Value {
     }))
 }
 
+/// A `Failure` of kind `NotATicket`: `read_ticket` was asked for a path
+/// `tickets_list` doesn't show.
+pub fn not_a_ticket(path: &str) -> Value {
+    escape(serde_json::json!({
+        "schema": 1,
+        "error": {
+            "kind": "NotATicket",
+            "message": format!("daiku-app: {path} isn't a ticket of this workspace"),
+        },
+    }))
+}
+
+/// A `Failure` of kind `AmbiguousTicket`: two tickets are shown with the same
+/// path.
+pub fn ambiguous_ticket(path: &str) -> Value {
+    escape(serde_json::json!({
+        "schema": 1,
+        "error": {
+            "kind": "AmbiguousTicket",
+            "message": format!("{path} names more than one ticket"),
+        },
+    }))
+}
+
 /// A `Failure` of kind `NotOpen`: a command asked for a root the person hasn't
 /// opened (S-0020 security finding 1).
 pub fn not_open(root: &str) -> Value {

@@ -1,12 +1,12 @@
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   adrsKey,
   artifactsKey,
   ideasKey,
   nextKey,
   readArtifactKey,
-  readTextKey,
+  readTicketKey,
   statusKey,
   ticketsKey,
 } from "./hooks";
@@ -15,7 +15,6 @@ import {
   changeMatches,
   invalidateAll,
   invalidateChanged,
-  ticketPath,
 } from "./live";
 
 /** One representative query per command, seeded into every test's client. */
@@ -32,8 +31,8 @@ const SEEDED = {
   readArtifactA: readArtifactKey("/w", "4-x", "functional-spec.md"),
   readArtifactIntake: readArtifactKey("/w", "3-auth-flow", "functional-spec.md"),
   readArtifactBuild: readArtifactKey("/w", "S-0019", "requirements.md"),
-  readTextPlan: readTextKey("/w", "plan/specs/4-x/tickets/S-1.md"),
-  readTextInbox: readTextKey("/w", "build/tickets/N-1.md"),
+  readTicketPlan: readTicketKey("/w", "plan/specs/4-x/tickets/S-1.md"),
+  readTicketInbox: readTicketKey("/w", "build/tickets/N-1.md"),
 };
 
 /** Calls the query function recorded, so a refetch is visible by key. */
@@ -78,18 +77,26 @@ function active(client: QueryClient, key: readonly unknown[]): () => void {
 }
 
 describe("invalidateChanged", () => {
-  it("State refetches status, next and every artifacts query, for its root only", async () => {
+  it("State refetches status, next, tickets and every artifacts query, for its root only", async () => {
     const { client } = makeClient();
     seed(client);
     client.setQueryData(statusKey("/elsewhere"), "data");
 
     await invalidateChanged(client, "/w", { kind: "state" });
 
-    expect(hit(client).sort()).toEqual(["artifactsA", "artifactsB", "artifactsBuild", "artifactsIntake", "next", "status"]);
+    expect(hit(client).sort()).toEqual([
+      "artifactsA",
+      "artifactsB",
+      "artifactsBuild",
+      "artifactsIntake",
+      "next",
+      "status",
+      "tickets",
+    ]);
     expect(client.getQueryState(statusKey("/elsewhere"))?.isInvalidated).toBe(false);
   });
 
-  it("Ticket refreshes the list, next and the plan ticket's exact read_text", async () => {
+  it("Ticket refreshes status, the list, next, ticket reads and its plan's files", async () => {
     const { client } = makeClient();
     seed(client);
 
@@ -99,27 +106,38 @@ describe("invalidateChanged", () => {
       "artifactsA",
       "next",
       "readArtifactA",
-      "readTextPlan",
+      "readTicketInbox",
+      "readTicketPlan",
+      "status",
       "tickets",
     ]);
   });
 
-  it("Ticket without a change refreshes the inbox ticket's read_text", async () => {
+  it("Ticket also refreshes the files of the build change named by its id", async () => {
     const { client } = makeClient();
     seed(client);
 
-    await invalidateChanged(client, "/w", { kind: "ticket", id: "N-1", change: null });
+    await invalidateChanged(client, "/w", { kind: "ticket", id: "S-0019", change: null });
 
-    expect(hit(client).sort()).toEqual(["next", "readTextInbox", "tickets"]);
+    expect(hit(client)).toEqual(
+      expect.arrayContaining(["artifactsBuild", "readArtifactBuild", "status"]),
+    );
+    expect(hit(client)).not.toContain("artifactsA");
   });
 
-  it("Ticket with a missing change field is an inbox ticket too", async () => {
+  it.each([{ change: null }, {}])("Ticket without a change is an inbox ticket %#", async (extra) => {
     const { client } = makeClient();
     seed(client);
 
-    await invalidateChanged(client, "/w", { kind: "ticket", id: "N-1" });
+    await invalidateChanged(client, "/w", { kind: "ticket", id: "N-1", ...extra });
 
-    expect(hit(client).sort()).toEqual(["next", "readTextInbox", "tickets"]);
+    expect(hit(client).sort()).toEqual([
+      "next",
+      "readTicketInbox",
+      "readTicketPlan",
+      "status",
+      "tickets",
+    ]);
   });
 
   it("PlanArtifact refreshes that change's artifacts and read_artifact", async () => {
@@ -128,7 +146,15 @@ describe("invalidateChanged", () => {
 
     await invalidateChanged(client, "/w", { kind: "planArtifact", change: "4-x" });
 
-    expect(hit(client).sort()).toEqual(["artifactsA", "readArtifactA"]);
+    expect(hit(client).sort()).toEqual([
+      "artifactsA",
+      "next",
+      "readArtifactA",
+      "readTicketInbox",
+      "readTicketPlan",
+      "status",
+      "tickets",
+    ]);
   });
 
   it("PlanArtifact with a numeric intake change matches the plan name beginning n-", async () => {
@@ -137,7 +163,15 @@ describe("invalidateChanged", () => {
 
     await invalidateChanged(client, "/w", { kind: "planArtifact", change: "3" });
 
-    expect(hit(client).sort()).toEqual(["artifactsIntake", "readArtifactIntake"]);
+    expect(hit(client).sort()).toEqual([
+      "artifactsIntake",
+      "next",
+      "readArtifactIntake",
+      "readTicketInbox",
+      "readTicketPlan",
+      "status",
+      "tickets",
+    ]);
   });
 
   it("BuildArtifact refreshes that build change's artifacts and read_artifact", async () => {
@@ -167,15 +201,22 @@ describe("invalidateChanged", () => {
     expect(hit(client)).toEqual(["adrs"]);
   });
 
-  it("Repos and Settings refresh status", async () => {
+  it("Repos refreshes status and next", async () => {
     const { client } = makeClient();
     seed(client);
 
     await invalidateChanged(client, "/w", { kind: "repos" });
-    expect(hit(client)).toEqual(["status"]);
+
+    expect(hit(client).sort()).toEqual(["next", "status"]);
+  });
+
+  it("Settings refreshes status and adr_list", async () => {
+    const { client } = makeClient();
+    seed(client);
 
     await invalidateChanged(client, "/w", { kind: "settings" });
-    expect(hit(client)).toEqual(["status"]);
+
+    expect(hit(client).sort()).toEqual(["adrs", "status"]);
   });
 
   it("Reference and Scaffold refresh no core query", async () => {
@@ -202,7 +243,30 @@ describe("invalidateChanged", () => {
     expect(fetched).not.toContain(JSON.stringify(SEEDED.next));
     expect(client.getQueryState(SEEDED.status)?.isInvalidated).toBe(false);
     expect(client.getQueryState(SEEDED.next)?.isInvalidated).toBe(true);
-    expect(client.getQueryState(SEEDED.tickets)?.isInvalidated).toBe(false);
+    expect(client.getQueryState(SEEDED.ideas)?.isInvalidated).toBe(false);
+  });
+
+  it.each([
+    ["a classified change", (c: QueryClient) => invalidateChanged(c, "/w", { kind: "state" })],
+    ["a reload", (c: QueryClient) => invalidateAll(c, "/w")],
+  ])("restarts a first fetch still in flight on %s", async (_name, apply) => {
+    const answers: ((v: string) => void)[] = [];
+    const client = new QueryClient();
+    const observer = new QueryObserver(client, {
+      queryKey: SEEDED.status,
+      queryFn: () => new Promise<string>((resolve) => answers.push(resolve)),
+    });
+    const off = observer.subscribe(() => {});
+    try {
+      const applied = apply(client);
+      await vi.waitFor(() => expect(answers).toHaveLength(2));
+      answers[0]("before the change");
+      answers[1]("after the change");
+      await applied;
+      expect(client.getQueryData(SEEDED.status)).toBe("after the change");
+    } finally {
+      off();
+    }
   });
 });
 
@@ -244,6 +308,7 @@ describe("applyWorkspaceChanged", () => {
       "artifactsIntake",
       "next",
       "status",
+      "tickets",
     ]);
   });
 
@@ -269,7 +334,7 @@ describe("applyWorkspaceChanged", () => {
     });
 
     expect(fetched).toContain(JSON.stringify(SEEDED.status));
-    expect(fetched).toContain(JSON.stringify(SEEDED.readTextInbox));
+    expect(fetched).toContain(JSON.stringify(SEEDED.readTicketInbox));
     expect(client.getQueryState(ideasKey("/elsewhere"))?.isInvalidated).toBe(false);
   });
 });
@@ -291,12 +356,5 @@ describe("changeMatches", () => {
   it("matches nothing for an absent change", () => {
     expect(changeMatches(null, "3")).toBe(false);
     expect(changeMatches(null, "4-x")).toBe(false);
-  });
-});
-
-describe("ticketPath", () => {
-  it("names the plan ticket or the inbox ticket", () => {
-    expect(ticketPath("S-1", "4-x")).toBe("plan/specs/4-x/tickets/S-1.md");
-    expect(ticketPath("N-1", null)).toBe("build/tickets/N-1.md");
   });
 });

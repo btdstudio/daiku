@@ -30,7 +30,7 @@ const BODY = [
 /** A success envelope carrying core's warnings. */
 const warns = (data: unknown, warnings: string[]) => ({ schema: 1, data, warnings });
 
-/** Serve status, tickets and read_text; by default the read echoes the list's body,
+/** Serve status, tickets and read_ticket; by default the read echoes the list's body,
  *  so the fallback and the read agree. */
 function serve(
   list: TicketView[],
@@ -45,7 +45,7 @@ function serve(
     over.readText ?? ((rel: string) => ok(list.find((t) => t.path === rel)?.body ?? ""));
   vi.mocked(invoke).mockImplementation(async (cmd: string, args?: unknown) => {
     if (cmd === "status") return over.status ?? ok(s);
-    if (cmd === "read_text") return readText((args as { rel: string }).rel);
+    if (cmd === "read_ticket") return readText((args as { path: string }).path);
     return over.tickets ?? ok({ tickets: list, unreadable: [] });
   });
 }
@@ -95,7 +95,7 @@ describe("TicketPanel", () => {
       "holds the lock on daiku",
     );
     expect(screen.getByText("S-1 · Title S-1")).toBeTruthy();
-    expect(invoke).toHaveBeenCalledWith("read_text", { root: "/w", rel: t.path });
+    expect(invoke).toHaveBeenCalledWith("read_ticket", { root: "/w", path: t.path });
   });
 
   it("renders the read body through Markdown: table and code, no script, escapes visible", async () => {

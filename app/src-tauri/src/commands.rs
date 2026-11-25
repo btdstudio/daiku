@@ -136,6 +136,51 @@ pub async fn read_artifact(app: AppHandle, root: String, change: String, path: S
     }
 }
 
+/// The text of a ticket that `tickets_list` lists, named by its path as the
+/// envelope shows it (escaped). As in [`read_artifact`], the path is matched
+/// against a fresh listing, never read as given: no match is `NotATicket`, several
+/// are `AmbiguousTicket`, and the one match is read by its raw path, under
+/// [`READ_CAP`].
+#[tauri::command]
+pub async fn read_ticket(app: AppHandle, root: String, path: String) -> Value {
+    if let Some(no) = refuse(&app, &root) {
+        return no;
+    }
+    let job = tauri::async_runtime::spawn_blocking(move || {
+        let ws = Workspace::open(PathBuf::from(root), app_env());
+        read_listed_ticket(&ws, &path)
+    })
+    .await;
+    match job {
+        Ok(v) => v,
+        Err(e) => envelope::internal(&e.to_string()),
+    }
+}
+
+/// The raw path of the one listed ticket whose escaped path is `path`, or the
+/// Failure to return instead.
+fn find_ticket<'a>(raw: impl Iterator<Item = &'a str>, path: &str) -> Result<&'a str, Value> {
+    let mut matches = raw.filter(|r| envelope::shown(r) == path);
+    match (matches.next(), matches.next()) {
+        (Some(r), None) => Ok(r),
+        (None, _) => Err(envelope::not_a_ticket(path)),
+        (Some(_), Some(_)) => Err(envelope::ambiguous_ticket(path)),
+    }
+}
+
+fn read_listed_ticket(ws: &Workspace, path: &str) -> Value {
+    match ws.tickets_list() {
+        Err(e) => envelope::reply::<()>(Err(e)),
+        Ok(out) => {
+            let listed = out.value.tickets.iter().map(|t| t.path.as_str());
+            match find_ticket(listed, path) {
+                Ok(raw) => read_capped(ws, raw),
+                Err(failure) => failure,
+            }
+        }
+    }
+}
+
 /// The raw path of the one artifact of `change` whose escaped path is `path`, or the
 /// Failure to return instead.
 fn find_artifact(list: &ArtifactList, change: &str, path: &str) -> Result<String, Value> {
@@ -472,5 +517,41 @@ mod tests {
         let v = envelope::not_open("/somewhere/else");
         assert_eq!(v["error"]["kind"], "NotOpen");
         assert!(v.get("data").is_none());
+    }
+
+    #[test]
+    fn read_ticket_opens_an_escaped_path_and_refuses_unlisted_ones() {
+        let (dir, ws) = workspace();
+        let rel = "plan/specs/a\u{200b}b/tickets/S-1.md";
+        put(&dir, rel, b"body");
+        let shown = envelope::shown(rel);
+        assert_ne!(shown, rel);
+        assert_eq!(find_ticket([rel].into_iter(), &shown).unwrap(), rel);
+
+        let none = find_ticket([rel].into_iter(), "a.md").unwrap_err();
+        assert_eq!(none["error"]["kind"], "NotATicket");
+        let two = find_ticket([rel, shown.as_str()].into_iter(), &shown).unwrap_err();
+        assert_eq!(two["error"]["kind"], "AmbiguousTicket");
+
+        put(&dir, "a.md", b"not a ticket");
+        let v = read_listed_ticket(&ws, "a.md");
+        assert_eq!(v["error"]["kind"], "NotATicket");
+
+        ws.repo_add("api", "https://example.com/api.git", None, "main")
+            .unwrap();
+        ws.tickets_new(&daiku_core::tickets::TicketNewOptions {
+            typ: "task".into(),
+            title: "Fix typo".into(),
+            parent: String::new(),
+            repo: "api".into(),
+            depends_on: vec![],
+            requirements: vec![],
+            inbox: true,
+        })
+        .unwrap();
+        let list = envelope::reply(ws.tickets_list());
+        let path = list["data"]["tickets"][0]["path"].as_str().unwrap();
+        let v = read_listed_ticket(&ws, path);
+        assert!(v["data"].as_str().unwrap().contains("Fix typo"), "{v}");
     }
 }
