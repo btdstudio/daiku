@@ -47,11 +47,12 @@
   --text-body: var(--text-body);
   --text-list: var(--text-list);
   --text-label: var(--text-label);
+  --text-id: var(--text-id);
 
   --radius-sm: var(--radius-1);
   --radius-md: var(--radius-2);
   --radius-lg: var(--radius-3);
-  --radius-xl: var(--radius-window);
+  --radius-pill: var(--radius-pill);
 }
 
 /* shadcn's variables, set from our tokens. */
@@ -88,5 +89,17 @@
     @apply bg-surface-window text-ink;
     font-size: var(--text-body);
     margin: 0;
+  }
+
+  .lucide {
+    stroke-width: 1.8px;
+  }
+}
+
+@layer utilities {
+  .text-id {
+    font-family: var(--font-mono-family);
+    font-size: var(--text-id);
+    font-weight: 500;
   }
 }

@@ -16,7 +16,7 @@ export function LaunchScreen({ recents, dispatch }: Props) {
       <Button onClick={() => void pickAndOpen(dispatch)}>Open workspace…</Button>
       {recents.length > 0 && (
         <section aria-label="Recent workspaces" className="flex w-full max-w-md flex-col gap-1">
-          <h2 className="text-label uppercase tracking-[var(--tracking-label)] text-ink-muted">
+          <h2 className="text-label font-medium uppercase tracking-[var(--tracking-label)] text-ink-muted">
             Recent
           </h2>
           {recents.map((w) => (
