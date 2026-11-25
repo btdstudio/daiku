@@ -2,10 +2,14 @@ mod commands;
 mod env;
 mod envelope;
 mod view_state;
+mod watch;
+
+use std::sync::Arc;
 
 use tauri::{LogicalSize, Manager, WindowEvent};
 
 use view_state::{Size, ViewStateStore};
+use watch::{AppEventSink, WatchRegistry};
 
 pub fn run() {
     let builder = tauri::Builder::default()
@@ -16,6 +20,9 @@ pub fn run() {
             let store = ViewStateStore::load(&dir);
             let saved = store.current().window;
             app.manage(store);
+            app.manage(WatchRegistry::new(Arc::new(AppEventSink::new(
+                app.handle().clone(),
+            ))));
             if let Some(window) = app.get_webview_window("main") {
                 if let Some(size) = saved {
                     let _ = window.set_size(LogicalSize::new(size.width, size.height));
@@ -54,7 +61,8 @@ pub fn run() {
         commands::measure_root,
         commands::view_state_load,
         commands::view_state_save,
-        commands::probe_workspace
+        commands::probe_workspace,
+        watch::sync_watchers
     ]);
     #[cfg(feature = "measure")]
     let builder = builder.invoke_handler(tauri::generate_handler![
@@ -70,7 +78,8 @@ pub fn run() {
         commands::measure_ready,
         commands::view_state_load,
         commands::view_state_save,
-        commands::probe_workspace
+        commands::probe_workspace,
+        watch::sync_watchers
     ]);
 
     builder
