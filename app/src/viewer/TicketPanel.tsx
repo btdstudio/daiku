@@ -2,7 +2,7 @@ import { PaneHeader } from "@/frame/PaneHeader";
 import { Badges } from "@/build/Badges";
 import { StatusText } from "@/build/StatusText";
 import { useBuildBoard } from "@/build/useBuildBoard";
-import { useReadText } from "@/data/hooks";
+import { useReadTicket } from "@/data/hooks";
 import { QueryFeedback } from "@/data/QueryFeedback";
 import type { ReactNode } from "react";
 import type { TicketView } from "@/generated/TicketView";
@@ -38,13 +38,13 @@ function fields(t: TicketView): [string, ReactNode][] {
 }
 
 /** A ticket in the viewer (design D11): its fields, badges and build from the loaded
- *  `TicketView`, and its body read through `read_text` (`S-0019` D7). The list's body
+ *  `TicketView`, and its body read through `read_ticket` (`S-0019` D7). The list's body
  *  holds until the read resolves; a failed read keeps the last good text and metadata. */
 export function TicketPanel({ root, ticketKey, focused, onFill, onClose }: Props) {
   const board = useBuildBoard(root);
   const t = board.tickets.find((x) => x.path === ticketKey);
   const info = t ? board.builds.get(t.id) : undefined;
-  const read = useReadText(root, t?.path ?? null);
+  const read = useReadTicket(root, t?.path ?? null);
 
   const warnings =
     board.warnings.length > 0 || read.warnings.length > 0

@@ -1,7 +1,7 @@
-import { type QueryClient, useQueryClient } from "@tanstack/react-query";
+import { type Query, type QueryClient, useQueryClient } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { Changed } from "@/generated/Changed";
 
 /** The event one root's watcher emits (`app/src-tauri/src/watch.rs`). */
@@ -24,7 +24,7 @@ const CORE_READS = new Set([
   "adr_list",
   "artifacts",
   "read_artifact",
-  "read_text",
+  "read_ticket",
 ]);
 
 /** The part of a query this map reads. */
@@ -58,22 +58,43 @@ export function changeMatches(change: string | null, changed: string): boolean {
   return change.startsWith(`${changed}-`);
 }
 
-/**
- * The workspace-relative path a `Changed::Ticket` names, as `TicketView.path` and
- * `read_text` use it: the plan change's ticket file, or the inbox one without a change.
- */
-export function ticketPath(id: string, change: string | null): string {
-  return change === null ? `build/tickets/${id}.md` : `plan/specs/${change}/tickets/${id}.md`;
+/** Cancel the matched queries still on their first fetch. Invalidating would otherwise
+ *  reuse that fetch, whose answer may predate the change. */
+function cancelFirstFetches(
+  client: QueryClient,
+  predicate: (q: Query) => boolean,
+): Promise<void> {
+  return client.cancelQueries({
+    predicate: (q) =>
+      predicate(q) && q.state.data === undefined && q.state.fetchStatus === "fetching",
+  });
 }
 
 /** Invalidate the root's keys `test` matches: active ones refetch, inactive ones go
  *  stale (TanStack's default `refetchType: "active"`). */
-function invalidate(
+async function invalidate(
   client: QueryClient,
   root: string,
   test: (q: Keyed) => boolean,
 ): Promise<void> {
-  return client.invalidateQueries({ predicate: (q) => forRoot(q, root) && test(q) });
+  const predicate = (q: Query) => forRoot(q, root) && test(q);
+  await cancelFirstFetches(client, predicate);
+  await client.invalidateQueries({ predicate });
+}
+
+/** Whether a query is one of `commands`. */
+const reads =
+  (...commands: string[]) =>
+  (q: Keyed) => {
+    const cmd = command(q);
+    return cmd !== null && commands.includes(cmd);
+  };
+
+/** Whether a query reads the files of a change `matches` accepts. */
+function changeFiles(q: Keyed, ...changes: string[]): boolean {
+  return (
+    reads("artifacts", "read_artifact")(q) && changes.some((c) => changeMatches(arg(q, 2), c))
+  );
 }
 
 /**
@@ -87,39 +108,39 @@ export function invalidateChanged(
 ): Promise<void> {
   switch (changed.kind) {
     case "state":
-      // `artifacts` carries the change and phase data as well as paths.
-      return invalidate(client, root, (q) => {
-        const cmd = command(q);
-        return cmd === "status" || cmd === "next" || cmd === "artifacts";
-      });
+      // `artifacts` carries the change and phase data as well as paths, and the ticket
+      // list says which plans are closed.
+      return invalidate(client, root, reads("status", "next", "tickets_list", "artifacts"));
     case "ticket": {
-      const change = changed.change ?? null;
-      const rel = ticketPath(changed.id, change);
-      return invalidate(client, root, (q) => {
-        const cmd = command(q);
-        if (cmd === "tickets_list" || cmd === "next") return true;
-        if (cmd === "read_text") return arg(q, 2) === rel;
-        if (change === null) return false;
-        return (
-          (cmd === "artifacts" || cmd === "read_artifact") && changeMatches(arg(q, 2), change)
-        );
-      });
+      // A build change is named by its ticket's id, and lists the ticket as its source.
+      // Every ticket read goes: its key holds the path as shown, which may be escaped.
+      const changes = [changed.id, ...(changed.change ? [changed.change] : [])];
+      return invalidate(
+        client,
+        root,
+        (q) =>
+          reads("status", "tickets_list", "next", "read_ticket")(q) || changeFiles(q, ...changes),
+      );
     }
     case "planArtifact":
+      // A ticket folder moved or renamed whole is reported only as its plan's artifact.
+      return invalidate(
+        client,
+        root,
+        (q) =>
+          reads("status", "tickets_list", "next", "read_ticket")(q) ||
+          changeFiles(q, changed.change),
+      );
     case "buildArtifact":
-      return invalidate(client, root, (q) => {
-        const cmd = command(q);
-        return (
-          (cmd === "artifacts" || cmd === "read_artifact") && changeMatches(arg(q, 2), changed.change)
-        );
-      });
+      return invalidate(client, root, (q) => changeFiles(q, changed.change));
     case "idea":
-      return invalidate(client, root, (q) => command(q) === "idea_list");
+      return invalidate(client, root, reads("idea_list"));
     case "adr":
-      return invalidate(client, root, (q) => command(q) === "adr_list");
+      return invalidate(client, root, reads("adr_list"));
     case "repos":
+      return invalidate(client, root, reads("status", "next"));
     case "settings":
-      return invalidate(client, root, (q) => command(q) === "status");
+      return invalidate(client, root, reads("status", "adr_list"));
     case "reference":
     case "scaffold":
       // Kept in the typed event contract for later views; no core query reads them yet.
@@ -128,14 +149,13 @@ export function invalidateChanged(
 }
 
 /** Every cached core query for the root, inactive ones included (`refetchType: "all"`). */
-export function invalidateAll(client: QueryClient, root: string): Promise<void> {
-  return client.invalidateQueries({
-    predicate: (q) => {
-      const cmd = command(q);
-      return forRoot(q, root) && cmd !== null && CORE_READS.has(cmd);
-    },
-    refetchType: "all",
-  });
+export async function invalidateAll(client: QueryClient, root: string): Promise<void> {
+  const predicate = (q: Query) => {
+    const cmd = command(q);
+    return forRoot(q, root) && cmd !== null && CORE_READS.has(cmd);
+  };
+  await cancelFirstFetches(client, predicate);
+  await client.invalidateQueries({ predicate, refetchType: "all" });
 }
 
 /** Apply one `workspace-changed` payload: `reloadAll` refreshes every core query for the
@@ -155,12 +175,14 @@ export async function applyWorkspaceChanged(
 
 /**
  * The app's one live-updates hook (design D5): registers a single `workspace-changed`
- * listener and sends the complete open-root set to `sync_watchers`. Watcher lifetime
- * is the backend registry's; only the listener is cleaned up here.
+ * listener and, once it's in place, sends the complete open-root set to `sync_watchers`,
+ * so a new watcher's first event isn't missed. Watcher lifetime is the backend
+ * registry's; only the listener is cleaned up here.
  */
 export function useLiveUpdates(openRoots: readonly string[]): void {
   const client = useQueryClient();
   const rootsKey = JSON.stringify(openRoots);
+  const listening = useRef<Promise<unknown>>(Promise.resolve());
 
   useEffect(() => {
     const listener = listen<WorkspaceChanged>(EVENT, (e) => {
@@ -169,6 +191,7 @@ export function useLiveUpdates(openRoots: readonly string[]): void {
       console.error("workspace-changed listener failed", err);
       return () => {};
     });
+    listening.current = listener;
     return () => {
       void listener.then((unlisten) => unlisten());
     };
@@ -176,8 +199,16 @@ export function useLiveUpdates(openRoots: readonly string[]): void {
 
   useEffect(() => {
     const roots = JSON.parse(rootsKey) as string[];
-    invoke("sync_watchers", { roots }).catch((err) =>
-      console.error("sync_watchers failed", err),
-    );
-  }, [rootsKey]);
+    // Only the latest set is sent if it changes while the listener is still pending.
+    let superseded = false;
+    void listening.current.then(() => {
+      if (superseded) return;
+      invoke("sync_watchers", { roots }).catch((err) =>
+        console.error("sync_watchers failed", err),
+      );
+    });
+    return () => {
+      superseded = true;
+    };
+  }, [client, rootsKey]);
 }

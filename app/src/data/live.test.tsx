@@ -71,6 +71,24 @@ describe("useLiveUpdates", () => {
     expect(synced()).toEqual([{ roots: ["/a", "/b"] }]);
   });
 
+  it("syncs only once the listener is in place, with the latest set", async () => {
+    let ready: (off: () => void) => void = () => {};
+    vi.mocked(listen).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          ready = resolve;
+        }),
+    );
+    const { rerender } = setup(["/a"]);
+    rerender({ roots: ["/a", "/b"] });
+    await act(async () => {});
+    expect(synced()).toEqual([]);
+
+    await act(async () => ready(unlisten));
+
+    expect(synced()).toEqual([{ roots: ["/a", "/b"] }]);
+  });
+
   it("keeps the one listener while the open set grows", async () => {
     const { rerender } = setup(["/a"]);
     await waitFor(() => expect(synced()).toEqual([{ roots: ["/a"] }]));
