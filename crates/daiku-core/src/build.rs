@@ -16,8 +16,8 @@ use crate::{Error, Event, gofmt, inbox};
 
 mod pr_template;
 pub use pr_template::{
-    LINKS_CLOSE, LINKS_OPEN, LINKS_PLACEHOLDER, PrTemplate, TemplateOrigin, WORKSPACE_TEMPLATE,
-    find_repo_template, render_body,
+    LINKS_CLOSE, LINKS_OPEN, LINKS_PLACEHOLDER, MAX_REPO_TEMPLATE_BYTES, PrTemplate,
+    TemplateOrigin, WORKSPACE_TEMPLATE, find_repo_template, render_body,
 };
 
 /// One line of `repo list`.

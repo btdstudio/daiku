@@ -1,6 +1,7 @@
 //! The pull request template `daiku pr` starts a body from (N-0019): where it comes
 //! from, and how the ticket's links go into it.
 
+use std::io::Read;
 use std::path::Path;
 
 use serde::Serialize;
@@ -18,6 +19,8 @@ pub const LINKS_OPEN: &str = "<!-- daiku:links -->";
 pub const LINKS_CLOSE: &str = "<!-- /daiku:links -->";
 /// The workspace's template, and where the embedded default would be written.
 pub const WORKSPACE_TEMPLATE: &str = "build/05_ship/templates/pull-request.md";
+/// Largest repo PR template we will read: 64 KiB.
+pub const MAX_REPO_TEMPLATE_BYTES: usize = 64 * 1024;
 
 /// Which template a body started from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -120,6 +123,32 @@ fn split_block(text: &str) -> Option<(&str, &str)> {
     found.map(|(start, end)| (&text[..start], &text[end..]))
 }
 
+/// Reads a resolved repo template. The read is bounded so an oversized file is
+/// never loaded in full; `rel` is used in errors because that is the path a
+/// client recognises.
+fn read_repo_template(path: &Path, rel: &str) -> Result<String, Error> {
+    let mut bytes = Vec::new();
+    std::fs::File::open(path)
+        .and_then(|file| {
+            file.take(MAX_REPO_TEMPLATE_BYTES as u64 + 1)
+                .read_to_end(&mut bytes)
+        })
+        .map_err(|e| Error::CannotRead {
+            path: rel.to_string(),
+            detail: e.to_string(),
+        })?;
+    if bytes.len() > MAX_REPO_TEMPLATE_BYTES {
+        return Err(Error::CannotRead {
+            path: rel.to_string(),
+            detail: format!("template exceeds {MAX_REPO_TEMPLATE_BYTES} bytes"),
+        });
+    }
+    String::from_utf8(bytes).map_err(|e| Error::CannotRead {
+        path: rel.to_string(),
+        detail: e.to_string(),
+    })
+}
+
 /// The repo's own template: the first regular file named `pull_request_template.md`
 /// (any case) in `.github/`, the repo root, then `docs/`. Returns its path
 /// relative to the repo, written with `/`, and its text. A folder of templates
@@ -128,7 +157,9 @@ fn split_block(text: &str) -> Option<(&str, &str)> {
 ///
 /// A match whose resolved path is outside the resolved `repo_dir` (a symlink to
 /// another place) is skipped, with a warning naming it: the body is published, so
-/// a repo must not be able to make it carry a file from elsewhere.
+/// a repo must not be able to make it carry a file from elsewhere. The resolved
+/// path is also the one read, and a template over `MAX_REPO_TEMPLATE_BYTES` is an
+/// error naming the repo-relative path and the limit.
 pub fn find_repo_template(repo_dir: &Path) -> Result<Outcome<Option<(String, String)>>, Error> {
     let mut warnings = Vec::new();
     let root = std::fs::canonicalize(repo_dir).ok();
@@ -150,20 +181,17 @@ pub fn find_repo_template(repo_dir: &Path) -> Result<Outcome<Option<(String, Str
             } else {
                 format!("{folder}/{name}")
             };
-            let inside = match (&root, std::fs::canonicalize(dir.join(&name))) {
-                (Some(root), Ok(file)) => file.starts_with(root),
-                _ => false,
+            let resolved = match (&root, std::fs::canonicalize(dir.join(&name))) {
+                (Some(root), Ok(file)) if file.starts_with(root) => Some(file),
+                _ => None,
             };
-            if !inside {
+            let Some(file) = resolved else {
                 warnings.push(Warning {
                     message: format!("pr template {rel} points outside the repo; ignored"),
                 });
                 continue;
-            }
-            let text = std::fs::read_to_string(dir.join(&name)).map_err(|e| Error::CannotRead {
-                path: rel.clone(),
-                detail: e.to_string(),
-            })?;
+            };
+            let text = read_repo_template(&file, &rel)?;
             return Ok(Outcome {
                 value: Some((rel, text)),
                 warnings,
