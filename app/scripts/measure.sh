@@ -80,12 +80,12 @@ cd "$copy"
 delays=()
 for i in $(seq "$gate_runs"); do
   before=$(grep -c '^event ' "$probe_log" || true)
+  t0=$(now_ms)
   if [ $((i % 2)) -eq 1 ]; then
     "$daiku_bin" gate intake approved >/dev/null
   else
     "$daiku_bin" reopen intake --reason probe >/dev/null
   fi
-  t0=$(now_ms)
   line=
   for _ in $(seq 100); do
     n=$(grep -c '^event ' "$probe_log" || true)
@@ -107,7 +107,7 @@ echo
 echo "| What | Result | Target |"
 echo "|---|---|---|"
 echo "| Cold start, median of $cold_runs | ${cold_median} ms | 2000 ms |"
-echo "| Watcher delay, median of $gate_runs | ${watch_median} ms | 1000 ms |"
+echo "| Watcher delay (from command start), median of $gate_runs | ${watch_median} ms | 1000 ms |"
 echo "| .app size, measure build | $((size_measure_kb / 1024)) MB (${size_measure_kb} KB) | none |"
 echo "| .app size, default build | $((size_default_kb / 1024)) MB (${size_default_kb} KB) | none |"
 echo "cold runs (ms): ${cold[*]}"
