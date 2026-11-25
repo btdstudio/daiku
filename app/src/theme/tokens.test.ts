@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- test compiles under Vitest; app tsconfig has no node types.
 // @ts-nocheck
 import fs from "node:fs";
 import path from "node:path";

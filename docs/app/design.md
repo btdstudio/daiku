@@ -139,8 +139,8 @@ core. These implementations are the app's own, in `app/src-tauri/src/env.rs`.
 A `Failure` carries a `kind` and a message. The view that asked shows both inline and
 keeps its last good data. The read runs again on the next change that affects it, or
 when the window gets focus. Core's `Warning`s come back in the envelope's `warnings`
-and are shown with the data. The nudge is the exception: the status bar shows
-warnings, but not a failure of `next`.
+and are shown with the data. The status bar shows the latest `next` failure as
+`Kind: message` beside the nudge; a failed refetch keeps the last nudge.
 
 Core's kinds are those of `daiku_core::json::error_kind`. The app adds its own:
 
@@ -407,14 +407,9 @@ commands are always mono.
 | Id | mono | 12px | 500 |
 | Terminal (phase 2) | mono | 12px | 400 |
 
-The Id style's size and weight aren't applied yet: ids are mono and take the text
-around them.
-
-The spacing scale is 4, 8, 12, 16 and 24px. Radii are 4, 6 and 8px, 12px for the
-window, and a pill. The app applies neither of the last two yet: the window's corners
-are macOS's, and badges and phase dots aren't rounded by the pill radius. The app's
-own surfaces have no shadows, though some shadcn/ui controls keep theirs. Icons are
-lucide's outlines, at its default 2px stroke.
+The spacing scale is 4, 8, 12, 16 and 24px. Radii are 4, 6 and 8px, and a pill. The
+window keeps macOS's native corners. The app's own surfaces have no shadows. Icons
+are lucide's outlines, at 1.8px stroke.
 
 ## What the app needs from core
 
