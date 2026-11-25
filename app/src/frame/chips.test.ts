@@ -14,6 +14,9 @@ describe("chipLabels", () => {
   it("falls back to a position when initials and first two letters collide", () => {
     expect(chipLabels(["daiku", "dash"])).toEqual(["D1", "D2"]);
   });
+  it("skips already used labels in numbered fallbacks", () => {
+    expect(chipLabels(["dash", "daiku", "d1x"])).toEqual(["D2", "D3", "D1"]);
+  });
   it("numbers three identical names", () => {
     expect(chipLabels(["daiku", "daiku", "daiku"])).toEqual(["D1", "D2", "D3"]);
   });
