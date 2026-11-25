@@ -21,6 +21,26 @@ use crate::{Error, gofmt, gojson};
 pub static NAME_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-z0-9][a-z0-9._-]*$").expect("valid pattern"));
 
+const RESERVED_DEVICE_NAMES: &[&str] = &[
+    "con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8",
+    "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
+];
+
+/// Why `name` can't be used as a repo name, or `None` when it's fine.
+pub fn invalid_repo_name_reason(name: &str) -> Option<&'static str> {
+    if !NAME_RE.is_match(name) {
+        return Some("use lowercase letters, digits, '.', '_' and '-'");
+    }
+    if name.ends_with('.') {
+        return Some("a trailing '.' is not allowed on Windows");
+    }
+    let base = name.split('.').next().unwrap_or(name);
+    if RESERVED_DEVICE_NAMES.contains(&base.to_ascii_lowercase().as_str()) {
+        return Some("reserved device names are not allowed on Windows");
+    }
+    None
+}
+
 /// One registered repo.
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -55,9 +75,14 @@ pub fn load(root: &Path) -> Result<Registry, Error> {
         })?;
         // The file is shared, so a name can come from a hand edit: check it as
         // `add` does before anything uses it as a folder name (N-0004).
-        if let Some(name) = reg.repos.keys().find(|n| !NAME_RE.is_match(n)) {
+        if let Some((name, reason)) = reg
+            .repos
+            .keys()
+            .find_map(|n| invalid_repo_name_reason(n).map(|r| (n, r)))
+        {
             return Err(Error::InvalidRepoName {
                 name: name.clone(),
+                reason,
                 path: Some(shown(root, "REPOS.json")),
             });
         }
@@ -377,9 +402,10 @@ struct RegistryFile<'a> {
 impl Registry {
     /// Go's `Add`: registers a repo. An empty branch means [`DEFAULT_BRANCH`].
     pub fn add(&mut self, name: &str, remote: &str, branch: &str) -> Result<(), Error> {
-        if !NAME_RE.is_match(name) {
+        if let Some(reason) = invalid_repo_name_reason(name) {
             return Err(Error::InvalidRepoName {
                 name: name.into(),
+                reason,
                 path: None,
             });
         }

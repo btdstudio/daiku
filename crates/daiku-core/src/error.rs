@@ -211,10 +211,14 @@ pub enum Error {
     #[error("getwd: the current folder is unknown")]
     NoCwd,
 
-    /// A repo name that doesn't match `NAME_RE`. `path` is the file it was read
-    /// from, `None` for a name given to `repo add`.
-    #[error("daiku: {}invalid repo name {} (use lowercase letters, digits, '.', '_' and '-')", file_prefix(.path), gofmt::quote(.name))]
-    InvalidRepoName { name: String, path: Option<String> },
+    /// A repo name that doesn't match the allowed shape or is unsafe on Windows.
+    /// `path` is the file it was read from, `None` for a name given to `repo add`.
+    #[error("daiku: {}invalid repo name {} ({})", file_prefix(.path), gofmt::quote(.name), .reason)]
+    InvalidRepoName {
+        name: String,
+        reason: &'static str,
+        path: Option<String>,
+    },
 
     #[error("daiku: repo {} is already registered", gofmt::quote(.name))]
     RepoExists { name: String },
